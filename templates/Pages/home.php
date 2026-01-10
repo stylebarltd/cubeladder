@@ -1,0 +1,233 @@
+
+<!-- Hero Section -->
+<section id="home" class="relative h-screen flex items-center justify-center bg-coffee-900 text-white overflow-hidden">
+    <img src="/img/bullet.jpg"
+         alt="Coffee beans"
+         class="absolute w-full h-full object-cover opacity-50">
+    <div class="relative z-5 text-center px-4">
+        <h1 class="text-4xl md:text-7xl mb-6 font-rubik">the last <?=$maxGamesToRank?></h1>
+        <p class="text-xl mb-8 max-w-2xl mx-auto"><?= $lastGameDateRange['start'] ?> until <?= $lastGameDateRange['end'] ?></p>
+<!--        <p class="text-xs md:text-2xl mb-8 max-w-2xl mx-auto">AssaultCube_v1.3.0.2_LockdownEdition_RC1</p>-->
+    </div>
+
+</section>
+
+    <!-- Main -->
+    <main class="flex-1 mx-auto max-w-5xl px-6 py-14">
+
+        <!-- SYSTEM STATUS -->
+        <div class="mb-10">
+
+            <!-- 🟢 STATUS: OPERATIONAL -->
+            <!--
+            <div class="flex items-start gap-4 bg-emerald-900/30 border border-emerald-700 rounded-xl p-6">
+                <span class="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full bg-emerald-600 text-white">
+                    🟢 Operational
+                </span>
+                <div>
+                    <h4 class="text-lg font-bold text-white">All systems operational</h4>
+                    <p class="text-emerald-200 text-sm">
+                        Servers are online. Games, stats, rankings, and achievements are updating normally.
+                    </p>
+                </div>
+            </div>
+            -->
+
+            <!-- 🟡 STATUS: DEGRADED / TECHNICAL ISSUES -->
+            <!--
+            <div class="flex items-start gap-4 bg-yellow-900/30 border border-yellow-700 rounded-xl p-6">
+                <span class="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full bg-yellow-500 text-black">
+                    🟡 Degraded
+                </span>
+                <div>
+                    <h4 class="text-lg font-bold text-white">Temporary technical issues</h4>
+                    <p class="text-yellow-200 text-sm">
+                        Some services may be slow or unavailable. Your games are safe and not lost.
+                        Please check back later or tomorrow.
+                    </p>
+                </div>
+            </div>
+
+
+            <!-- 🔴 STATUS: MAINTENANCE / OFFLINE -->
+            <!--
+            <div class="flex items-start gap-4 bg-red-900/30 border border-red-700 rounded-xl p-6">
+                <span class="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full bg-red-600 text-white">
+                    🔴 Maintenance
+                </span>
+                <div>
+                    <h4 class="text-lg font-bold text-white">Maintenance in progress</h4>
+                    <p class="text-red-200 text-sm">
+                        Stats processing is currently offline. No data is lost.
+                        Everything will be back online soon.
+                    </p>
+                </div>
+            </div>
+            -->
+
+            <!-- 🔵 STATUS: INFO / PARTIAL SYSTEM -->
+            <!--
+            <div class="flex items-start gap-4 bg-blue-900/30 border border-blue-700 rounded-xl p-6">
+                <span class="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full bg-blue-600 text-white">
+                    🔵 Info
+                </span>
+                <div>
+                    <h4 class="text-lg font-bold text-white">Partial system availability</h4>
+                    <p class="text-blue-200 text-sm">
+                        Servers are online, but some stats or achievements may update with delay.
+                    </p>
+                </div>
+            </div>
+            -->
+
+        </div>
+
+
+
+        <div class="grid grid-cols-1 gap-8 mt-8 mb-8">
+
+
+            <!-- Last updates -->
+            <div
+                class="block bg-zinc-900 rounded-xl p-8">
+                <div class="text-4xl mb-4"><i class="fa-solid fa-refresh"></i></div>
+                <h3 class="text-xl font-bold mb-2 text-white">Servers</h3>
+                <?php if (!empty($lastLogs)): ?>
+                    <?php foreach($lastLogs as $lastLog): ?>
+                        <i class="fa-solid fa-server"></i> <strong> <?= h($lastLog->server_name) ?>, <?= $lastLog->modified->format('Y-m-d H:i:s') ?> (UTC)</strong>
+                        <br>
+                    <?php endforeach ?>
+                <?php endif; ?>
+            </div>
+        </div>
+
+
+        <!-- Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Players -->
+            <a href="/players"
+               class="block bg-zinc-900 rounded-xl p-8">
+                <div class="text-4xl mb-4"><i class="fa-solid fa-user"></i></div>
+                <h3 class="text-xl font-bold mb-2 text-white">Players</h3>
+
+                <div class="space-y-2">
+                    <?php foreach ($bestPlayersByScore as $i => $player): ?>
+                        <div class="flex items-center gap-3 p-2 bg-zinc-800 rounded-lg">
+
+                            <div class="text-2xl font-bold w-8 text-center">
+                                <?= $i + 1 ?>.
+                            </div>
+
+                            <img
+                                src="<?= $this->Layout->playerPicture($player) ?>"
+                                class="w-10 h-10 rounded-full"
+                                alt="pic"
+                            >
+
+                            <div class="flex-1">
+                                <div class="font-semibold"><?= h($player->name) ?></div>
+                                <div class="text-xs text-blue-500">
+                                    <?= $this->Layout->flag($player->country) ?>
+                                    <?= h($player->country) ?>
+                                </div>
+                            </div>
+
+                            <div class="text-blue-500 font-mono text-lg">
+                                <?= number_format($player->total_score) ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </a>
+            <!-- Maps -->
+            <a href="/maps"
+               class="block bg-zinc-900 rounded-xl p-8">
+                <div class="text-4xl mb-4"><i class="fa-solid fa-map"></i></div>
+                <h3 class="text-xl font-bold mb-2 text-white">Maps</h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+
+                    <?php foreach ($bestPlayersByMap as $item): ?>
+                        <div class="bg-zinc-800 p-4 rounded-lg shadow">
+                            <div class="text-xl font-bold text-white">
+                                <?= h($item['map']->name) ?>
+                                <span class="text-blue-500 text-sm">
+                                    Played <?= $item['times_played'] ?> times
+                                </span>
+                            </div>
+
+
+
+                            <?php if ($item['best_player']): ?>
+                                <div class="mt-3 flex items-center gap-3">
+                                    <img src="<?= $this->Layout->playerPicture($item['best_player']) ?>" class="w-10 h-10 rounded-full">
+                                    <div>
+                                        <div class="font-semibold">
+                                            <?= h($item['best_player']->name) ?>
+                                        </div>
+                                        <div class="text-xs text-blue-500">
+                                            <?= $this->Layout->flag($item['best_player']->country) ?>
+                                            <?= h($item['best_player']->country) ?><br>
+
+                                        </div>
+
+                                    </div>
+                                    <div class="flex-1 text-blue-500 font-mono text-lg text-right">
+                                        <?= $item['best_player']->total_score ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+
+                </div>
+
+            </a>
+        </div>
+        <div class="grid grid-cols-1 gap-8 mt-8">
+
+
+            <!-- Games -->
+            <div
+                class="block bg-zinc-900 rounded-xl p-8">
+                <div class="text-4xl mb-4"><i class="fa-solid fa-trophy"></i></div>
+                <h3 class="text-xl font-bold mb-2 text-white">Achievements last week</h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <?php foreach ($this->Achievements->sort($achievementPlayers) as $a):
+                        if($a->event_type=='best_on_map')continue;
+                        ?>
+                        <div class="achievement-card">
+                            <img src="/img/achievements/<?= $this->Achievements->iconClass($a->event_type) ?>" class="w-8 h-8">
+                            <div class="label">
+                                <?= h($this->Achievements->labelFor($a)) ?>
+                            </div>
+                            <div class="player font-bold">
+
+
+                                <?= $this->Html->link(h($a->player->name)." ". $this->Layout->flag($a->player->country), ['controller' => 'Players', 'action' => 'view', $a->player->id], ['class' => 'hover:text-blue-400', 'escape' => false]) ?>
+
+                                <?= h($a->player->country) ?>
+                            </div>
+
+                            <div class="value text-blue-500">
+                                <?= $this->Achievements->format($a->event_type, $a->count) ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+
+
+
+
+
+    </main>
+
+
+
+
+
+
+

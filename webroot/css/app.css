@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@source "../templates/**/*.php";
+@source "../src/**/*.php";
+@source "../webroot/**/*.js";
+
+@font-face {
+    font-family: "RubikGlitch";
+    font-style: normal;
+    font-weight: 200 700;
+    font-display: swap;
+    src: url("/font/RubikGlitch-Regular.ttf") format("truetype");
+}
+
+@theme {
+    --font-family-rubik: "RubikGlitch", sans-serif;
+}
+
+@utility font-rubik {
+    font-family: "RubikGlitch", sans-serif;
+}
+
+
+/* hide scrollbar but keep scroll */
+.scrollbar-hide {
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* IE 10+ */
+}
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;              /* Chrome / Safari */
+}

@@ -1,0 +1,222 @@
+<?php
+namespace App\Command;
+
+use Cake\Command\Command;
+use Cake\Console\Arguments;
+use Cake\Console\ConsoleIo;
+use DateTimeImmutable;
+use App\Service\LastGamesTrait;
+
+class CalculateAchievementsCommand extends Command
+{
+
+    use LastGamesTrait;
+
+    public function execute(Arguments $args, ConsoleIo $io): int
+    {
+        $Games        = $this->fetchTable('Games');
+        $PlayerStats  = $this->fetchTable('PlayerStatsPerGame');
+        $Achievements = $this->fetchTable('Achievements');
+        $Maps         = $this->fetchTable('Maps');
+
+        /**
+         * Week range (last completed Sunday)
+         */
+        $today = new DateTimeImmutable('today');
+
+        $weekEnd = ($today->format('w') === '0')
+            ? $today
+            : $today->modify('last sunday');
+
+        $weekStart = $weekEnd->modify('-6 days');
+
+        /**
+         * Last 100 games
+         */
+//        $gameIds = array_column(
+//            $Games->find()
+//                ->select(['id'])
+//                ->where([]),
+//                ->orderDesc('id')
+//                ->limit(100)
+//                ->enableHydration(false)
+//                ->toArray(),
+//            'id'
+//        );
+
+        $lastGameIds = $this->getLastGameIds();
+
+        if (!$lastGameIds) {
+            $io->err('No games found.');
+            return Command::SUCCESS;
+        }
+
+        /**
+         * Metrics definition (logic only)
+         */
+        $metrics = [
+            'kd_ratio' => 'kd_ratio',
+            'headshot' => 'headshot',
+            'scored_with_the_flag' => 'scored_with_the_flag',
+            'slashed' => 'slashed',
+            'gibbed' => 'gibbed',
+            'suicided' => 'suicided',
+            'teamkills' => 'teamkills',
+            'total_score' => 'total_score',
+        ];
+
+        foreach ($metrics as $eventType => $field) {
+
+            $value = $PlayerStats->find()->func()->sum($field);
+
+            if($eventType=='kd_ratio'){
+                $value = $PlayerStats->find()->func()->avg($field);
+            }
+
+            $row = $PlayerStats->find()
+                ->select([
+                    'player_id',
+                    'value' => $value,
+//                    'total_deaths',
+//                    'total_kills',
+                    'Players.name'
+                ])
+                ->where([
+                    'game_id IN' => $lastGameIds,
+                    'Players.name IS NOT' => "unarmed"
+                ])
+                ->group('player_id')
+                ->contain(['Players'])
+                ->orderDesc('value')
+                ->limit(1)
+                ->enableHydration(false)
+                ->first();
+
+
+
+            if (!$row) {
+                //dd($row);
+                continue;
+            }
+
+
+           // dd($row);
+            /**
+             * Prevent duplicate weekly entries
+             */
+            if ($Achievements->exists([
+                'week_start' => $weekStart->format('Y-m-d'),
+                'event_type' => $eventType
+            ])) {
+                continue;
+            }
+
+            $entity = $Achievements->newEntity([
+                'week_start' => $weekStart->format('Y-m-d'),
+                'week_end'   => $weekEnd->format('Y-m-d'),
+                'player_id'  => $row['player_id'],
+                'event_type' => $eventType,
+                'count'      => $row['value'],
+                'created'    => (new DateTimeImmutable())->format('Y-m-d H:i:s')
+            ]);
+
+            $Achievements->saveOrFail($entity);
+
+            $io->out(sprintf(
+                '✔ %s → player %d (%s)',
+                $eventType,
+                $row['player_id'],
+                $row['value']
+            ));
+        }
+
+
+
+
+        /**
+         * Best player per map (last 100 games)
+         */
+        $maps = $Maps->find()
+            ->matching('Games', function ($q) use ($lastGameIds) {
+                return $q->where([
+                    'Games.id IN' => $lastGameIds
+                ]);
+            })
+            ->distinct(['Maps.id'])
+            ->select([
+                'Maps.id',
+                'Maps.name'
+            ])
+            ->enableHydration(false)
+            ->toArray();
+
+        foreach ($maps as $map) {
+
+            $row = $PlayerStats->find()
+                ->select([
+                    'player_id',
+                    'value' => $PlayerStats->find()->func()->max('total_score'),
+                    'Players.name'
+                ])
+                ->matching('Games', function ($q) use ($lastGameIds, $map) {
+                    return $q->where([
+                        'Games.id IN' => $lastGameIds,
+                        'Games.map_id' => $map['id']
+                    ]);
+                })
+                ->where([
+                    'Players.name IS NOT' => 'unarmed'
+                ])
+                ->group('player_id')
+                ->contain(['Players'])
+                ->orderDesc('value')
+                ->limit(1)
+                ->enableHydration(false)
+                ->first();
+
+            if (!$row) {
+                continue;
+            }
+
+            /**
+             * Prevent duplicate weekly entries per map
+             */
+            if ($Achievements->exists([
+                'week_start' => $weekStart->format('Y-m-d'),
+                'event_type' => 'best_on_map',
+                'map_id'     => $map['id']
+            ])) {
+                continue;
+            }
+
+            $entity = $Achievements->newEntity([
+                'week_start' => $weekStart->format('Y-m-d'),
+                'week_end'   => $weekEnd->format('Y-m-d'),
+                'player_id'  => $row['player_id'],
+                'map_id'     => $map['id'],
+                'event_type' => 'best_on_map',
+                'count'      => $row['value'],
+                'created'    => (new DateTimeImmutable())->format('Y-m-d H:i:s')
+            ]);
+
+            $Achievements->saveOrFail($entity);
+
+            $io->out(sprintf(
+                '✔ best_on_map → %s → player %d (%s)',
+                $map['name'],
+                $row['player_id'],
+                $row['value']
+            ));
+        }
+
+
+
+
+
+
+
+
+
+        return 1;
+    }
+}
