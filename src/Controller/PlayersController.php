@@ -280,9 +280,9 @@ class PlayersController extends AppController
 
         $players = $this->Players->find()
             ->select(['id', 'name', 'country'])
-            ->where(['name LIKE' => '%' . $query . '%', 'track'=>1])
+            ->where(['track'=>1, ['OR'=>[['name LIKE' => '%' . $query . '%',],['country' => $query,] ] ] ])
             ->orderAsc('name')
-            ->limit(10)
+            ->limit(30)
             ->all()
             ->toList();
 
