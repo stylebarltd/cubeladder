@@ -12,4 +12,9 @@ if (!isset($params['escape']) || $params['escape'] !== false) {
     $message = h($message);
 }
 ?>
-<div class="<?= h($class) ?>" onclick="this.classList.add('hidden');"><?= $message ?></div>
+
+<div class="text-center py-6 text-blue-500 m-5">
+    <div class="<?= h($class) ?>" onclick="this.classList.add('hidden');"><?= $message ?></div>
+</div>
+
+

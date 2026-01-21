@@ -84,22 +84,7 @@
 
 
 
-        <div class="grid grid-cols-1 gap-8 mt-8 mb-8">
 
-
-            <!-- Last updates -->
-            <div
-                class="block bg-zinc-900 rounded-xl p-8">
-                <div class="text-4xl mb-4"><i class="fa-solid fa-refresh"></i></div>
-                <h3 class="text-xl font-bold mb-2 text-white">Servers</h3>
-                <?php if (!empty($lastLogs)): ?>
-                    <?php foreach($lastLogs as $lastLog): ?>
-                        <i class="fa-solid fa-server"></i> <strong> <?= h($lastLog->server_name) ?>, <?= $lastLog->modified->format('Y-m-d H:i:s') ?> (UTC)</strong>
-                        <br>
-                    <?php endforeach ?>
-                <?php endif; ?>
-            </div>
-        </div>
 
 
         <!-- Cards -->
@@ -220,7 +205,22 @@
         </div>
 
 
+        <div class="grid grid-cols-1 gap-8 mt-8 mb-8">
 
+
+            <!-- Last updates -->
+            <div
+                class="block bg-zinc-900 rounded-xl p-8">
+                <div class="text-4xl mb-4"><i class="fa-solid fa-refresh"></i></div>
+                <h3 class="text-xl font-bold mb-2 text-white">Servers</h3>
+                <?php if (!empty($lastLogs)): ?>
+                    <?php foreach($lastLogs as $lastLog): ?>
+                        <i class="fa-solid fa-server"></i> <strong> <?= h($lastLog->server_name) ?>, <?= $lastLog->modified->format('Y-m-d H:i:s') ?> (UTC)</strong>
+                        <br>
+                    <?php endforeach ?>
+                <?php endif; ?>
+            </div>
+        </div>
 
 
     </main>

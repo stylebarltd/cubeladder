@@ -21,6 +21,20 @@ use Cake\Core\Configure;
             <p class="text-sm text-zinc-400">
                 <?= h($player->country) ?>
             </p>
+
+            <?php if ($authPlayer && $authPlayer->id != $player->id) : ?>
+                <?= $this->Html->link(
+                    'Send Message',
+                    ['controller' => 'Messages', 'action' => 'send',  $player->id],
+                    ['class' => 'inline-flex items-center px-3 py-1.5 cursor-pointer m-5
+                     rounded-lg text-sm font-medium
+                     text-blue-400 border border-blue-500/40
+                     hover:bg-blue-500/10 hover:text-blue-300
+                     transition']
+                ) ?>
+
+            <?php endif; ?>
+
         </div>
     </div>
 
@@ -126,7 +140,7 @@ use Cake\Core\Configure;
     </div>
 
     <!-- Recent Games Table -->
-    <h2 class="text-2xl font-bold text-white mb-4">Recent Games</h2>
+    <h2 class="text-2xl font-bold text-white mb-4"><?= h($player->name) ?> last 100 Games</h2>
 
     <div class="overflow-x-auto">
         <table class="min-w-full border border-zinc-700 rounded-xl overflow-hidden">
@@ -162,7 +176,13 @@ use Cake\Core\Configure;
                 <tr class="hover:bg-zinc-700 transition">
 
                     <td class="px-3 py-2 hidden md:table-cell">
-                        <?= $stat->game->started_at->format('Y-m-d') ?>
+
+                        <?= $this->Html->link(
+                            $stat->game->started_at->format('Y-m-d H:i'),
+                            ['controller' => 'games', 'action' => 'view', $stat->game->id],
+                            ['class' => 'font-semibold hover:text-blue-400']
+                        ) ?>
+
                     </td>
 
                     <td class="px-3 py-2 flex items-center gap-2">

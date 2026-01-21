@@ -41,13 +41,13 @@ if(!$type){
     }
 
 
-    public function playerPicture($player = null): string
+    public function playerPicture($player = null, $achievementPlayers = []): string
     {
 
         if(empty($player->picture)){
             return "/img/acl.png";
         }
-        return "/img/players/fun/" . $player->picture;
+        return "/img/players/" . $player->picture;
     }
 
     /**

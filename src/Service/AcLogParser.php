@@ -170,7 +170,7 @@ class AcLogParser
             $uniqueKey = $mapName . '_' .
                 str_replace(' ', '_', ($mode ?? 'unknown')) . '_' .
                 $ts->format('Ymd_His');
-
+echo $ts->format('Ymd_His')."\n";
             // check if exists
             $existing = $this->Games->find()->where(['unique_key' => $uniqueKey])->first();
             $this->skipCurrentGame = false;
@@ -382,7 +382,8 @@ class AcLogParser
             $dt->minute,
             $dt->second
         );
-
+//echo $fullDate."\n";
+//dd($this->year);
         return [
             $fullDate,
             $m[2] ?? ''
@@ -554,61 +555,109 @@ class AcLogParser
     {
         return $this->playersCache[$name] ?? null;
     }
+    protected function findOrCreatePlayerCached(
+        string $name,
+        ?string $pubkey = null,
+        ?string $ip = null,
+        ?Chronos $ts = null
+    ) {
+        $now = $ts ?? Chronos::now();
+
+        // 1) Identity by pubkey
+        if ($pubkey && isset($this->pubkeyCache[$pubkey])) {
+            $player = $this->Players->get($this->pubkeyCache[$pubkey]);
+
+            // IMPORTANT: only overwrite if this login is newer
+            if (
+                !$player->last_seen ||
+                $now->getTimestamp() >= $player->last_seen->getTimestamp()
+            ) {
+                $player->name = $name;
+                $player->ip = $ip;
+                $player->last_seen = $now;
+                $this->Players->save($player);
+            }
+
+            // always refresh name cache
+            $this->playersCache[$name] = $player->id;
+
+            return $player;
+        }
+
+        // 2) Create new player
+        $player = $this->Players->newEmptyEntity();
+        $player->name = $name;
+        $player->pubkey = $pubkey;
+        $player->ip = $ip;
+        $player->country = $this->ipToCountryCached($ip);
+        $player->first_seen = $now;
+        $player->last_seen = $now;
+
+        $this->Players->save($player);
+
+        // cache
+        $this->playersCache[$name] = $player->id;
+        if ($pubkey) {
+            $this->pubkeyCache[$pubkey] = $player->id;
+        }
+
+        return $player;
+    }
+
 
     /**
      * Find or create a player using caches. Will save via ORM (rare operations).
      */
-    protected function findOrCreatePlayerCached(string $name, ?string $pubkey = null, ?string $ip = null, ?Chronos $ts = null)
-    {
-        // try by pubkey
-        if ($pubkey && isset($this->pubkeyCache[$pubkey])) {
-            $id = $this->pubkeyCache[$pubkey];
-            // refresh name/ip via ORM
-            $player = $this->Players->get($id);
-            $player->name = $name;
-            $player->ip = $ip;
-            //$this->Players->GeoIp->geoLocate($player);
-            $player->last_seen = $ts ?? Chronos::now();
-            $this->Players->save($player);
-            $this->playersCache[$name] = $id;
-            return $player;
-        }
-
-        // try by name cache
-        if (isset($this->playersCache[$name]) && $name != "unarmed") {
-            $player = $this->Players->get($this->playersCache[$name]);
-            if ($pubkey && !$player->pubkey) {
-                $player->pubkey = $pubkey;
-                $this->Players->save($player);
-                $this->pubkeyCache[$pubkey] = $player->id;
-            }
-            $player->ip = $ip;
-            //$this->Players->GeoIp->geoLocate($player);
-            $player->last_seen = $ts ?? Chronos::now();
-            $this->Players->save($player);
-            return $player;
-        }
-
-        // create new player via ORM
-        $p = $this->Players->newEmptyEntity();
-        $p->name = $name;
-        //$p->picture = rand(1, 185).".jpg";
-        $p->pubkey = $pubkey;
-        $p->ip = $ip;
-       // $this->Players->GeoIp->geoLocate($player);
-        $p->country = $this->ipToCountryCached($ip);
-        $p->first_seen = $ts ?? Chronos::now();
-        $p->last_seen = $ts ?? Chronos::now();
-        $this->Players->save($p);
-
-        // cache
-        $this->playersCache[$name] = $p->id;
-        if ($pubkey) $this->pubkeyCache[$pubkey] = $p->id;
-
-
-        return $p;
-    }
-
+//    protected function findOrCreatePlayerCached(string $name, ?string $pubkey = null, ?string $ip = null, ?Chronos $ts = null)
+//    {
+//        // try by pubkey
+//        if ($pubkey && isset($this->pubkeyCache[$pubkey])) {
+//            $id = $this->pubkeyCache[$pubkey];
+//            // refresh name/ip via ORM
+//            $player = $this->Players->get($id);
+//            $player->name = $name;
+//            $player->ip = $ip;
+//            //$this->Players->GeoIp->geoLocate($player);
+//            $player->last_seen = $ts ?? Chronos::now();
+//            $this->Players->save($player);
+//            $this->playersCache[$name] = $id;
+//            return $player;
+//        }
+//
+//        // try by name cache
+//        if (isset($this->playersCache[$name]) && $name != "unarmed") {
+//            $player = $this->Players->get($this->playersCache[$name]);
+//            if ($pubkey && !$player->pubkey) {
+//                $player->pubkey = $pubkey;
+//                $this->Players->save($player);
+//                $this->pubkeyCache[$pubkey] = $player->id;
+//            }
+//            $player->ip = $ip;
+//            //$this->Players->GeoIp->geoLocate($player);
+//            $player->last_seen = $ts ?? Chronos::now();
+//            $this->Players->save($player);
+//            return $player;
+//        }
+//
+//        // create new player via ORM
+//        $p = $this->Players->newEmptyEntity();
+//        $p->name = $name;
+//        //$p->picture = rand(1, 185).".jpg";
+//        $p->pubkey = $pubkey;
+//        $p->ip = $ip;
+//       // $this->Players->GeoIp->geoLocate($player);
+//        $p->country = $this->ipToCountryCached($ip);
+//        $p->first_seen = $ts ?? Chronos::now();
+//        $p->last_seen = $ts ?? Chronos::now();
+//        $this->Players->save($p);
+//
+//        // cache
+//        $this->playersCache[$name] = $p->id;
+//        if ($pubkey) $this->pubkeyCache[$pubkey] = $p->id;
+//
+//
+//        return $p;
+//    }
 
     // -------------------------------
     // GeoIP (cached)

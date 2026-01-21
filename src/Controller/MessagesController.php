@@ -10,31 +10,7 @@ namespace App\Controller;
  */
 class MessagesController extends AppController
 {
-//    public function view($id)
-//    {
-//        $player = $this->authPlayer();
-//
-//        $message = $this->Messages->find()
-//            ->where(['Messages.id' => $id, 'receiver_id' => $player->id])
-//            ->contain(['Senders'])
-//            ->firstOrFail();
-//
-//        // mark as read
-//        $message->is_read = 1;
-//        $this->Messages->save($message);
-//
-//        // mark notification as seen
-//        $notification = $this->Messages->Notifications->find()
-//            ->where(['message_id' => $id])
-//            ->first();
-//
-//        if ($notification) {
-//            $notification->is_seen = 1;
-//            $this->Messages->Notifications->save($notification);
-//        }
-//
-//        $this->set(compact('message'));
-//    }
+
     public function delete($id)
     {
         $this->request->allowMethod(['post']);
@@ -77,56 +53,98 @@ class MessagesController extends AppController
 
         $this->set(compact('messages'));
     }
-
-    public function send($receiverId = null)
+    public function send(?string $receiverId = null)
     {
-        $player = $this->authPlayer();
+        $sender = $this->authPlayer();
 
         if (!$sender) {
-            throw new ForbiddenException("You must be a registered player (IP match) to send messages.");
+            $this->Flash->error('You must be a registered player to send messages.');
+            return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
         }
 
         if (!$receiverId) {
-            throw new BadRequestException("Receiver not specified.");
+            $this->Flash->error('Receiver not specified.');
+            return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
         }
 
-        if ($sender->id == $receiverId) {
-            throw new ForbiddenException("You cannot send a message to yourself.");
+        if ($sender->id === $receiverId) {
+            $this->Flash->error('You cannot send a message to yourself.');
+            return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
         }
 
         $receiver = $this->Messages->Receivers->get($receiverId);
+        $message  = $this->Messages->newEmptyEntity();
 
-        $message = $this->Messages->newEmptyEntity();
-
-        if ($this->request->is('post')) {
-
-            $message = $this->Messages->patchEntity($message, $this->request->getData());
-
-            $message->sender_id = $sender->id;
-            $message->receiver_id = $receiverId;
-            $message->is_read = 0;
-
-            if ($this->Messages->save($message)) {
-
-                // OPTIONAL: Create a notification entry for receiver
-                $notificationTable = $this->fetchTable('Notifications');
-                $notificationTable->save(
-                    $notificationTable->newEntity([
-                        'player_id' => $receiverId,
-                        'message_id' => $message->id,
-                        'is_seen' => 0
-                    ])
-                );
-
-                $this->Flash->success("Message sent to {$receiver->name}!");
-                return $this->redirect(['controller' => 'Players', 'action' => 'view', $receiverId]);
-            }
-
-            $this->Flash->error("Could not send message.");
+        if (!$this->request->is('post')) {
+            $this->set(compact('receiver', 'message'));
+            return;
         }
 
+        // Inbox limit
+        $inboxCount = $this->Messages->find()
+            ->where(['receiver_id' => $receiverId])
+            ->count();
+
+        if ($inboxCount >= 100) {
+            $this->Flash->error("Inbox full. {$receiver->name} cannot receive more messages.");
+            return $this->redirect(['controller' => 'Players', 'action' => 'view', $receiverId]);
+        }
+
+        $message = $this->Messages->patchEntity($message, $this->request->getData());
+        $message->sender_id   = $sender->id;
+        $message->receiver_id = $receiverId;
+        $message->is_read     = 0;
+
+        if ($this->Messages->save($message)) {
+            $this->Flash->success("Message sent to {$receiver->name}!");
+            return $this->redirect(['controller' => 'Players', 'action' => 'view', $receiverId]);
+        }
+
+        $this->Flash->error('Could not send message.');
         $this->set(compact('receiver', 'message'));
     }
+
+//    public function send($receiverId = null)
+//    {
+//        $player = $this->authPlayer();
+//
+//        if (!$player) {
+//            $this->Flash->error("You must be a registered player (IP match) to send messages.");
+//            return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
+//        }
+//
+//        if (!$receiverId) {
+//            $this->Flash->error("Receiver not specified.");
+//            return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
+//        }
+//
+//        if ($player->id == $receiverId) {
+//            $this->Flash->error("You cannot send a message to yourself.");
+//            return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
+//        }
+//
+//        $receiver = $this->Messages->Receivers->get($receiverId);
+//
+//        $message = $this->Messages->newEmptyEntity();
+//
+//        if ($this->request->is('post')) {
+//
+//            $message = $this->Messages->patchEntity($message, $this->request->getData());
+//
+//            $message->sender_id = $player->id;
+//            $message->receiver_id = $receiverId;
+//            $message->is_read = 0;
+//
+//            if ($this->Messages->save($message)) {
+//                $this->Flash->success("Message sent to {$receiver->name}!");
+//                return $this->redirect(['controller' => 'Players', 'action' => 'view', $receiverId]);
+//            }
+//
+//            $this->Flash->error("Could not send message.");
+//        }
+//
+//        $this->set(compact('receiver', 'message'));
+//    }
 
 
 }

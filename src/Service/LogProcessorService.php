@@ -106,7 +106,7 @@ class LogProcessorService
         if ($offsetRow && $offsetRow->inode === $inode && $filesize >= $offsetRow->last_offset) {
             // normal resume with safety rewind
             //$startOffset = max(0, $offsetRow->last_offset - 8192);
-            $startOffset = max(0, $offsetRow->last_offset - 5 * 1024 * 1024);
+            $startOffset = max(0, $offsetRow->last_offset - 10 * 1024 * 1024);
 
         }
 

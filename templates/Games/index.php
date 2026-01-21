@@ -35,6 +35,7 @@
                 'slashed' => 'Most Slashes',
                 'scored_with_the_flag' => 'Most Flags scored',
                 'headshot' => 'Most Headshots',
+                'suicided' => 'Most Suicides',
             ];
             ?>
             <?php $i = 1; foreach ($games as $game): ?>

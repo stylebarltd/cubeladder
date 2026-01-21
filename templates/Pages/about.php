@@ -11,14 +11,29 @@
                 <span class="text-green-400">✔</span>
                 <span>
                 Only the <b>last 100 games</b> are counted.
+            </span>
+            </li>
+            <li class="flex gap-2">
+                <span class="text-green-400">✔</span>
+                <span>
                 Games must start with a minimum of <b>4 players</b>.
+            </span>
+            </li>
+            <li class="flex gap-2">
+                <span class="text-green-400">✔</span>
+                <span>
+                Games must be <b>finished</b>.
             </span>
             </li>
 
             <li class="flex gap-2">
                 <span class="text-green-400">✔</span>
                 <span>
-                <b>Do not change your name</b> during a game.
+                Write us a message if you have <b>
+                <?= $this->Html->link(
+                    'questions',
+                    ['controller' => 'Messages', 'action' => 'send', 'ed947213-05f5-4030-a7bc-f1f67e5c5de8']
+                ) ?></b>?
             </span>
             </li>
 
@@ -32,10 +47,12 @@
             <li class="flex gap-2">
                 <span class="text-yellow-400">⚠</span>
                 <span>
-                Write us a message if you <b>do not want to be tracked</b>.
+                Write us a message if you <b><?= $this->Html->link(
+                            'do not want to be tracked',
+                            ['controller' => 'Messages', 'action' => 'send', 'ed947213-05f5-4030-a7bc-f1f67e5c5de8']
+                        ) ?></b>.
             </span>
             </li>
-
 
             <li class="flex gap-2">
                 <span class="text-pink-400">♥</span>

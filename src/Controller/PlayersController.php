@@ -168,12 +168,13 @@ class PlayersController extends AppController
                 'Achievements',
                 'PlayerStatsPerGame' => function ($q) use ($lastGameIds) {
                     return $q
-                        ->where([
-                            'PlayerStatsPerGame.game_id IN' => $lastGameIds
-                        ])
+//                        ->where([
+//                            'PlayerStatsPerGame.game_id IN' => $lastGameIds
+//                        ])
                         ->contain([
                             'Games' => ['Maps']
                         ])
+                        ->limit(100)
                         ->orderDesc('Games.ended_at');
                 }
             ]
@@ -263,6 +264,78 @@ class PlayersController extends AppController
             'statSums',
         ));
     }
+    public function profile()
+    {
+        $authPlayer = $this->authPlayer();
+        $player = $this->Players->get($authPlayer->id);
+
+        // all avatar files
+        $avatars = glob(WWW_ROOT . 'img/players/*.jpg');
+        $avatars = array_map('basename', $avatars);
+
+        // avatars already used by OTHER players
+        $usedAvatars = $this->Players
+            ->find()
+            ->select(['picture'])
+            ->where([
+                'picture IS NOT' => null,
+                'id !=' => $player->id
+            ])
+            ->enableHydration(false)
+            ->all()
+            ->extract('picture')
+            ->toList();
+
+        // remove used avatars
+        $avatars = array_values(array_diff($avatars, $usedAvatars));
+
+        // random 20
+        shuffle($avatars);
+        $avatars = array_slice($avatars, 0, 39);
+
+        $this->set(compact('player', 'avatars'));
+    }
+
+    public function avatar(?string $picture = null)
+    {
+        $authPlayer = $this->authPlayer();
+        $player = $this->Players->get($authPlayer->id);
+
+        $used = $this->Players->exists([
+            'picture' => $picture,
+            'id !=' => $player->id
+        ]);
+
+        if ($used) {
+            $this->Flash->error('Avatar already taken');
+            return $this->redirect(['action' => 'profile']);
+        }
+
+
+        // Reset avatar
+        if ($picture === 'none') {
+            $player->picture = null;
+            $this->Players->saveOrFail($player);
+            $this->Flash->success('Avatar removed');
+            return $this->redirect(['action' => 'profile']);
+        }
+
+        // Normal avatar selection
+        $file = WWW_ROOT . 'img/players/' . $picture;
+        if (!file_exists($file)) {
+            $this->Flash->error('Invalid avatar');
+            return $this->redirect(['action' => 'profile']);
+        }
+
+        $player->picture = $picture;
+        $this->Players->saveOrFail($player);
+
+        $this->Flash->success('Avatar updated');
+        return $this->redirect(['action' => 'profile']);
+    }
+
+
+
 
 
 

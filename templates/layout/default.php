@@ -22,6 +22,10 @@
 
 </head>
 <body class="bg-zinc-900 text-white font-mono">
+
+
+
+
 <div class="min-h-screen bg-zinc-950 text-gray font-mono flex flex-col">
 
 
@@ -30,7 +34,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
-                    <a href="/" class="text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder<small class="text-xs">v1</small></a>
+                    <a href="/" class="text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder<small class="text-xs hidden md:inline">v1.1</small></a>
                 </div>
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="/players" class="hover:text-zinc-500 transition">Players</a>
@@ -40,8 +44,7 @@
                 </div>
                 <div class="flex items-center space-x-4">
 
-
-                    <button class="p-2 hover:text-zinc-500 transition" id="search-btn">
+                    <button class="p-2 hover:text-zinc-500 transition hidden md:inline" id="search-btn">
                         <i class="fas fa-search"></i>
                     </button>
                     <?php if ($authPlayer): ?>
@@ -51,12 +54,15 @@
                                 <span class="absolute -top-1 -right-1 bg-blue-400 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" id="cart-count"><?= $inboxUnread ?></span>
                             <?php endif; ?>
                         </a>
-
-                        <div><?=h($authPlayer->name) ?></div>
-
+                        <div>
+                            <?= $this->Html->link(
+                                h($authPlayer->name),
+                                ['controller' => 'Players', 'action' => 'profile'],
+                                ['escape' => false, 'class' => 'font-semibold hover:text-blue-400']
+                            ) ?>
+                        </div>
 
                     <?php endif; ?>
-
                 </div>
                 <button class="md:hidden p-2" id="mobile-menu-btn">
                     <i class="fas fa-bars"></i>
@@ -87,11 +93,9 @@
     </nav>
 
 
-<?php if ($this->Flash->render()): ?>
-    <div class="fixed top-4 right-4 z-50">
         <?= $this->Flash->render() ?>
-    </div>
-<?php endif; ?>
+
+
 
 <!-- Page content -->
 <?= $this->fetch('content') ?>

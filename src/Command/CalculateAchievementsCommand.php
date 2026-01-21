@@ -14,6 +14,10 @@ class CalculateAchievementsCommand extends Command
 
     public function execute(Arguments $args, ConsoleIo $io): int
     {
+
+        $Messages = $this->fetchTable('Messages');
+
+
         $Games        = $this->fetchTable('Games');
         $PlayerStats  = $this->fetchTable('PlayerStatsPerGame');
         $Achievements = $this->fetchTable('Achievements');
@@ -33,16 +37,6 @@ class CalculateAchievementsCommand extends Command
         /**
          * Last 100 games
          */
-//        $gameIds = array_column(
-//            $Games->find()
-//                ->select(['id'])
-//                ->where([]),
-//                ->orderDesc('id')
-//                ->limit(100)
-//                ->enableHydration(false)
-//                ->toArray(),
-//            'id'
-//        );
 
         $lastGameIds = $this->getLastGameIds();
 
@@ -121,6 +115,18 @@ class CalculateAchievementsCommand extends Command
             ]);
 
             $Achievements->saveOrFail($entity);
+
+            $this->sendAchievementMessage(
+                $Messages,
+                $row['player_id'],
+                'Weekly Achievement Unlocked!',
+                sprintf(
+                    'You ranked #1 for **%s** this week with a value of **%s**.\n\nGreat job! 🏆',
+                    str_replace('_', ' ', $eventType),
+                    $row['value']
+                )
+            );
+
 
             $io->out(sprintf(
                 '✔ %s → player %d (%s)',
@@ -201,6 +207,18 @@ class CalculateAchievementsCommand extends Command
 
             $Achievements->saveOrFail($entity);
 
+            $this->sendAchievementMessage(
+                $Messages,
+                $row['player_id'],
+                'Map Champion!',
+                sprintf(
+                    'You were the **top player on %s** this week with a score of **%s**.\n\nDominating! 💥',
+                    $map['name'],
+                    $row['value']
+                )
+            );
+
+
             $io->out(sprintf(
                 '✔ best_on_map → %s → player %d (%s)',
                 $map['name'],
@@ -209,14 +227,26 @@ class CalculateAchievementsCommand extends Command
             ));
         }
 
-
-
-
-
-
-
-
-
         return 1;
     }
+
+
+    private function sendAchievementMessage(
+        \Cake\ORM\Table $Messages,
+        string $receiverId,
+        string $title,
+        string $body
+    ): void {
+        $message = $Messages->newEntity([
+            'sender_id'   => 'ed947213-05f5-4030-a7bc-f1f67e5c5de8',
+            'receiver_id' => $receiverId,
+            'body'        => "**{$title}**\n\n{$body}",
+            'is_read'     => 0,
+            'created'     => new DateTimeImmutable()
+        ]);
+
+        $Messages->save($message);
+    }
+
+
 }
