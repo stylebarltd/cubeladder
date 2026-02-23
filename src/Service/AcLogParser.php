@@ -7,6 +7,7 @@ use Cake\Core\Configure;
 use Cake\Datasource\ConnectionManager;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use GeoIp2\Database\Reader;
+use MaxMind\Db\Reader\InvalidDatabaseException;
 use RuntimeException;
 
 /**
@@ -58,7 +59,9 @@ class AcLogParser
 
     // Dates
     protected ?Chronos $currentTimestamp = null;
+
     private int $year;
+    private int $baseMonth;
     private ?int $previousMonth = null;
 
 
@@ -106,9 +109,11 @@ class AcLogParser
         return $this->serverName;
     }
     // Constructor - preload tables, compile regex, load small caches
-    public function __construct(int $baseYear)
+    public function __construct(int $baseYear, int $baseMonth)
     {
         $this->year = $baseYear;
+        $this->baseMonth = $baseMonth;
+        $this->previousMonth = $baseMonth;
 
         $this->Games = $this->fetchTable('Games');
         $this->Maps = $this->fetchTable('Maps');
@@ -120,7 +125,6 @@ class AcLogParser
         $this->compileRegexes();
         $this->preloadPlayerCache();
         $this->preloadMapCache();
-
     }
 
 
@@ -170,7 +174,7 @@ class AcLogParser
             $uniqueKey = $mapName . '_' .
                 str_replace(' ', '_', ($mode ?? 'unknown')) . '_' .
                 $ts->format('Ymd_His');
-echo $ts->format('Ymd_His')."\n";
+//echo $ts->format('Ymd_His')."\n";
             // check if exists
             $existing = $this->Games->find()->where(['unique_key' => $uniqueKey])->first();
             $this->skipCurrentGame = false;
@@ -362,18 +366,33 @@ echo $ts->format('Ymd_His')."\n";
         // Parse timestamp without year
         $dt = Chronos::createFromFormat('M j H:i:s', $m[1]);
         if ($dt === false) {
-            echo "Failed creating chronos time from: $m[1]";
+            echo "Failed creating chronos time from: {$m[1]}";
             return null;
         }
 
-        // Year rollover handling
-        $month = $dt->month;
-        if ($this->previousMonth !== null && $month < $this->previousMonth) {
+        $month = (int)$dt->month;
+
+        /*
+         * CASE 1:
+         * First parsed line.
+         * If parsed month is smaller than baseMonth,
+         * we already crossed into next year.
+         */
+        if ($this->previousMonth === $this->baseMonth && $month < $this->baseMonth) {
             $this->year++;
         }
+
+        /*
+         * CASE 2:
+         * Normal rollover inside log stream (Dec -> Jan)
+         */
+        elseif ($this->previousMonth !== null && $month < $this->previousMonth) {
+            $this->year++;
+        }
+
         $this->previousMonth = $month;
 
-        // Build full datetime with year
+        // Build full datetime with corrected year
         $fullDate = Chronos::create(
             $this->year,
             $dt->month,
@@ -382,13 +401,13 @@ echo $ts->format('Ymd_His')."\n";
             $dt->minute,
             $dt->second
         );
-//echo $fullDate."\n";
-//dd($this->year);
+
         return [
             $fullDate,
             $m[2] ?? ''
         ];
     }
+
 
     // -------------------------------
     // Stats buffering
@@ -607,6 +626,7 @@ echo $ts->format('Ymd_His')."\n";
 
     /**
      * Find or create a player using caches. Will save via ORM (rare operations).
+     * @throws InvalidDatabaseException
      */
 //    protected function findOrCreatePlayerCached(string $name, ?string $pubkey = null, ?string $ip = null, ?Chronos $ts = null)
 //    {

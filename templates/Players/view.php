@@ -7,11 +7,13 @@ use Cake\Core\Configure;
 
     <!-- Player Header -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+        <a href="/img/players/<?= $player->picture ?>">
         <img
             src="<?= $this->Layout->playerPicture($player) ?>"
             alt="<?= h($player->name) ?>"
             class="w-32 h-32 rounded-full object-cover"
         >
+        </a>
 
         <div>
             <h1 class="text-3xl font-bold text-white">

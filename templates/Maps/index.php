@@ -15,7 +15,6 @@
             <tr>
                 <th class="px-3 py-2 text-left hidden md:table-cell">#</th>
                 <th class="px-3 py-2 text-left">Map</th>
-                <th class="px-3 py-2 text-right">Played</th>
                 <th class="px-3 py-2 text-left hidden md:table-cell">Top Players by Total Points</th>
             </tr>
             </thead>
@@ -34,48 +33,54 @@
                     </td>
 
                     <!-- Map -->
-                    <td class="px-3 py-2">
-                        <div class="flex items-center gap-3">
+                    <td class="px-3 py-2 align-top">
+                        <?php
+                        $mapImage = WWW_ROOT . 'img/maps/' . $map->name . '.jpg';
+                        $mapUrl = file_exists($mapImage)
+                            ? '/img/maps/' . h($map->name) . '.jpg'
+                            : '/img/maps/placeholder.jpg';
 
-                            <?php
-                            $mapImage = WWW_ROOT . 'img/maps/' . $map->name . '.jpg';
-                            $mapUrl = file_exists($mapImage)
-                                ? '/img/maps/' . h($map->name) . '.jpg'
-                                : '/img/maps/placeholder.jpg';
-                            ?>
+                        $playedCount = $map->times_played ?? count($map->games);
+                        ?>
 
-                            <img
-                                src="<?= $mapUrl ?>"
-                                alt="<?= h($map->name) ?>"
-                                class="w-20 h-14 rounded object-cover border border-zinc-600"
-                            >
+                        <div
+                            class="w-64 h-64 rounded-lg border border-zinc-700
+               bg-cover bg-center flex flex-col justify-end
+               text-white p-3"
+                            style="background-image:
+                                linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.4), transparent),
+                                url('<?= $mapUrl ?>');"
+                        >
 
-                            <div>
-                                <div class="font-semibold text-white">
-                                    <?= h($map->name) ?>
-                                </div>
-                                <?php if (!empty($achievementMaps)): ?>
-                                    <?php foreach ($achievementMaps as $achievement):
-                                        if($achievement->map_id == $map->id): ?>
-                                            <p class="text-sm text-blue-500"> 🏆
-                                                <?= $this->Html->link(
-                                                    h($achievement->player->name),
-                                                    ['controller' => 'Players', 'action' => 'view', $achievement->player->id],
-                                                    ['class' => 'hover:text-blue-400', 'escape' => false, 'title' => 'Last Week Top Player on Map']
-                                                ) ?>
-                                                <?= $this->Layout->flag($achievement->player->country) ?>
- (<?= round($achievement->count) ?>) </p>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
+                            <div class="font-bold text-lg leading-tight">
+                                <?= h($map->name) ?>
                             </div>
+
+<!--                            <div class="text-sm text-zinc-300">-->
+<!--                                Played: --><?php //= h($playedCount) ?>
+<!--                            </div>-->
+
+                            <?php foreach ($achievementMaps as $achievement): ?>
+                                <?php if ($achievement->map_id == $map->id): ?>
+                                    <div class="text-sm text-yellow-400 mt-1">
+                                        🏆
+                                        <?= $this->Html->link(
+                                            h($achievement->player->name),
+                                            ['controller' => 'Players', 'action' => 'view', $achievement->player->id],
+                                            ['class' => 'hover:text-yellow-300', 'escape' => false]
+                                        ) ?>
+                                        <?= $this->Layout->flag($achievement->player->country) ?>
+                                        (<?= round($achievement->count) ?>)
+                                    </div>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+
                         </div>
                     </td>
 
-                    <!-- Times played -->
-                    <td class="px-3 py-2 text-right font-bold text-blue-400">
-                        <?= h($map->times_played ?? count($map->games)) ?>
-                    </td>
+
+
+
 
                     <!-- Top players -->
                     <td class="px-3 py-2 hidden md:table-cell">

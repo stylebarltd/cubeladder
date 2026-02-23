@@ -56,8 +56,22 @@ class GeoPlayersCommand extends Command
                 }
 
                 // 🔐 privacy random offset
-                $lat += rand(-5, 5) / 100;
-                $lon += rand(-5, 5) / 100;
+//                $lat += rand(-5, 5) / 100;
+//                $lon += rand(-5, 5) / 100;
+                $radius = 100; // km
+
+                $earthRadius = 6371; // km
+
+                $randDist = mt_rand() / mt_getrandmax();
+                $randDist = $radius * sqrt($randDist);
+
+                $randAngle = mt_rand() / mt_getrandmax() * 2 * pi();
+
+                $latOffset = ($randDist / $earthRadius) * (180 / pi());
+                $lonOffset = ($randDist / $earthRadius) * (180 / pi()) / cos(deg2rad($lat));
+
+                $lat += $latOffset * cos($randAngle);
+                $lon += $lonOffset * sin($randAngle);
 
                 $player->latitude = $lat;
                 $player->longitude = $lon;
@@ -72,7 +86,7 @@ class GeoPlayersCommand extends Command
         }
 
         $io->success('Geo-location finished.');
-        return Command::SUCCESS;
+        return true;
     }
 
     /**

@@ -8,6 +8,25 @@ use Cake\View\Helper;
 class LayoutHelper extends Helper
 {
 
+    public function serverName($type): string
+    {
+        if(!$type){
+            $type = 'unknown';
+        }
+
+        $serverName = [
+            'acka-europa'    => '[aCKa] Europa',
+            'acka-custom'   => '[aCKa] Custom',
+            'acka-nostalgic'    => '[aCKa] Nostalgic',
+            'acka-assault'   => '[aCKa] Assault',
+            'chobbz-banana'    => 'Banana',
+            'chobbz-potato'   => 'Potato',
+        ];
+
+        $label = $serverName[$type];
+
+        return $label;
+    }
 
     public function gameMode($type): string
     {

@@ -4,8 +4,42 @@ declare(strict_types=1);
 namespace App\Controller;
 
 
+use Cake\Core\Configure;
+use Cake\Http\Cookie\Cookie;
+use Cake\Http\Exception\BadRequestException;
+use Cake\Log\Log;
+use Cake\Utility\Security;
+
 class PlayersController extends AppController
 {
+
+    public function select()
+    {
+        $this->request->allowMethod(['post']);
+
+        $playerId = (string)$this->request->getData('player_id');
+
+        if (!$playerId) {
+            throw new BadRequestException('Missing player_id');
+        }
+
+        // Optional: verify player actually exists
+        $Players = $this->fetchTable('Players');
+
+        $player = $Players->find()
+            ->where(['id' => $playerId])
+            ->first();
+
+        if (!$player) {
+            throw new BadRequestException('Invalid player');
+        }
+
+        // Write encrypted cookie (middleware will encrypt it)
+        $this->writePlayerCookie($player->id);
+
+        return $this->redirect($this->referer());
+    }
+
 
     public function index()
     {
@@ -179,7 +213,7 @@ class PlayersController extends AppController
                 }
             ]
         ]);
-        $authPlayer=$this->authPlayer();
+        $authPlayer = $this->request->getAttribute('identity');
         if ($authPlayer && $player->id!=$authPlayer->id){
             $player->views++;
             $this->Players->save($player);
@@ -266,9 +300,11 @@ class PlayersController extends AppController
     }
     public function profile()
     {
-        $authPlayer = $this->authPlayer();
-        $player = $this->Players->get($authPlayer->id);
-
+        $player = $this->request->getAttribute('identity');
+        if(!$player){
+            $this->Flash->error('No profile found!');
+            return $this->redirect(['action' => 'index']);
+        }
         // all avatar files
         $avatars = glob(WWW_ROOT . 'img/players/*.jpg');
         $avatars = array_map('basename', $avatars);
@@ -298,8 +334,7 @@ class PlayersController extends AppController
 
     public function avatar(?string $picture = null)
     {
-        $authPlayer = $this->authPlayer();
-        $player = $this->Players->get($authPlayer->id);
+        $player = $this->request->getAttribute('identity');
 
         $used = $this->Players->exists([
             'picture' => $picture,
@@ -370,10 +405,12 @@ class PlayersController extends AppController
         $this->request->allowMethod(['get']);
 
         $players = $this->Players->find()
-            ->select(['name', 'latitude', 'longitude'])
+            ->select(['id', 'name', 'latitude', 'longitude', 'country'])
             ->where([
                 'latitude IS NOT' => null,
-                'longitude IS NOT' => null
+                'longitude IS NOT' => null,
+                'track' => 1,
+                'name IS NOT' => 'unarmed',
             ])
             ->enableHydration(false)
             ->toArray();
@@ -384,5 +421,9 @@ class PlayersController extends AppController
     }
 
 
+    public function map()
+    {
+
+    }
 
 }

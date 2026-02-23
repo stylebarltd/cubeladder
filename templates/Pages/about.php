@@ -1,9 +1,21 @@
+<div class="max-w-6xl mx-auto px-6 py-10">
+
+    <h1 class="text-3xl font-bold mb-6 text-white text-center">
+        about <span class="text-blue-500">cube</span>Ladder
+    </h1>
+
+    <p class="text-sm mb-6 text-center">
+
+    </p>
+
+
+
 
 <div class="text-white">
 
     <div class="bg-zinc-800 rounded-xl shadow-lg p-4 text-white">
         <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
-            ℹ️ Rules & Info
+            Rules & Info
         </h3>
 
         <ul class="space-y-2 text-sm text-zinc-300">
@@ -32,7 +44,7 @@
                 Write us a message if you have <b>
                 <?= $this->Html->link(
                     'questions',
-                    ['controller' => 'Messages', 'action' => 'send', 'ed947213-05f5-4030-a7bc-f1f67e5c5de8']
+                    ['controller' => 'Messages', 'action' => 'sendToAdmin']
                 ) ?></b>?
             </span>
             </li>
@@ -49,7 +61,7 @@
                 <span>
                 Write us a message if you <b><?= $this->Html->link(
                             'do not want to be tracked',
-                            ['controller' => 'Messages', 'action' => 'send', 'ed947213-05f5-4030-a7bc-f1f67e5c5de8']
+                            ['controller' => 'Messages', 'action' => 'sendToAdmin']
                         ) ?></b>.
             </span>
             </li>
@@ -69,7 +81,12 @@
         </ul>
     </div>
 
-    <div class="overflow-x-auto bg-zinc-800 rounded-xl shadow-lg p-4">
+    <div class="overflow-x-auto bg-zinc-800 rounded-xl shadow-lg p-4 mt-2">
+
+        <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+            Points
+        </h3>
+
         <table class="min-w-full text-sm text-white border border-zinc-700 rounded-lg">
             <thead class="bg-zinc-900 text-zinc-300">
             <tr>
@@ -177,9 +194,43 @@
         </table>
     </div>
 
+    <div class="bg-zinc-800 rounded-xl shadow-lg p-4 text-white mt-2">
+        <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+            Credits
+        </h3>
+
+        <ul class="space-y-2 text-sm text-zinc-300">
+            <li class="flex gap-2">
+                <span class="text-green-400">✔</span>
+                <span>
+                pola|ZZ for creating this ladder and hosting it
+            </span>
+            </li>
+            <li class="flex gap-2">
+                <span class="text-green-400">✔</span>
+                <span>
+                ZZ|Perros for adding [aCKa] Servers to ladder
+            </span>
+            </li>
+            <li class="flex gap-2">
+                <span class="text-green-400">✔</span>
+                <span>
+                ZZ|Ketar* for sponsoring .ovh domain
+            </span>
+            </li>
+            <li class="flex gap-2">
+                <span class="text-green-400">✔</span>
+                <span>
+                Chobbz for adding Banana & Potato Servers to ladder
+            </span>
+            </li>
 
 
 
+        </ul>
+    </div>
 
+
+</div>
 </div>
 

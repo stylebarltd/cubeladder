@@ -215,7 +215,7 @@
                 <h3 class="text-xl font-bold mb-2 text-white">Servers</h3>
                 <?php if (!empty($lastLogs)): ?>
                     <?php foreach($lastLogs as $lastLog): ?>
-                        <i class="fa-solid fa-server"></i> <strong> <?= h($lastLog->server_name) ?>, <?= $lastLog->modified->format('Y-m-d H:i:s') ?> (UTC)</strong>
+                        <i class="fa-solid fa-server"></i> <strong> <?= $this->Layout->serverName($lastLog->server_name) ?>, <?= $lastLog->modified->format('Y-m-d H:i:s') ?> (UTC)</strong>
                         <br>
                     <?php endforeach ?>
                 <?php endif; ?>

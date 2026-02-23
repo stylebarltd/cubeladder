@@ -6,6 +6,7 @@
         CubeLadder
     </title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?= $this->Html->meta('csrfToken', $this->request->getAttribute('csrfToken')) ?>
 
     <!-- Tailwind CSS -->
     <?= $this->Html->css('tailwind') ?>
@@ -17,6 +18,7 @@
     <?= $this->fetch('meta') ?>
     <?= $this->fetch('css') ?>
     <?= $this->fetch('script') ?>
+
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -34,7 +36,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
-                    <a href="/" class="text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder<small class="text-xs hidden md:inline">v1.1</small></a>
+                    <a href="/" class="text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder<small class="text-xs hidden md:inline">v1.2</small></a>
                 </div>
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="/players" class="hover:text-zinc-500 transition">Players</a>
@@ -42,28 +44,77 @@
                     <a href="/maps" class="hover:text-zinc-500 transition">Maps</a>
 
                 </div>
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center gap-4">
 
+                    <!-- Search -->
                     <button class="p-2 hover:text-zinc-500 transition hidden md:inline" id="search-btn">
                         <i class="fas fa-search"></i>
                     </button>
-                    <?php if ($authPlayer): ?>
-                        <a class="p-2 hover:text-zinc-500 transition relative" href="/messages/inbox">
-                            <i class="fa fa-inbox"></i>
+
+                    <!-- Inbox only if single authenticated player -->
+                    <?php if (!empty($authPlayer)): ?>
+                        <a class="relative p-2 hover:text-zinc-500 transition"
+                           href="<?= $this->Url->build(['controller' => 'Messages', 'action' => 'inbox']) ?>">
+                            <i class="fa fa-inbox text-lg"></i>
+
                             <?php if ($inboxUnread > 0): ?>
-                                <span class="absolute -top-1 -right-1 bg-blue-400 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" id="cart-count"><?= $inboxUnread ?></span>
+                                <span class="absolute -top-1 -right-1 bg-blue-500 text-white text-xs
+                             rounded-full h-5 w-5 flex items-center justify-center">
+                    <?= $inboxUnread ?>
+                </span>
                             <?php endif; ?>
                         </a>
-                        <div>
+
+                        <div class="font-semibold hover:text-blue-400 transition">
                             <?= $this->Html->link(
                                 h($authPlayer->name),
                                 ['controller' => 'Players', 'action' => 'profile'],
-                                ['escape' => false, 'class' => 'font-semibold hover:text-blue-400']
+                                ['escape' => false]
                             ) ?>
                         </div>
+                    <?php endif; ?>
+
+                    <!-- Multiple Player Dropdown -->
+                    <?php if (!empty($multiplePlayers)): ?>
+
+                        <?= $this->Form->create(null, [
+                            'url' => ['controller' => 'Players', 'action' => 'select'],
+                            'class' => 'inline-block'
+                        ]) ?>
+
+                        <?= $this->Form->control('player_id', [
+                            'type' => 'select',
+                            'options' => collection($multiplePlayers)->combine('id', 'name')->toArray(),
+                            'empty' => 'Who are you?',
+                            'label' => false,
+                            'class' => '
+                                text-sm
+                                bg-black
+                                border border-zinc-300
+                                rounded-md
+                                px-3 py-1.5
+                                focus:outline-none
+                                focus:ring-2
+                                focus:ring-blue-400
+                                focus:border-blue-400
+                                hover:border-zinc-400
+                                transition
+                            ',
+                            'onchange' => 'this.form.submit();'
+                        ]) ?>
+
+                        <?= $this->Form->end() ?>
 
                     <?php endif; ?>
+
+
+
+
+
                 </div>
+
+
+
                 <button class="md:hidden p-2" id="mobile-menu-btn">
                     <i class="fas fa-bars"></i>
                 </button>
@@ -101,11 +152,13 @@
 <?= $this->fetch('content') ?>
     <!-- Footer -->
     <footer class="text-center py-6 text-zinc-600 text-sm">
-        © ZZ|<?= date('Y') ?> . <a href="/about" class="hover:text-zinc-300 transition">about</a>
+        © ZZ|<?= date('Y') ?> . <a href="/about" class="hover:text-zinc-300 transition">about</a> . <a href="/players/map" class="hover:text-zinc-300 transition">map</a>
 
     </footer>
 
 </div>
+
+
 <script>
     const input = document.getElementById('player-search');
     const resultsBox = document.getElementById('search-results');

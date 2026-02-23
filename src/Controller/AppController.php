@@ -20,6 +20,11 @@ use Cake\Controller\Controller;
 use Cake\Core\Configure;
 use Cake\Event\EventInterface;
 use App\Service\LastGamesTrait;
+use App\Model\Entity\Player;
+use Cake\Http\Cookie\Cookie;
+use Cake\Http\Cookie\SameSiteEnum;
+use Cake\Utility\Security;
+
 /**
  * Application Controller
  *
@@ -46,6 +51,8 @@ class AppController extends Controller
     {
         parent::initialize();
 
+
+
         $this->loadComponent('Flash');
 
         /*
@@ -59,32 +66,107 @@ class AppController extends Controller
     {
         parent::beforeFilter($event);
 
-        // Detect IP
-        $ip = $this->request->clientIp();
+        $player = $this->resolvePlayer();
 
-        // TODO: remove after testing
-
-        // Find matching player
-        $player = $this->fetchTable('Players')
-            ->find()
-            ->where(['ip' => $ip])
-            ->first();
-
-        // Attach identity into request (NOT Authentication plugin)
         if ($player) {
             $this->request = $this->request->withAttribute('identity', $player);
         }
 
-        // Make available in ALL templates
         $this->set('authPlayer', $player);
     }
 
-    /**
-     * Helper to get authenticated player object
-     */
-    public function authPlayer()
+
+    protected function resolvePlayer(): ?Player
     {
-        return $this->request->getAttribute('identity');
+        $Players = $this->fetchTable('Players');
+
+        // 1️⃣ Try cookie FIRST
+        $player = $this->playerFromCookie($Players);
+
+        if ($player) {
+            return $player;
+        }
+
+        // 2️⃣ Then try IP detection
+        $player = $this->playerFromIp($Players);
+
+        if ($player) {
+            return $player;
+        }
+
+        return null;
+    }
+
+
+
+
+    protected function playerFromCookie($Players): ?Player
+    {
+        $playerId = $this->request->getCookie('selected_player_id');
+
+        if (!$playerId) {
+            return null;
+        }
+
+        $player = $Players->find()
+            ->where(['id' => $playerId])
+            ->first();
+
+        if (!$player) {
+            return $this->expirePlayerCookie();
+        }
+
+        return $player;
+    }
+
+
+
+    protected function playerFromIp($Players): ?Player
+    {
+        // If already authenticated via cookie, skip IP detection
+        if ($this->request->getCookie('player_id')) {
+            return null;
+        }
+
+        $ip = $this->request->clientIp();
+
+        $players = $Players->find()
+            ->where(['ip' => $ip])
+            ->toArray();
+
+        if (count($players) === 1) {
+            $player = $players[0];
+            $this->writePlayerCookie($player->id);
+            return $player;
+        }
+
+        if (count($players) > 1) {
+            $this->set('multiplePlayers', $players);
+        }
+
+        return null;
+    }
+
+
+    public function writePlayerCookie(string $playerId): void
+    {
+        $cookie = (new Cookie('selected_player_id', $playerId))
+            ->withExpiry(new \DateTime('+30 days'))
+            ->withPath('/')
+            ->withSecure(false) // change to true in production
+            ->withHttpOnly(true)
+            ->withSameSite(SameSiteEnum::LAX);
+
+        $this->response = $this->response->withCookie($cookie);
+    }
+
+    protected function expirePlayerCookie(): ?Player
+    {
+        $this->response = $this->response->withExpiredCookie(
+            new Cookie('selected_player_id')
+        );
+
+        return null;
     }
 
 

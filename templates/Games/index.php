@@ -69,7 +69,7 @@
                 <td class="px-3 py-2">
                     <div class="flex items-center gap-2">
                         <img src="<?= $mapUrl ?>" class="w-10 h-10 rounded border border-zinc-600 hidden md:table-cell">
-                        <span><?= h($game->map->name) ?><br> <?= h($game->server_name) ?></span>
+                        <span><?= h($game->map->name) ?><br> <?= $this->Layout->serverName($game->server_name) ?></span>
                     </div>
                 </td>
 

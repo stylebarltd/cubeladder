@@ -12,10 +12,17 @@ class MapsController extends AppController
 {
     public function index()
     {
+//        $maps = $this->Maps->find()
+//            ->contain(['Games'])
+//            ->orderDesc('Maps.times_played')
+//            ->all();
+
         $maps = $this->Maps->find()
-            ->contain(['Games'])
-            ->orderDesc('Maps.times_played')
+            ->matching('Games.PlayerStatsPerGame')
+            ->distinct(['Maps.id'])
+            ->orderByDesc('Maps.times_played')
             ->all();
+
 
         $PlayerStatsPerGame = $this->fetchTable('PlayerStatsPerGame');
         $achievementTable = $this->fetchTable('Achievements');

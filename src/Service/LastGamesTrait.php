@@ -34,7 +34,7 @@ trait LastGamesTrait
 
         $games = $Games->find()
             ->select(['started_at', 'ended_at'])
-            ->orderDesc('ended_at')
+            ->orderByDesc('ended_at')
             ->limit($maxGamesToRank)
             ->enableHydration(false)
             ->toArray();

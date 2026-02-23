@@ -131,8 +131,8 @@ class PagesController extends AppController
                 'times_played' => 'COUNT(Games.id)',
             ])
             ->where(['Games.id IN' => $lastGameIds])
-            ->group('map_id')
-            ->orderDesc('times_played')
+            ->groupBy('map_id')
+            ->orderByDesc('times_played')
             ->limit(3)
             ->enableHydration(false)
             ->all()
@@ -167,9 +167,9 @@ class PagesController extends AppController
                         'Games.map_id' => $mapId
                     ]);
                 })
-                ->group('Players.id')
+                ->groupBy('Players.id')
                 ->where(['Players.name IS NOT' => "unarmed"])
-                ->orderDesc('total_score')
+                ->orderByDesc('total_score')
                 ->first();
 
 
@@ -203,8 +203,8 @@ class PagesController extends AppController
             ->innerJoinWith('PlayerStatsPerGame', function ($q) use ($lastGameIds) {
                 return $q->where(['PlayerStatsPerGame.game_id IN' => $lastGameIds]);
             })
-            ->group(['Players.id'])
-            ->orderDesc('total_score')
+            ->groupBy(['Players.id'])
+            ->orderByDesc('total_score')
             ->limit(6)
             ->all()
             ->toArray();

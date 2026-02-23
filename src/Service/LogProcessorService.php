@@ -123,7 +123,8 @@ class LogProcessorService
 
         $date = $this->dateFromLogFilename($fileIdentifier);
         $baseYear = (int)$date->format('Y');
-        $this->acLogParser = new AcLogParser($baseYear);
+        $baseMonth = (int)$date->format('n');
+        $this->acLogParser = new AcLogParser($baseYear, $baseMonth);
         $this->acLogParser->setServerName($server);
 
         while (($line = fgets($fp)) !== false) {
@@ -168,15 +169,34 @@ class LogProcessorService
         $row = $this->getOffsetRow($server, $fileIdentifier);
 
         if (!$row) {
+
+            $this->LogOffsets->deleteAll([
+                'server_name' => $server,
+                'log_path !=' => $this->offsetKey($fileIdentifier),
+            ]);
+
+
+            // First time seeing this file
             $row = $this->LogOffsets->newEntity([
                 'server_name' => $server,
                 'log_path'    => $this->offsetKey($fileIdentifier),
                 'last_offset' => $offset,
                 'inode'       => $inode,
             ]);
+
+            echo "# New log file detected. Starting fresh.\n";
+
         } else {
+
+            // 🔥 LOG ROTATION DETECTED
+            if ((int)$row->inode !== $inode) {
+                echo "# Log rotation detected. Resetting offset.\n";
+
+                $row->last_offset = 0;
+                $row->inode       = $inode;
+            }
+
             $row->last_offset = $offset;
-            $row->inode       = $inode;
         }
 
         if (!$this->LogOffsets->save($row)) {
@@ -185,8 +205,33 @@ class LogProcessorService
             );
         }
 
-        echo "# Saved byte_offset={$offset}, inode={$inode}\n";
+        echo "# Saved byte_offset={$row->last_offset}, inode={$inode}\n";
     }
+
+//    private function saveOffset(string $server, string $fileIdentifier, int $offset, int $inode): void
+//    {
+//        $row = $this->getOffsetRow($server, $fileIdentifier);
+//
+//        if (!$row) {
+//            $row = $this->LogOffsets->newEntity([
+//                'server_name' => $server,
+//                'log_path'    => $this->offsetKey($fileIdentifier),
+//                'last_offset' => $offset,
+//                'inode'       => $inode,
+//            ]);
+//        } else {
+//            $row->last_offset = $offset;
+//            $row->inode       = $inode;
+//        }
+//
+//        if (!$this->LogOffsets->save($row)) {
+//            throw new RuntimeException(
+//                "Failed saving log offset: " . json_encode($row->getErrors())
+//            );
+//        }
+//
+//        echo "# Saved byte_offset={$offset}, inode={$inode}\n";
+//    }
 
     private function offsetKey(string $fileIdentifier): string
     {
