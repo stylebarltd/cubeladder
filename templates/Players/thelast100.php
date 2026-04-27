@@ -15,13 +15,13 @@ $stats = [
         'label' => 'KDR',
         'value' => fn($p) => $p->stats['kd_ratio'] ?? 0,
     ],
-    'kills' => [
-        'label' => 'Kills',
-        'value' => fn($p) => $p->stats['kills'] ?? 0,
-    ],
     'headshot' => [
         'label' => 'HS',
         'value' => fn($p) => $p->stats['headshot'] ?? 0,
+    ],
+    'kills' => [
+        'label' => 'Kills',
+        'value' => fn($p) => $p->stats['kills'] ?? 0,
     ],
     'gibbed' => [
         'label' => 'Gib',
@@ -60,9 +60,17 @@ $achievementLabels = [
 
 <div class="max-w-7xl px-6 py-10 mx-auto">
 
-    <h1 class="text-4xl font-bold text-white mb-4 text-center">
-        All Time Ranking
+    <h1 class="text-4xl font-bold text-white mb-4 font-rubik text-center">
+        the last 100 games
     </h1>
+
+    <p class="text-sm mb-6 text-center">
+        <?= $lastGameDateRange['start'] ?> – <?= $lastGameDateRange['end'] ?>
+    </p>
+
+
+
+
 
     <div class="text-center mb-4">
         <form method="get">

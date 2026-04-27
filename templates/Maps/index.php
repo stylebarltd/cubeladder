@@ -1,4 +1,4 @@
-<div class="max-w-6xl mx-auto px-6 py-10">
+<div class="max-w-7xl px-6 py-10 mx-auto">
 
     <h1 class="text-3xl font-bold mb-6 text-white text-center">
         Maps

@@ -8,6 +8,11 @@
         <h1 class="text-4xl md:text-7xl mb-6 font-rubik">the last <?=$maxGamesToRank?></h1>
         <p class="text-xl mb-8 max-w-2xl mx-auto"><?= $lastGameDateRange['start'] ?> until <?= $lastGameDateRange['end'] ?></p>
 <!--        <p class="text-xs md:text-2xl mb-8 max-w-2xl mx-auto">AssaultCube_v1.3.0.2_LockdownEdition_RC1</p>-->
+
+        <a href="/players/thelast100" class="bg-blue-600/70 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
+            View Tournament
+
+        </a>
     </div>
 
 </section>
@@ -93,7 +98,7 @@
             <a href="/players"
                class="block bg-zinc-900 rounded-xl p-8">
                 <div class="text-4xl mb-4"><i class="fa-solid fa-user"></i></div>
-                <h3 class="text-xl font-bold mb-2 text-white">Players</h3>
+                <h3 class="text-xl font-bold mb-2 text-white">All time ranks</h3>
 
                 <div class="space-y-2">
                     <?php foreach ($bestPlayersByScore as $i => $player): ?>
@@ -211,7 +216,7 @@
             <!-- Last updates -->
             <div
                 class="block bg-zinc-900 rounded-xl p-8">
-                <div class="text-4xl mb-4"><i class="fa-solid fa-refresh"></i></div>
+                <div class="text-4xl mb-4"><i class="fa-solid fa-server"></i></div>
                 <h3 class="text-xl font-bold mb-2 text-white">Servers</h3>
                 <?php if (!empty($lastLogs)): ?>
                     <?php foreach($lastLogs as $lastLog): ?>

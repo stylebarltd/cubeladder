@@ -115,3 +115,13 @@ EOF
     done
 
 done
+
+echo "➡ CleanUp"
+if ! "$BASE_DIR/bin/cake" CleanUp >> "$LOGFILE" 2>&1; then
+    echo "CleanUp failed!" >> "$LOGFILE"
+fi
+
+echo "➡ GeoPlayers"
+if ! "$BASE_DIR/bin/cake" GeoPlayers >> "$LOGFILE" 2>&1; then
+    echo "GeoPlayers failed!" >> "$LOGFILE"
+fi

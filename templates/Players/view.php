@@ -3,20 +3,24 @@
 use Cake\Core\Configure;
 
 ?>
-<div class="max-w-6xl mx-auto px-6 py-10">
+<div class="max-w-7xl px-6 py-10 mx-auto">
 
     <!-- Player Header -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-        <a href="/img/players/<?= $player->picture ?>">
-        <img
-            src="<?= $this->Layout->playerPicture($player) ?>"
-            alt="<?= h($player->name) ?>"
-            class="w-32 h-32 rounded-full object-cover"
-        >
-        </a>
+    <div class="grid grid-cols-1 gap-6 mb-10">
+
+            <a href="/img/players/<?= $player->picture ?>">
+                <img
+                    src="<?= $this->Layout->playerPicture($player) ?>"
+                    alt="<?= h($player->name) ?>"
+                    class="w-32 h-32 rounded-full object-cover"
+                >
+            </a>
+
+
 
         <div>
             <h1 class="text-3xl font-bold text-white">
+                <b><?= $player->rankAllTime ?>.</b>
                 <?= h($player->name) ?>
                 <?= $this->Layout->flag($player->country) ?>
             </h1>
@@ -28,7 +32,7 @@ use Cake\Core\Configure;
                 <?= $this->Html->link(
                     'Send Message',
                     ['controller' => 'Messages', 'action' => 'send',  $player->id],
-                    ['class' => 'inline-flex items-center px-3 py-1.5 cursor-pointer m-5
+                    ['class' => 'inline-flex items-center px-3 py-1.5 cursor-pointer mt-5
                      rounded-lg text-sm font-medium
                      text-blue-400 border border-blue-500/40
                      hover:bg-blue-500/10 hover:text-blue-300
@@ -41,22 +45,7 @@ use Cake\Core\Configure;
     </div>
 
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10 text-sm">
-        <div class="bg-zinc-900 border border-zinc-700 rounded-lg p-4 text-center">
-            <div class="text-zinc-400">Total Score</div>
-            <div class="text-2xl font-bold text-white"><?= $totalScore ?></div>
-        </div>
-
-        <div class="bg-zinc-900 border border-zinc-700 rounded-lg p-4 text-center">
-            <div class="text-zinc-400">K/D Ratio</div>
-            <div class="text-2xl font-bold text-white"><?= number_format($kdRatio, 2) ?></div>
-        </div>
-    </div>
-
-
-
-    <!-- Achievements -->
-    <?php
+    <?php if(!empty($player->achievements)):
     $achievementLabels = [
         'total_score' => 'Most Points',
         'kills' => 'Most Kills',
@@ -69,14 +58,13 @@ use Cake\Core\Configure;
         'headshot' => 'Most Headshots',
         'best_on_map' => 'Best on Map',
     ];
-    ?>
-    <?php if(!empty($player->achievements)): ?>
-        <h2 class="text-2xl font-bold text-white mb-4">Achievements</h2>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-12">
+        ?>
+        <h2 class="text-2xl font-bold text-white mb-4">Achievements</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-10">
             <?php foreach ($player->achievements as $achievement): ?>
-            <?php if($achievement->event_type == 'best_on_map') continue; ?>
-                <div class="bg-zinc-900 border border-zinc-700 rounded-lg p-4 text-center hover:bg-zinc-800 transition">
+                <?php if($achievement->event_type == 'best_on_map') continue; ?>
+                <div class="bg-zinc-900 rounded-lg p-4 text-center hover:bg-zinc-800 transition">
                     <div class="text-xl mb-1 text-zinc-300">
                         <img
                             src="/img/achievements/<?= $achievement->event_type ?>.svg"
@@ -89,60 +77,205 @@ use Cake\Core\Configure;
                         <?= h($achievementLabels[$achievement->event_type]) ?><br>
                         <?= date("D, dS M Y",strtotime($achievement->week_end)); ?><br>
 
-                        <?php if(!empty($achievement->map->name)): ?>
-
-                            <?= h($achievement->map->name) ?><br>
-                        <?php endif ?>
-
                     </div>
                     <div class="text-2xl font-bold text-white">
                         <?php if($achievement->event_type == 'kd_ratio'): ?>
                             <?= h($achievement->count) ?>
-                        <?php elseif($achievement->event_type == 'best_on_map'): ?>
-                            <?= h(round($achievement->count)) ?> pts
                         <?php else: ?>
                             <?= h(round($achievement->count)) ?>
                         <?php endif ?>
                     </div>
                 </div>
             <?php endforeach; ?>
+
+            <div class="bg-zinc-900 rounded-lg p-4 text-center hover:bg-zinc-800 transition">
+                <div class="text-xl mb-1 text-zinc-300">
+                    <img
+                        src="/img/achievements/best_on_map.svg"
+                        alt="<?= h($achievementLabels['best_on_map']) ?>"
+                        title="<?= h($achievementLabels['best_on_map']) ?>"
+                        class="w-6 h-6 block mx-auto"
+                    >
+                </div>
+                <div class="text-xs uppercase tracking-wide text-zinc-400">
+                    Best on Map
+                </div>
+                <div class="text-2xl font-bold text-white">
+                    <?php
+                    $mapCount = 0;
+                    foreach ($player->achievements as $achievement): ?>
+                        <?php $mapCount++; ?>
+                    <?php endforeach; ?>
+                    <?= $mapCount; ?> times
+                </div>
+
+<!--                --><?php //foreach ($player->achievements as $achievement): ?>
+<!--                    --><?php //if($achievement->event_type != 'best_on_map') continue; ?>
+<!---->
+<!--                    <div class="text-xs uppercase tracking-wide text-zinc-400">-->
+<!--                        --><?php //= date("dS M Y",strtotime($achievement->week_end)); ?>
+<!---->
+<!--                        --><?php //if(!empty($achievement->map->name)): ?>
+<!---->
+<!--                            --><?php //= h($achievement->map->name) ?>
+<!--                        --><?php //endif ?>
+<!--                        --><?php //= h(round($achievement->count)) ?><!-- pts <br>-->
+<!---->
+<!--                    </div>-->
+<!---->
+<!--                --><?php //endforeach; ?>
+            </div>
         </div>
     <?php endif ?>
 
 
-    <?php
-    $statIcons = [
-        'kills' => 'fa-skull',
-        'headshot' => 'fa-crosshairs',
-        'slashed' => 'fa-knife',
-        'gibbed' => 'fa-bomb',
-        'teamkills' => 'fa-skull-crossbones',
-        'stole_the_flag' => 'fa-flag',
-        'returned_the_flag' => 'fa-rotate-left',
-        'scored_with_the_flag' => 'fa-trophy',
-        'suicided' => 'fa-face-dizzy',
-    ];
-    ?>
-    <h2 class="text-2xl font-bold text-white mb-4">Scores in the last <?=Configure::read('Ladder.maxGamesToRank') ?> games</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-12">
-        <?php foreach ($statSums as $field => $value): ?>
-            <?php if ($value === 0) continue; ?>
-            <div class="bg-zinc-900 border border-zinc-700 rounded-lg p-4 text-center hover:bg-zinc-800 transition">
-                <div class="text-xl mb-1 text-zinc-300">
-                    <i class="fa-solid <?= $statIcons[$field] ?? 'fa-circle-dot' ?>"></i>
+    <!--the last 100-->
+    <?php if($player->rankTheLast100 > 0): ?>
+    <div class="relative bg-[url('/img/bullet.jpg')] bg-cover bg-center bg-no-repeat rounded-xl p-8">
+
+        <div class="absolute inset-0 bg-black/60 rounded-xl"></div>
+
+        <div class="relative z-10">
+
+            <h2 class="text-4xl font-bold text-white mb-4 font-rubik">
+                the last 100
+            </h2>
+
+            <p class="text-sm mb-8 max-w-2xl text-zinc-300">
+                <?= $lastGameDateRange['start'] ?> until <?= $lastGameDateRange['end'] ?>
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 text-sm">
+
+                <div class="bg-zinc-900/40 hover:bg-zinc-800/20 backdrop-blur rounded-lg p-4 text-center">
+                    <div class="text-zinc-400">Rank</div>
+                    <div class="text-4xl font-extrabold text-white"><?= $player->rankTheLast100 ?>.</div>
                 </div>
-                <div class="text-xs uppercase tracking-wide text-zinc-400">
-                    <?= h(str_replace('_', ' ', $field)) ?>
+
+                <div class="bg-zinc-900/40 hover:bg-zinc-800/20 backdrop-blur rounded-lg p-4 text-center">
+                    <div class="text-zinc-400">Total Score</div>
+                    <div class="text-2xl font-bold text-white"><?= $totalScore ?></div>
                 </div>
-                <div class="text-2xl font-bold text-white">
-                    <?= $value ?>
+
+                <div class="bg-zinc-900/40 hover:bg-zinc-800/20 backdrop-blur rounded-lg p-4 text-center">
+                    <div class="text-zinc-400">K/D Ratio</div>
+                    <div class="text-2xl font-bold text-white"><?= number_format($kdRatio, 2) ?></div>
                 </div>
+
             </div>
-        <?php endforeach; ?>
+
+            <?php
+            $statIcons = [
+                'kills' => 'fa-skull',
+                'headshot' => 'fa-crosshairs',
+                'slashed' => 'fa-knife',
+                'gibbed' => 'fa-bomb',
+                'teamkills' => 'fa-skull-crossbones',
+                'stole_the_flag' => 'fa-flag',
+                'returned_the_flag' => 'fa-rotate-left',
+                'scored_with_the_flag' => 'fa-trophy',
+                'suicided' => 'fa-face-dizzy',
+            ];
+            ?>
+
+            <?php if(!empty($statSums)): ?>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+                    <div class="bg-zinc-900/40 backdrop-blur rounded-lg p-4 text-center hover:bg-zinc-800/20 transition">
+
+                        <?php
+                        $kills = ['headshot','busted','shredded','sprayed','punctured','splattered','slashed','gibbed','teamkills','picked_off',];
+                        $killCount=0;
+                        foreach ($kills as $value): ?>
+                            <?php $killCount+=$statSums[$value]; ?>
+                        <?php endforeach; ?>
+                        <div class="text-xl mb-1 text-zinc-300">
+                            <i class="fa-solid <?= $statIcons['kills'] ?? 'fa-circle-dot' ?>"></i>
+                        </div>
+                        <div class="text-xs uppercase tracking-wide text-zinc-400">
+                            Kills
+                        </div>
+                        <div class="text-2xl font-bold text-white">
+                            <?= $killCount ?>
+                        </div>
+                        <div class="text-xs uppercase tracking-wide text-zinc-400">
+                            <?php
+                            foreach ($statSums as $field => $value): ?>
+                                <?php if (!in_array($field, $kills) || $value === 0) continue; ?>
+                                <?= h(str_replace('_', ' ', $field)) ?>
+                                <?= $value ?><br>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-900/40 backdrop-blur rounded-lg p-4 text-center hover:bg-zinc-800/20 transition">
+                        <?php
+                        $flags = ['stole_the_flag','lost_the_flag','returned_the_flag','scored_with_the_flag',];
+                        $flagCount=0;
+                        foreach ($flags as $value): ?>
+                            <?php $flagCount+=$statSums[$value]; ?>
+                        <?php endforeach; ?>
+
+                        <div class="text-xl mb-1 text-zinc-300">
+                            <i class="fa-solid <?= $statIcons['scored_with_the_flag'] ?? 'fa-circle-dot' ?>"></i>
+                        </div>
+                        <div class="text-xs uppercase tracking-wide text-zinc-400">
+                            Flags / Objectives
+                        </div>
+                        <div class="text-2xl font-bold text-white">
+                            <?= $flagCount ?>
+                        </div>
+                        <div class="text-xs uppercase tracking-wide text-zinc-400">
+                            <?php
+                            $flags = ['stole_the_flag','lost_the_flag','returned_the_flag','scored_with_the_flag',];
+                            foreach ($statSums as $field => $value): ?>
+                                <?php if (!in_array($field, $flags) || $value === 0) continue; ?>
+                                <?= h(str_replace('_', ' ', $field)) ?>
+                                <?= $value ?><br>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div class="bg-zinc-900/40 backdrop-blur rounded-lg p-4 text-center hover:bg-zinc-800/20 transition">
+                        <div class="text-xl mb-1 text-zinc-300">
+                            <i class="fa-solid <?= $statIcons['deaths'] ?? 'fa-circle-dot' ?>"></i>
+                        </div>
+                        <div class="text-xs uppercase tracking-wide text-zinc-400">
+                            <?= h(str_replace('_', ' ', 'deaths')) ?>
+                        </div>
+                        <div class="text-2xl font-bold text-white">
+                            <?= $statSums['deaths'] ?>
+                        </div>
+                        <div class="text-xs uppercase tracking-wide text-zinc-400">
+                            <?php
+                            $kills = ['suicided',];
+                            foreach ($statSums as $field => $value): ?>
+                                <?php if (!in_array($field, $kills) || $value === 0) continue; ?>
+                                <?= h(str_replace('_', ' ', $field)) ?>
+                                <?= $value ?><br>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                </div>
+            <?php endif; ?>
+
+        </div>
     </div>
+    <?php endif; ?>
+
+
+
+
+
+
+
+
+
+
+
+
 
     <!-- Recent Games Table -->
-    <h2 class="text-2xl font-bold text-white mb-4"><?= h($player->name) ?> last 100 Games</h2>
+    <h2 class="text-2xl font-bold text-white mb-4 mt-6"><?= h($player->name) ?> recent games</h2>
 
     <div class="overflow-x-auto">
         <table class="min-w-full border border-zinc-700 rounded-xl overflow-hidden">
@@ -150,12 +283,15 @@ use Cake\Core\Configure;
             <thead class="bg-zinc-900 text-zinc-300 text-sm">
             <tr>
                 <th class="px-3 py-2 text-left hidden md:table-cell">Date</th>
+                <th class="px-3 py-2"></th>
                 <th class="px-3 py-2 text-left">Map</th>
                 <th class="px-3 py-2 text-right">PTS</th>
                 <th title="Kills" class="hover:underline cursor-help hidden md:table-cell">K</th>
                 <th title="Death" class="hover:underline cursor-help hidden md:table-cell">D</th>
                 <th title="Kill / Death Ratio" class="hover:underline cursor-help hidden md:table-cell">K/D</th>
                 <th title="Headshots" class="hover:underline cursor-help hidden md:table-cell">HS</th>
+                <th title="Slashes" class="hover:underline cursor-help hidden md:table-cell">SL</th>
+                <th title="Gibbs" class="hover:underline cursor-help hidden md:table-cell">GB</th>
                 <th title="Flags scored / stolen / returned" class="hover:underline cursor-help hidden md:table-cell">OBJ</th>
                 <th title="Teamkills & suicides" class="hover:underline cursor-help hidden md:table-cell">⚠</th>
                 <th class="px-3 py-2 text-left">Result</th>
@@ -174,18 +310,31 @@ use Cake\Core\Configure;
                 $badge = $kd >= 2 ? '🔥 Carry'
                     : ($kd >= 1.2 ? '👍 Solid'
                         : ($kd >= 0.8 ? '😐 Avg' : '💀 Rough'));
+                $isPartOfTheLast100 = '<td></td>';
+                if(isset($gamesDataGlobal[$stat->game_id])){
+                    //$isPartOfTheLast100 = 'bg-blue-900 text-white';
+                    $isPartOfTheLast100 = '<td class="px-3 py-2 md:table-cell text-center">
+                        <p class="text-xs font-rubik">the last<br> '.Configure::read('Ladder.maxGamesToRank').'</p>
+                    </td>';
+                }
+
                 ?>
+
                 <tr class="hover:bg-zinc-700 transition">
 
                     <td class="px-3 py-2 hidden md:table-cell">
 
                         <?= $this->Html->link(
-                            $stat->game->started_at->format('Y-m-d H:i'),
+                            $stat->game->started_at->format('Y-m-d'),
                             ['controller' => 'games', 'action' => 'view', $stat->game->id],
                             ['class' => 'font-semibold hover:text-blue-400']
                         ) ?>
 
                     </td>
+
+                    <?=$isPartOfTheLast100?>
+
+
 
                     <td class="px-3 py-2 flex items-center gap-2">
                         <img
@@ -206,6 +355,8 @@ use Cake\Core\Configure;
                     </td>
 
                     <td class="px-3 py-2 text-right hidden md:table-cell"><?= $stat->headshot ?></td>
+                    <td class="px-3 py-2 text-right hidden md:table-cell"><?= $stat->slashed ?></td>
+                    <td class="px-3 py-2 text-right hidden md:table-cell"><?= $stat->gibbed ?></td>
                     <td class="px-3 py-2 text-right hidden md:table-cell"><?= $objectives ?: '–' ?></td>
                     <td class="px-3 py-2 text-right hidden md:table-cell"><?= $penalties ?: '–' ?></td>
                     <td class="px-3 py-2 font-semibold"><?= $badge ?></td>
@@ -232,6 +383,7 @@ use Cake\Core\Configure;
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+
     const gamesData = <?= json_encode($gamesData) ?>;
 
     // K/D chart

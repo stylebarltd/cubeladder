@@ -7,6 +7,83 @@ use Cake\View\Helper;
 
 class LayoutHelper extends Helper
 {
+    public function cleanMapName(string $mapName): string
+    {
+        $name = strtolower($mapName);
+
+        // Remove common prefixes
+        $name = preg_replace('/^ac[_-]/', '', $name);
+
+        // Remove version numbers (3.0, 5.1 etc)
+        $name = preg_replace('/[_-]\d+(\.\d+)?/', '', $name);
+
+        // Remove standalone numbers at beginning or end
+        $name = preg_replace('/^\d+[_-]?/', '', $name);
+        $name = preg_replace('/[_-]?\d+$/', '', $name);
+
+        // Remove gamemode words
+        $name = preg_replace('/\b(ctf|tdm|dm)\b/', '', $name);
+
+        // Replace separators with space
+        $name = str_replace(['-', '_'], ' ', $name);
+
+        // Remove extra spaces
+        $name = preg_replace('/\s+/', ' ', $name);
+
+        return ucwords(trim($name));
+    }
+    public function gameModeIcon(string|null $modeName, array $options = []): string
+    {
+        if($modeName == null) return '';
+
+        $mode = strtolower(trim($modeName));
+
+        $map = [
+            'deathmatch' => 'dm',
+            'team deathmatch' => 'tdm',
+            'capture the flag' => 'ctf',
+            'team capture the flag' => 'ctf',
+            'hunt the flag' => 'htf',
+            'keep the flag' => 'ktf',
+            'team keep the flag' => 'tktf',
+            'last swiss standing' => 'lss',
+            'team last swiss standing' => 'tlss',
+            'one shot, one kill' => 'osok',
+            'team one shot one kill' => 'tosok',
+            'pistol frenzy' => 'pf',
+            'team pistol frenzy' => 'tpf',
+            'survivor' => 'surv',
+            'team survivor' => 'tsurv',
+        ];
+
+        $code = $map[$mode] ?? $mode;
+
+        $icon = $this->iconFor($code);
+        $label = strtoupper($code);
+
+
+        return '<i class="' . $icon . ' mr-1"></i>
+' . h($label);
+    }
+
+    protected function iconFor(string $code): string
+    {
+        $base = str_starts_with($code, 't') ? substr($code, 1) : $code;
+
+        return match ($base) {
+            'dm'   => 'fa-solid fa-skull-crossbones',
+            'ctf'  => 'fa-solid fa-flag',
+            'htf'  => 'fa-solid fa-flag-checkered',
+            'ktf'  => 'fa-solid fa-shield-halved',
+            'surv' => 'fa-solid fa-heart-pulse',
+            'osok' => 'fa-solid fa-crosshairs',
+            'pf'   => 'fa-solid fa-burst',
+            'lss'  => 'fa-solid fa-trophy',
+            default => 'fa-solid fa-circle-question',
+        };
+    }
+
+
 
     public function serverName($type): string
     {
@@ -20,7 +97,7 @@ class LayoutHelper extends Helper
             'acka-nostalgic'    => '[aCKa] Nostalgic',
             'acka-assault'   => '[aCKa] Assault',
             'chobbz-banana'    => 'Banana',
-            'chobbz-potato'   => 'Potato',
+            'chobbz-potato'   => 'POTATO',
         ];
 
         $label = $serverName[$type];

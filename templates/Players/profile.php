@@ -1,4 +1,4 @@
-<div class="max-w-6xl mx-auto px-6 py-10">
+<div class="max-w-7xl px-6 py-10 mx-auto">
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
         <img
             src="<?= $this->Layout->playerPicture($player) ?>"
@@ -8,7 +8,10 @@
 
         <div>
             <h1 class="text-3xl font-bold text-white">
-                <?= h($player->name) ?>
+                <?= $this->Html->link(h($player->name),
+                    ['controller' => 'Players', 'action' => 'view', $player->id]
+                ) ?>
+
                 <?= $this->Layout->flag($player->country) ?>
             </h1>
             <p class="text-sm text-zinc-400">

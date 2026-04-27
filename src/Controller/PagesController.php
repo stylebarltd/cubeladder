@@ -115,10 +115,10 @@ class PagesController extends AppController
     public function bestPlayersByMap()
     {
 
-        $lastGameIds = $this->getLastGameIds();
+        $theLast100GameIds = $this->getLastGameIds();
 
         // SAFETY: if no games, prevent empty IN()
-        if (empty($lastGameIds)) {
+        if (empty($theLast100GameIds)) {
             $this->set('topMaps', []);
             return parent::display(...$path);
         }
@@ -130,7 +130,7 @@ class PagesController extends AppController
                 'map_id',
                 'times_played' => 'COUNT(Games.id)',
             ])
-            ->where(['Games.id IN' => $lastGameIds])
+            ->where(['Games.id IN' => $theLast100GameIds])
             ->groupBy('map_id')
             ->orderByDesc('times_played')
             ->limit(3)
@@ -157,9 +157,9 @@ class PagesController extends AppController
                     'Players.picture',
                     'total_score' => 'MAX(PlayerStatsPerGame.total_score)'
                 ])
-                ->innerJoinWith('PlayerStatsPerGame', function ($q) use ($lastGameIds) {
+                ->innerJoinWith('PlayerStatsPerGame', function ($q) use ($theLast100GameIds) {
                     return $q->where([
-                        'PlayerStatsPerGame.game_id IN' => $lastGameIds
+                        'PlayerStatsPerGame.game_id IN' => $theLast100GameIds
                     ]);
                 })
                 ->innerJoinWith('PlayerStatsPerGame.Games', function ($q) use ($mapId) {
@@ -188,7 +188,9 @@ class PagesController extends AppController
     public function bestPlayersByScore()
     {
         // Last 100 games
-        $lastGameIds = $this->getLastGameIds();
+        //$theLast100GameIds = $this->getLastGameIds();
+
+        $gameIds = $this->getThisYearGameIds();
 
         // Best 3 players from the last 100 games
         $topPlayers = $this->fetchTable('Players')
@@ -200,8 +202,8 @@ class PagesController extends AppController
                 'Players.picture',
                 'total_score' => 'SUM(PlayerStatsPerGame.total_score)'
             ])
-            ->innerJoinWith('PlayerStatsPerGame', function ($q) use ($lastGameIds) {
-                return $q->where(['PlayerStatsPerGame.game_id IN' => $lastGameIds]);
+            ->innerJoinWith('PlayerStatsPerGame', function ($q) use ($gameIds) {
+                return $q->where(['PlayerStatsPerGame.game_id IN' => $gameIds]);
             })
             ->groupBy(['Players.id'])
             ->orderByDesc('total_score')

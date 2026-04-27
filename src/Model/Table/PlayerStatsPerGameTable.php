@@ -168,6 +168,4 @@ class PlayerStatsPerGameTable extends Table
 
         return $rules;
     }
-
-
 }

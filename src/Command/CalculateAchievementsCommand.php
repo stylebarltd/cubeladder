@@ -38,9 +38,9 @@ class CalculateAchievementsCommand extends Command
          * Last 100 games
          */
 
-        $lastGameIds = $this->getLastGameIds();
+        $theLast100GameIds = $this->getLastGameIds();
 
-        if (!$lastGameIds) {
+        if (!$theLast100GameIds) {
             $io->err('No games found.');
             return Command::SUCCESS;
         }
@@ -76,7 +76,7 @@ class CalculateAchievementsCommand extends Command
                     'Players.name'
                 ])
                 ->where([
-                    'game_id IN' => $lastGameIds,
+                    'game_id IN' => $theLast100GameIds,
                     'Players.name IS NOT' => "unarmed"
                 ])
                 ->group('player_id')
@@ -143,9 +143,9 @@ class CalculateAchievementsCommand extends Command
          * Best player per map (last 100 games)
          */
         $maps = $Maps->find()
-            ->matching('Games', function ($q) use ($lastGameIds) {
+            ->matching('Games', function ($q) use ($theLast100GameIds) {
                 return $q->where([
-                    'Games.id IN' => $lastGameIds
+                    'Games.id IN' => $theLast100GameIds
                 ]);
             })
             ->distinct(['Maps.id'])
@@ -164,9 +164,9 @@ class CalculateAchievementsCommand extends Command
                     'value' => $PlayerStats->find()->func()->max('total_score'),
                     'Players.name'
                 ])
-                ->matching('Games', function ($q) use ($lastGameIds, $map) {
+                ->matching('Games', function ($q) use ($theLast100GameIds, $map) {
                     return $q->where([
-                        'Games.id IN' => $lastGameIds,
+                        'Games.id IN' => $theLast100GameIds,
                         'Games.map_id' => $map['id']
                     ]);
                 })

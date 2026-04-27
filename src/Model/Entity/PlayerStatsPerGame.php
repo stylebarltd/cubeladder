@@ -17,6 +17,7 @@ use Cake\ORM\Entity;
  * @property int|null $headshot
  * @property int|null $busted
  * @property int|null $shredded
+ * @property int|null $peppered
  * @property int|null $sprayed
  * @property int|null $punctured
  * @property int|null $splattered
@@ -54,6 +55,7 @@ class PlayerStatsPerGame extends Entity
         'headshot' => true,
         'busted' => true,
         'shredded' => true,
+        'peppered' => true,
         'sprayed' => true,
         'punctured' => true,
         'splattered' => true,

@@ -9,33 +9,71 @@ trait LastGamesTrait
 {
     protected function getLastGameIds(int $limit = 100): array
     {
-
         $Games = TableRegistry::getTableLocator()->get('Games');
 
-        $maxGamesToRank = Configure::read('Ladder.maxGamesToRank');
+        //$maxGamesToRank = Configure::read('Ladder.maxGamesToRank');
 
-        $lastGameIds = $Games
+        $gameIds = $Games
             ->find()
             ->select(['id'])
             ->orderByDesc('ended_at')
-            ->limit($maxGamesToRank)
+            ->limit($limit)
             ->enableHydration(false)
             ->all()
             ->extract('id')
             ->toList();
 
-        return $lastGameIds;
+        return $gameIds;
     }
-    protected function getGameDateRange(): array
+    protected function getHallOfFameGameIds(): array
     {
         $Games = TableRegistry::getTableLocator()->get('Games');
 
-        $maxGamesToRank = Configure::read('Ladder.maxGamesToRank');
+        //$maxGamesToRank = Configure::read('Ladder.maxGamesToRank');
+
+        $gameIds = $Games
+            ->find()
+            ->select(['id'])
+            ->orderByDesc('ended_at')
+            ->where(['started_at >=' => '2026-03-01'])
+            //->limit($limit)
+            ->enableHydration(false)
+            ->all()
+            ->extract('id')
+            ->toList();
+
+        return $gameIds;
+    }
+    protected function getThisYearGameIds(): array
+    {
+        $Games = TableRegistry::getTableLocator()->get('Games');
+
+        //$maxGamesToRank = Configure::read('Ladder.maxGamesToRank');
+
+        $gameIds = $Games
+            ->find()
+            ->select(['id'])
+            ->orderByDesc('ended_at')
+            ->where(['started_at >' => date('Y')])
+            //->limit($limit)
+            ->enableHydration(false)
+            ->all()
+            ->extract('id')
+            ->toList();
+
+        return $gameIds;
+    }
+
+    protected function getGameDateRange(int $limit = 100): array
+    {
+        $Games = TableRegistry::getTableLocator()->get('Games');
+
+        //$maxGamesToRank = Configure::read('Ladder.maxGamesToRank');
 
         $games = $Games->find()
             ->select(['started_at', 'ended_at'])
             ->orderByDesc('ended_at')
-            ->limit($maxGamesToRank)
+            ->limit($limit)
             ->enableHydration(false)
             ->toArray();
 

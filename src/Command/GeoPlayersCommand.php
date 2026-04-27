@@ -85,7 +85,7 @@ class GeoPlayersCommand extends Command
             }
         }
 
-        $io->success('Geo-location finished.');
+        $io->success('# Geo-location finished.');
         return true;
     }
 

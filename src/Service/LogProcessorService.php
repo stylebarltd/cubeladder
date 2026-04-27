@@ -64,7 +64,6 @@ class LogProcessorService
             }
         }
 
-
         // Cleanup only if games were parsed
         if (($result['gamesParsed'] ?? 0) > 0) {
             $gamesTable = $this->fetchTable('Games');
@@ -72,7 +71,7 @@ class LogProcessorService
             $games = $gamesTable->find()
                 ->where([
                     'ended_at IS NULL',
-                    'started_at <' => new \DateTime('-2 hours'),
+                    //'started_at <' => new \DateTime('-40 minutes'),
                 ]);
 
             foreach ($games as $game) {
@@ -138,6 +137,8 @@ class LogProcessorService
         }
 
         fclose($fp);
+
+        $this->acLogParser->flush(); // only flushStats()
 
         $result = $this->acLogParser->getResult();
 
@@ -207,31 +208,6 @@ class LogProcessorService
 
         echo "# Saved byte_offset={$row->last_offset}, inode={$inode}\n";
     }
-
-//    private function saveOffset(string $server, string $fileIdentifier, int $offset, int $inode): void
-//    {
-//        $row = $this->getOffsetRow($server, $fileIdentifier);
-//
-//        if (!$row) {
-//            $row = $this->LogOffsets->newEntity([
-//                'server_name' => $server,
-//                'log_path'    => $this->offsetKey($fileIdentifier),
-//                'last_offset' => $offset,
-//                'inode'       => $inode,
-//            ]);
-//        } else {
-//            $row->last_offset = $offset;
-//            $row->inode       = $inode;
-//        }
-//
-//        if (!$this->LogOffsets->save($row)) {
-//            throw new RuntimeException(
-//                "Failed saving log offset: " . json_encode($row->getErrors())
-//            );
-//        }
-//
-//        echo "# Saved byte_offset={$offset}, inode={$inode}\n";
-//    }
 
     private function offsetKey(string $fileIdentifier): string
     {

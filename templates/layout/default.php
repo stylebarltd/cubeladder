@@ -20,7 +20,9 @@
     <?= $this->fetch('script') ?>
 
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 
 </head>
 <body class="bg-zinc-900 text-white font-mono">
@@ -36,12 +38,16 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
-                    <a href="/" class="text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder<small class="text-xs hidden md:inline">v1.2</small></a>
+                    <a href="/" class="text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder<small class="text-xs hidden md:inline">v1.6</small></a>
                 </div>
                 <div class="hidden md:flex items-center space-x-8">
-                    <a href="/players" class="hover:text-zinc-500 transition">Players</a>
+
+                    <a href="/players" class="hover:text-zinc-500 transition">All Time Ranking</a>
+                    <a href="/players/hall_of_fame" class="hover:text-zinc-500 transition">Hall of Fame</a>
                     <a href="/games" class="hover:text-zinc-500 transition">Games</a>
                     <a href="/maps" class="hover:text-zinc-500 transition">Maps</a>
+                    <a href="/players/thelast100" class="hover:text-zinc-500 transition">The last 100</a>
+
 
                 </div>
                 <div class="flex items-center gap-4">
@@ -107,13 +113,7 @@
 
                     <?php endif; ?>
 
-
-
-
-
                 </div>
-
-
 
                 <button class="md:hidden p-2" id="mobile-menu-btn">
                     <i class="fas fa-bars"></i>
@@ -123,9 +123,13 @@
         <!-- Mobile menu -->
         <div class="md:hidden hidden bg-zinc-900" id="mobile-menu">
             <div class="px-2 pt-2 pb-3 space-y-1">
-                <a href="/players" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Players</a>
+
+                <a href="/players" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">All Time Ranking</a>
+                <a href="/players/hall_of_fame" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Hall of Fame</a>
                 <a href="/games" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Games</a>
                 <a href="/maps" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Maps</a>
+                <a href="/players/thelast100" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">The last 100</a>
+
 
             </div>
         </div>
@@ -152,7 +156,8 @@
 <?= $this->fetch('content') ?>
     <!-- Footer -->
     <footer class="text-center py-6 text-zinc-600 text-sm">
-        © ZZ|<?= date('Y') ?> . <a href="/about" class="hover:text-zinc-300 transition">about</a> . <a href="/players/map" class="hover:text-zinc-300 transition">map</a>
+       <a href="/about" class="hover:text-zinc-300 transition">about</a> . <a href="/players/map" class="hover:text-zinc-300 transition">map</a> <br>
+        ©<?= date('Y') ?> by |ZZ
 
     </footer>
 
@@ -234,11 +239,6 @@
     // Initialize the page
    // displayMenuItems();
 </script>
-
-
-
-
-
 
 
 <!-- Optional scripts -->

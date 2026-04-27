@@ -26,8 +26,8 @@ class PlayerStatsPerGameFixture extends TestFixture
         $this->records = [
             [
                 'id' => 1,
-                'game_id' => 'a2d95cb1-b1a2-4fff-9116-9489e87a027b',
-                'player_id' => '3bc3d1eb-abcb-4088-bcfd-93cda0934487',
+                'game_id' => 'f6def7db-8bb5-4b85-bcc1-93d775ed8e25',
+                'player_id' => '6350d46e-92a7-415e-a41f-e741391c873f',
                 'kills' => 1,
                 'teamkills' => 1,
                 'deaths' => 1,

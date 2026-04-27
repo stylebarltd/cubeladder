@@ -5,6 +5,7 @@ namespace App\Service;
 use Cake\Chronos\Chronos;
 use Cake\Core\Configure;
 use Cake\Datasource\ConnectionManager;
+use Cake\Log\Log;
 use Cake\ORM\Locator\LocatorAwareTrait;
 use GeoIp2\Database\Reader;
 use MaxMind\Db\Reader\InvalidDatabaseException;
@@ -244,43 +245,80 @@ class AcLogParser
         }
 
         // kill events
+// kill events
         if (preg_match($this->killRegex, $rest, $m)) {
-            if($this->skipCurrentGame){
+
+            if ($this->skipCurrentGame) {
                 return;
             }
-            $ip = $m[1];
-            $killerName = trim($m[2]);
-            $verb = strtolower($m[3]);
-            $victimRaw = trim($m[4]);
 
-            // teamkill detection
+            $ip         = $m[1];
+            $killerName = trim($m[2]);
+            $verb       = strtolower($m[3]);
+            $victimRaw  = trim($m[4]);
+
+            $killerIsUnarmed = strtolower($killerName) === 'unarmed';
+
+            // world/unarmed cannot be killer
+            if ($killerIsUnarmed) {
+                return;
+            }
+
+            // detect teamkill
             $isTeamKill = false;
             $victimName = $victimRaw;
+
             if (preg_match('/^their teammate (\S+)/i', $victimRaw, $tm)) {
                 $isTeamKill = true;
                 $victimName = $tm[1];
             }
 
-            $killerId = $this->getPlayerIdByNameCached($killerName);
-            $victimId = $this->getPlayerIdByNameCached($victimName);
-            if (!$killerId || !$victimId) return;
+            $victimIsUnarmed = strtolower($victimName) === 'unarmed';
 
+            $killerId = $this->getPlayerIdByNameCached($killerName);
+            if (!$killerId) {
+                return;
+            }
+
+            $victimId = null;
+            if (!$victimIsUnarmed) {
+                $victimId = $this->getPlayerIdByNameCached($victimName);
+                if (!$victimId) {
+                    return;
+                }
+            }
+
+            // TEAMKILL
             if ($isTeamKill) {
+
                 $this->incrementStatBuffered($killerId, 'teamkills', 1);
+                $this->incrementStatBuffered($killerId, 'kills', -1);
+
+                if ($victimId) {
+                    $this->incrementStatBuffered($victimId, 'deaths', 1);
+                }
+
                 $this->eventsParsed++;
                 return;
             }
 
-            // normal kill
-            $this->incrementStatBuffered($killerId, 'kills', 1);
-            $this->incrementStatBuffered($victimId, 'deaths', 1);
-
-            // verb mapping (e.g., picked off => picked_off)
+            // normalize verb column
             $verbCol = str_replace(' ', '_', $verb);
-            if ($verbCol === 'picked_off') $verbCol = 'picked_off';
 
-            // increment specific verb stat if column exists in pointsMap
-            if (array_key_exists($verbCol, $this->pointsMap) || in_array($verbCol, ['headshot','picked_off','busted','shredded','peppered','sprayed','punctured','splattered','slashed','gibbed'])) {
+            if (in_array($verbCol, ['headshot','slashed'])) {
+                $this->incrementStatBuffered($killerId, 'kills', 1);
+            }
+
+            // killer stats
+            $this->incrementStatBuffered($killerId, 'kills', 1);
+
+            // victim stats (only if real player)
+            if ($victimId) {
+                $this->incrementStatBuffered($victimId, 'deaths', 1);
+            }
+
+            // weapon / special stat
+            if (isset($this->pointsMap[$verbCol])) {
                 $this->incrementStatBuffered($killerId, $verbCol, 1);
                 $this->statsParsed++;
             }
@@ -289,6 +327,60 @@ class AcLogParser
 
             return;
         }
+//        if (preg_match($this->killRegex, $rest, $m)) {
+//            if($this->skipCurrentGame){
+//                return;
+//            }
+//            $ip = $m[1];
+//            $killerName = trim($m[2]);
+//            $verb = strtolower($m[3]);
+//            $victimRaw = trim($m[4]);
+//
+//
+//            // teamkill detection
+//            $isTeamKill = false;
+//            $victimName = $victimRaw;
+//
+//            if (preg_match('/^their teammate (\S+)/i', $victimRaw, $tm)) {
+//                $isTeamKill = true;
+//                $victimName = $tm[1];
+//            }
+//
+//            $killerId = $this->getPlayerIdByNameCached($killerName);
+//            $victimId = $this->getPlayerIdByNameCached($victimName);
+//            if (!$killerId || !$victimId) return;
+//
+//            if ($isTeamKill) {
+//                $this->incrementStatBuffered($killerId, 'teamkills', 1);
+//                $this->incrementStatBuffered($killerId, 'kills', -1);
+//                $this->incrementStatBuffered($victimId, 'deaths', 1);
+//                $this->eventsParsed++;
+//                return;
+//            }
+//
+//            // verb mapping (e.g., picked off => picked_off)
+//            $verbCol = str_replace(' ', '_', $verb);
+//
+//            if (in_array($verbCol, ['headshot','slashed'])) {
+//                $this->incrementStatBuffered($killerId, 'kills', 1);
+//            }
+//
+//            // normal kill
+//            $this->incrementStatBuffered($killerId, 'kills', 1);
+//            $this->incrementStatBuffered($victimId, 'deaths', 1);
+//
+//
+//
+//            // increment specific verb stat if column exists in pointsMap
+//            if (array_key_exists($verbCol, $this->pointsMap) || in_array($verbCol, ['headshot','picked_off','busted','shredded','peppered','sprayed','punctured','splattered','slashed','gibbed'])) {
+//                $this->incrementStatBuffered($killerId, $verbCol, 1);
+//                $this->statsParsed++;
+//            }
+//
+//            $this->eventsParsed++;
+//
+//            return;
+//        }
 
         // special events: suicide / flag
         if (preg_match($this->specialRegex, $rest, $m)) {
@@ -301,6 +393,10 @@ class AcLogParser
             $playerId = $this->getPlayerIdByNameCached($playerName);
             if (!$playerId) return;
 
+            if (strtolower($playerName) === 'unarmed') {
+                return;
+            }
+
             $map = [
                 'suicided' => 'suicided',
                 'stole the flag' => 'stole_the_flag',
@@ -311,6 +407,10 @@ class AcLogParser
 
             if (!isset($map[$verb])) return;
             $statCol = $map[$verb];
+            if($statCol=='suicided'){
+                $this->incrementStatBuffered($playerId, 'deaths', 1);
+                $this->incrementStatBuffered($playerId, 'kills', -1);
+            }
 
             $this->incrementStatBuffered($playerId, $statCol, 1);
             $this->statsParsed++;
@@ -408,13 +508,14 @@ class AcLogParser
         ];
     }
 
-
     // -------------------------------
     // Stats buffering
     // -------------------------------
     protected function ensurePlayerStatsBuffered(string $playerId): void
     {
-        if (!$this->currentGame) return;
+        if (!$this->currentGame || $this->currentGame->id === null) {
+            return;
+        }
         $key = $this->currentGame->id . ':' . $playerId;
         if (!isset($this->statsBuffer[$key])) {
             // try to load existing DB row first (so we preserve previous values if parser runs multiple times)
@@ -624,61 +725,6 @@ class AcLogParser
     }
 
 
-    /**
-     * Find or create a player using caches. Will save via ORM (rare operations).
-     * @throws InvalidDatabaseException
-     */
-//    protected function findOrCreatePlayerCached(string $name, ?string $pubkey = null, ?string $ip = null, ?Chronos $ts = null)
-//    {
-//        // try by pubkey
-//        if ($pubkey && isset($this->pubkeyCache[$pubkey])) {
-//            $id = $this->pubkeyCache[$pubkey];
-//            // refresh name/ip via ORM
-//            $player = $this->Players->get($id);
-//            $player->name = $name;
-//            $player->ip = $ip;
-//            //$this->Players->GeoIp->geoLocate($player);
-//            $player->last_seen = $ts ?? Chronos::now();
-//            $this->Players->save($player);
-//            $this->playersCache[$name] = $id;
-//            return $player;
-//        }
-//
-//        // try by name cache
-//        if (isset($this->playersCache[$name]) && $name != "unarmed") {
-//            $player = $this->Players->get($this->playersCache[$name]);
-//            if ($pubkey && !$player->pubkey) {
-//                $player->pubkey = $pubkey;
-//                $this->Players->save($player);
-//                $this->pubkeyCache[$pubkey] = $player->id;
-//            }
-//            $player->ip = $ip;
-//            //$this->Players->GeoIp->geoLocate($player);
-//            $player->last_seen = $ts ?? Chronos::now();
-//            $this->Players->save($player);
-//            return $player;
-//        }
-//
-//        // create new player via ORM
-//        $p = $this->Players->newEmptyEntity();
-//        $p->name = $name;
-//        //$p->picture = rand(1, 185).".jpg";
-//        $p->pubkey = $pubkey;
-//        $p->ip = $ip;
-//       // $this->Players->GeoIp->geoLocate($player);
-//        $p->country = $this->ipToCountryCached($ip);
-//        $p->first_seen = $ts ?? Chronos::now();
-//        $p->last_seen = $ts ?? Chronos::now();
-//        $this->Players->save($p);
-//
-//        // cache
-//        $this->playersCache[$name] = $p->id;
-//        if ($pubkey) $this->pubkeyCache[$pubkey] = $p->id;
-//
-//
-//        return $p;
-//    }
-
     // -------------------------------
     // GeoIP (cached)
     // -------------------------------
@@ -765,7 +811,6 @@ class AcLogParser
         $this->disconnectRegex = '~^disconnected client ([^\s]+) cn \d+,\s*(\d+) seconds played, score saved~i';
         $this->chatRegex = '~^\[([0-9a-f:\.]+)\]\s+(.+?)\s+says:\s+\'(.+)\'$~i';
 
-        //$this->killRegex = '/^\[([0-9a-f\:\.]+)\]\s+(.+?)\s+(sprayed|headshot|punctured|busted|shredded|peppered|gibbed|splattered|slashed|picked off)\s+(.+)$/';
         $this->killRegex = '~^\[([0-9a-f:\.]+)\]\s+(.+?)\s+'
             . '(sprayed|headshot|punctured|busted|shredded|peppered|gibbed|splattered|slashed|picked off)'
             . '\s+(.+)$~i';
@@ -812,5 +857,13 @@ class AcLogParser
             'players'      => array_keys($this->players),
         ];
     }
-
+    /**
+     * Flush parser state at end-of-file.
+     * Does NOT close unfinished games.
+     */
+    public function flush(): void
+    {
+        // Only flush stats buffer
+        $this->flushStats();
+    }
 }

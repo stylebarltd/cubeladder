@@ -1,4 +1,4 @@
-<div class="max-w-6xl mx-auto px-6 py-10">
+<div class="max-w-7xl px-6 py-10 mx-auto">
 
     <h1 class="text-3xl font-bold mb-6 text-white text-center">
         about <span class="text-blue-500">cube</span>Ladder
@@ -19,16 +19,22 @@
         </h3>
 
         <ul class="space-y-2 text-sm text-zinc-300">
+<!--            <li class="flex gap-2">-->
+<!--                <span class="text-green-400">✔</span>-->
+<!--                <span>-->
+<!--                Only the <b>last 100 games</b> are counted.-->
+<!--            </span>-->
+<!--            </li>-->
             <li class="flex gap-2">
                 <span class="text-green-400">✔</span>
                 <span>
-                Only the <b>last 100 games</b> are counted.
+                Games must start with a minimum of <b>4 players</b>.
             </span>
             </li>
             <li class="flex gap-2">
                 <span class="text-green-400">✔</span>
                 <span>
-                Games must start with a minimum of <b>4 players</b>.
+                Player <b>unarmed</b> is not being tracked.
             </span>
             </li>
             <li class="flex gap-2">
@@ -203,12 +209,6 @@
             <li class="flex gap-2">
                 <span class="text-green-400">✔</span>
                 <span>
-                pola|ZZ for creating this ladder and hosting it
-            </span>
-            </li>
-            <li class="flex gap-2">
-                <span class="text-green-400">✔</span>
-                <span>
                 ZZ|Perros for adding [aCKa] Servers to ladder
             </span>
             </li>
@@ -221,15 +221,17 @@
             <li class="flex gap-2">
                 <span class="text-green-400">✔</span>
                 <span>
-                Chobbz for adding Banana & Potato Servers to ladder
+                Chobbz for adding Banana & POTATO Servers to ladder
             </span>
             </li>
-
-
-
+            <li class="flex gap-2 border-t-2 border-zinc-400 pt-2">
+                <span class="text-green-400">✔</span>
+                <span>
+                cubeLadder by pola|ZZ
+            </span>
+            </li>
         </ul>
     </div>
-
 
 </div>
 </div>

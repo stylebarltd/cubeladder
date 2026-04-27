@@ -11,7 +11,7 @@ class GamesController extends AppController
     public function index()
     {
         // Fetch last 100 games with players
-                $games = $this->Games->find('all')
+        $games = $this->Games->find('all')
             ->contain([
                 'Maps',
                 'Players' => function ($q) {
@@ -90,14 +90,9 @@ class GamesController extends AppController
 
         $rankedStats = [];
         $rank = 1;
-
-
-
         $sorted = collection($game->player_stats_per_game)
             ->sortBy('total_score', SORT_DESC)
             ->toList();
-
-
 
         foreach ($sorted as $stat) {
             if($stat->player->track!=1) continue;
@@ -110,6 +105,8 @@ class GamesController extends AppController
                 'kd_ratio'    => $stat->kd_ratio,
                 'score'       => $stat->total_score,
                 'headshots'   => $stat->headshot,
+                'gibbed'   => $stat->gibbed,
+                'slashed'   => $stat->slashed,
                 'suicides'    => $stat->suicided+$stat->teamkills,
                 'objectives'  =>
                     $stat->stole_the_flag +

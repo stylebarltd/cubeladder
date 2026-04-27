@@ -1,9 +1,13 @@
-<div class="max-w-6xl mx-auto px-6 py-10">
-    <h1 class="text-3xl font-bold mb-8 text-white text-center">
-        Games
-        <small class="text-xs text-blue-500">by last played</small>
-    </h1>
+<?php
 
+use Cake\Core\Configure;
+
+?>
+<div class="max-w-7xl px-6 py-10 mx-auto">
+
+    <h1 class="text-4xl font-bold text-white mb-4 text-center">
+        Recent games
+    </h1>
     <p class="text-sm mb-8 max-w-2xl mx-auto text-center">
         <?= $lastGameDateRange['start'] ?> until <?= $lastGameDateRange['end'] ?>
     </p>
@@ -16,10 +20,10 @@
                 <th class="px-3 py-2 text-left hidden md:table-cell">#</th>
                 <th class="px-3 py-2 text-left">Date</th>
                 <th class="px-3 py-2 text-left">Map</th>
-                <th class="px-3 py-2 text-center hidden md:table-cell">Mode</th>
-                <th class="px-3 py-2 text-center hidden md:table-cell">Players</th>
+<!--                <th class="px-3 py-2 text-center hidden md:table-cell">Mode</th>-->
+<!--                <th class="px-3 py-2 text-center hidden md:table-cell">Players</th>-->
                 <th class="px-3 py-2 text-left">Top Players</th>
-                <th class="px-3 py-2 text-right hidden md:table-cell">Duration</th>
+<!--                <th class="px-3 py-2 text-right hidden md:table-cell">Duration</th>-->
                 <th class="px-3 py-2"></th>
             </tr>
             </thead>
@@ -68,20 +72,31 @@
                 <!-- Map -->
                 <td class="px-3 py-2">
                     <div class="flex items-center gap-2">
-                        <img src="<?= $mapUrl ?>" class="w-10 h-10 rounded border border-zinc-600 hidden md:table-cell">
-                        <span><?= h($game->map->name) ?><br> <?= $this->Layout->serverName($game->server_name) ?></span>
+                        <img src="<?= $mapUrl ?>" class="w-14 h-14 rounded hidden md:table-cell">
+
+                        <span class="text-xs">
+                            <i class="fa-solid fa-map-location-dot"></i> <?= $this->Layout->cleanMapName($game->map->name) ?><br>
+                            <i class="fa-solid fa-server"></i>
+                            <?= $this->Layout->serverName($game->server_name) ?>
+    <div> <?= $this->Layout->gameModeIcon($game->mode) ?></div>
+
+
+                        </span>
+
+
+
                     </div>
                 </td>
 
                 <!-- Mode -->
-                <td class="px-3 py-2 text-center hidden md:table-cell">
-                    <?= $this->Layout->gameMode($game->mode) ?>
-                </td>
+<!--                <td class="px-3 py-2 text-center hidden md:table-cell">-->
+<!--                    --><?php //= $this->Layout->gameModeIcon($game->mode) ?>
+<!--                </td>-->
 
                 <!-- Player count -->
-                <td class="px-3 py-2 text-center font-bold hidden md:table-cell">
-                    <?= count($game->players) ?>
-                </td>
+<!--                <td class="px-3 py-2 text-center font-bold hidden md:table-cell">-->
+<!--                    --><?php //= count($game->players) ?>
+<!--                </td>-->
 
                 <!-- Top 3 -->
                 <td class="px-3 py-2">
@@ -103,9 +118,9 @@
                 </td>
 
                 <!-- Duration -->
-                <td class="px-3 py-2 text-right hidden md:table-cell">
-                    <?= h($game->duration_minutes) ?> min
-                </td>
+<!--                <td class="px-3 py-2 text-right hidden md:table-cell">-->
+<!--                    --><?php //= h($game->duration_minutes) ?><!-- min-->
+<!--                </td>-->
 
                 <!-- Expand -->
                 <td class="px-3 py-2 text-right">
@@ -121,7 +136,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
 
                             <?php foreach ($game->players as $player): ?>
-                                <div class="flex border border-zinc-700 rounded px-2 py-1 gap-2">
+                                <div class="flex border-b border-zinc-700 rounded px-2 py-1 gap-2">
 
                                     <?= $this->Html->link(
                                         h($player->name),

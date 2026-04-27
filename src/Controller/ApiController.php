@@ -12,7 +12,7 @@ class ApiController extends AppController
         $this->Players = $this->fetchTable('Players');
 
 
-        $lastGameIds = $this->getLastGameIds();
+        $theLast100GameIds = $this->getLastGameIds();
 
         // players who participated in those games + stats from those games
         $players = $this->Players->find()
@@ -22,18 +22,18 @@ class ApiController extends AppController
                 'Players.country',
                 'total_score' => 'SUM(PlayerStatsPerGame.total_score)',
             ])
-            ->innerJoinWith('PlayerStatsPerGame', function ($q) use ($lastGameIds) {
+            ->innerJoinWith('PlayerStatsPerGame', function ($q) use ($theLast100GameIds) {
                 return $q->where([
-                    'PlayerStatsPerGame.game_id IN' => $lastGameIds
+                    'PlayerStatsPerGame.game_id IN' => $theLast100GameIds
                 ]);
             })
             ->where(['track'=>1])
             ->group(['Players.id'])
             ->orderByDesc('total_score')
             ->contain([
-                'PlayerStatsPerGame' => function ($q) use ($lastGameIds) {
+                'PlayerStatsPerGame' => function ($q) use ($theLast100GameIds) {
                     return $q->where([
-                        'PlayerStatsPerGame.game_id IN' => $lastGameIds
+                        'PlayerStatsPerGame.game_id IN' => $theLast100GameIds
                     ]);
                 }
             ])

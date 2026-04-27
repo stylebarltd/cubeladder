@@ -74,7 +74,7 @@ class MapsController extends AppController
 //    public function index()
 //    {
 //
-//        $lastGameIds = $this->getLastGameIds();
+//        $theLast100GameIds = $this->getLastGameIds();
 //
 //// Step 2: Get maps with last 100 games only
 //        $maps = $this->Maps->find()
@@ -86,12 +86,12 @@ class MapsController extends AppController
 //                    ->select(['count' => 'COUNT(Games.id)'])
 //                    ->where([
 //                        'Games.map_id = Maps.id',
-//                        'Games.id IN' => $lastGameIds
+//                        'Games.id IN' => $theLast100GameIds
 //                    ])
 //            ])
-//            ->contain(['Games' => function ($q) use ($lastGameIds) {
+//            ->contain(['Games' => function ($q) use ($theLast100GameIds) {
 //                return $q
-//                    ->where(['Games.id IN' => $lastGameIds])
+//                    ->where(['Games.id IN' => $theLast100GameIds])
 //                    ->contain(['Players' => function ($q2) {
 //                        return $q2
 //                            ->select(['Players.id', 'Players.name', 'Players.country'])

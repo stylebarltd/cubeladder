@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use Cake\Http\Exception\ForbiddenException;
+use Cake\I18n\DateTime;
 
 /**
  * WebVisits Controller
@@ -30,9 +31,106 @@ class WebVisitsController extends AppController
     }
 
     /**
+     * Stats / dashboard action
+     */
+    public function stats()
+    {
+        $db = $this->WebVisits->getConnection();
+
+        // --- Summary cards ---
+        $total      = $this->WebVisits->find()->count();
+        $bots       = $this->WebVisits->find()->where(['is_bot' => true])->count();
+        $humans     = $total - $bots;
+        $uniqueIPs  = $this->WebVisits->find()
+            ->select(['cnt' => 'COUNT(DISTINCT ip_address)'])
+            ->first()->cnt ?? 0;
+
+        // --- Visits per day (last 30 days) ---
+        $visitsPerDay = $db->execute(
+            "SELECT DATE(created) AS day,
+                    COUNT(*) AS total,
+                    SUM(is_bot) AS bots
+             FROM web_visits
+             WHERE created >= NOW() - INTERVAL 30 DAY
+             GROUP BY day
+             ORDER BY day ASC"
+        )->fetchAll('assoc');
+
+        // --- Top paths ---
+        $topPaths = $this->WebVisits->find()
+            ->select([
+                'path',
+                'total'   => 'COUNT(*)',
+                'bot_hits' => 'SUM(is_bot)',
+            ])
+            ->groupBy('path')
+            ->orderByDesc('total')
+            ->limit(10)
+            ->disableHydration()
+            ->all()
+            ->toList();
+
+        // --- HTTP methods breakdown ---
+        $methods = $this->WebVisits->find()
+            ->select(['method', 'cnt' => 'COUNT(*)'])
+            ->groupBy('method')
+            ->orderByDesc('cnt')
+            ->disableHydration()
+            ->all()
+            ->toList();
+
+        // --- Top IPs (with player name + country from players table) ---
+        $topIPs = $db->execute(
+            "SELECT
+                wv.ip_address,
+                COUNT(*)                                    AS cnt,
+                MAX(wv.is_bot)                              AS is_bot,
+                MAX(wv.country_iso)                         AS country_iso,
+                p.name                                      AS player_name,
+                p.country                               AS player_country
+             FROM web_visits wv
+             LEFT JOIN players p ON p.id = (
+                 SELECT player_id FROM web_visits
+                 WHERE ip_address = wv.ip_address
+                   AND player_id IS NOT NULL
+                 LIMIT 1
+             )
+             GROUP BY wv.ip_address, p.name, p.country
+             ORDER BY cnt DESC
+             LIMIT 15"
+        )->fetchAll('assoc');
+
+        // --- Visits by country (top 15, human only) ---
+        $byCountry = $db->execute(
+            "SELECT
+                COALESCE(country_iso, '??') AS country_iso,
+                COUNT(*)                    AS cnt
+             FROM web_visits
+             WHERE is_bot = 0
+               AND country_iso IS NOT NULL
+               AND country_iso != ''
+             GROUP BY country_iso
+             ORDER BY cnt DESC
+             LIMIT 15"
+        )->fetchAll('assoc');
+
+        // --- Hourly heatmap (hour of day × day of week) ---
+        $heatmap = $db->execute(
+            "SELECT HOUR(created) AS hour,
+                    DAYOFWEEK(created) AS dow,
+                    COUNT(*) AS cnt
+             FROM web_visits
+             GROUP BY hour, dow"
+        )->fetchAll('assoc');
+
+        $this->set(compact(
+            'total', 'bots', 'humans', 'uniqueIPs',
+            'visitsPerDay', 'topPaths', 'methods', 'topIPs', 'byCountry', 'heatmap'
+        ));
+    }
+
+    /**
      * Index method
-     *
-     * @return \Cake\Http\Response|null|void Renders view
      */
     public function index()
     {
@@ -45,10 +143,6 @@ class WebVisitsController extends AppController
 
     /**
      * View method
-     *
-     * @param string|null $id Web Visit id.
-     * @return \Cake\Http\Response|null|void Renders view
-     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
     public function view($id = null)
     {
@@ -58,8 +152,6 @@ class WebVisitsController extends AppController
 
     /**
      * Add method
-     *
-     * @return \Cake\Http\Response|null|void Redirects on successful add, renders view otherwise.
      */
     public function add()
     {
@@ -68,7 +160,6 @@ class WebVisitsController extends AppController
             $webVisit = $this->WebVisits->patchEntity($webVisit, $this->request->getData());
             if ($this->WebVisits->save($webVisit)) {
                 $this->Flash->success(__('The web visit has been saved.'));
-
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The web visit could not be saved. Please, try again.'));
@@ -79,10 +170,6 @@ class WebVisitsController extends AppController
 
     /**
      * Edit method
-     *
-     * @param string|null $id Web Visit id.
-     * @return \Cake\Http\Response|null|void Redirects on successful edit, renders view otherwise.
-     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
     public function edit($id = null)
     {
@@ -91,7 +178,6 @@ class WebVisitsController extends AppController
             $webVisit = $this->WebVisits->patchEntity($webVisit, $this->request->getData());
             if ($this->WebVisits->save($webVisit)) {
                 $this->Flash->success(__('The web visit has been saved.'));
-
                 return $this->redirect(['action' => 'index']);
             }
             $this->Flash->error(__('The web visit could not be saved. Please, try again.'));
@@ -102,10 +188,6 @@ class WebVisitsController extends AppController
 
     /**
      * Delete method
-     *
-     * @param string|null $id Web Visit id.
-     * @return \Cake\Http\Response|null Redirects to index.
-     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
     public function delete($id = null)
     {
@@ -116,7 +198,6 @@ class WebVisitsController extends AppController
         } else {
             $this->Flash->error(__('The web visit could not be deleted. Please, try again.'));
         }
-
         return $this->redirect(['action' => 'index']);
     }
 }

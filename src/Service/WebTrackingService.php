@@ -78,6 +78,7 @@ class WebTrackingService
         //Log::debug('Country: ' . $countryIso);
 //debug($ip);
         $visit = $this->WebVisits->newEntity([
+            'id'          => \Cake\Utility\Text::uuid(),   // ← add this
             'ip_address' => $ip,
             'user_agent' => $ua,
             'is_bot' => $isBot,
@@ -89,56 +90,11 @@ class WebTrackingService
         ]);
        // debug($visit);
 
-        $this->WebVisits->save($visit);
+        $saved = $this->WebVisits->save($visit);
+        Log::debug('Save result: ' . var_export($saved, true));
+        Log::debug('Errors: ' . json_encode($visit->getErrors()));
+        Log::debug('country_iso on entity: ' . var_export($visit->country_iso, true));
     }
-
-
-//    public function track(ServerRequestInterface $request): void
-//    {
-//        $server = $request->getServerParams();
-//        $ip = $server['HTTP_X_FORWARDED_FOR'] ?? $server['REMOTE_ADDR'] ?? null;
-//        $recent = $this->WebVisits->find()
-//            ->where([
-//                'ip_address' => $ip,
-//                'created >=' => new \DateTimeImmutable('-10 seconds')
-//            ])
-//            ->count();
-//
-//        if ($recent > 10) {
-//            return;
-//        }
-//
-//
-//        $ua = $request->getHeaderLine('User-Agent');
-//        $path = $request->getUri()->getPath();
-//
-//        if (!$this->shouldTrack($path, $ua)) {
-//            return;
-//        }
-//
-//        $isBot = $this->isBot($ua);
-//        $playerId = $this->matchPlayerByIp($ip);
-//
-//        $blockedPlayerIds = [
-//            'ed947213-05f5-4030-a7bc-f1f67e5c5de8'
-//        ];
-//
-//        if ($playerId && in_array($playerId, $blockedPlayerIds)) {
-//            return;
-//        }
-//
-//        $visit = $this->WebVisits->newEntity([
-//            'ip_address' => $ip,
-//            'user_agent' => $ua,
-//            'is_bot' => $isBot,
-//            'path' => $path,
-//            'method' => $request->getMethod(),
-//            'referer' => $request->getHeaderLine('Referer'),
-//            'player_id' => $playerId,
-//        ]);
-//
-//        $this->WebVisits->save($visit);
-//    }
 
     private function shouldTrack(string $path, ?string $ua): bool
     {
