@@ -10,18 +10,17 @@ LOGFILE="$PROCESSOR_LOG_DIR/logfile_server_processor.log"
 mkdir -p "$TMP_DIR"
 
 declare -A SERVERS
-SERVERS["chobbz"]="${CHOBBZ_SSH}|${CHOBBZ_SSH_KEY}|/serverlogs"
 SERVERS["acka"]="${ACKA_SSH}|${ACKA_SSH_KEY}|/home/AssaultCube_v1.3/logs"
-
+#SERVERS["chobbz"]="${CHOBBZ_SSH}|${CHOBBZ_SSH_KEY}|/serverlogs"
 
 declare -A LOG_PATTERNS=(
-    ["acka-europa"]="Europa"
-    ["acka-custom"]="Custom"
+#    ["acka-europa"]="Europa"
+#    ["acka-custom"]="Custom"
     ["acka-nostalgic"]="Nostalgic"
-    ["acka-assault"]="Assault"
-# Chobbz instances
-    ["chobbz-banana"]="local#1111"
-    ["chobbz-potato"]="local#2222"
+#    ["acka-assault"]="Assault"
+## Chobbz instances
+#    ["chobbz-banana"]="local#1111"
+#    ["chobbz-potato"]="local#2222"
 )
 
 for server_key in "${!SERVERS[@]}"; do
@@ -34,6 +33,7 @@ for server_key in "${!SERVERS[@]}"; do
     echo "==============================="
     echo "Processing server: $server_key"
     echo "==============================="
+
 
 SFTP_LIST=$(
 sftp -i "$SSH_KEY" \
@@ -76,9 +76,7 @@ EOF
 
         for key in "${!NEWEST_FILES[@]}"; do
             #echo "get ${NEWEST_FILES[$key]}"
-            #echo "get \"${NEWEST_FILES[$key]}\""
-            escaped_file="${NEWEST_FILES[$key]//#/\\#}"
-            echo "get $escaped_file"
+            echo "get \"${NEWEST_FILES[$key]}\""
         done
 
         echo "bye"
@@ -90,6 +88,7 @@ EOF
         -oStrictHostKeyChecking=no \
         -b "$DOWNLOAD_BATCH" \
         "$SSH_TARGET"
+
     rm -f "$DOWNLOAD_BATCH"
 
     for key in "${!NEWEST_FILES[@]}"; do
@@ -105,17 +104,12 @@ EOF
             "$local_file" \
             >> "$LOGFILE" 2>&1
 
-        echo "ProcessLogs exit code: $?"
     done
 
+    echo "➡ CleanUp"
+    "$BASE_DIR/bin/cake" CleanUp >> "$LOGFILE" 2>&1
+
+    echo "➡ GeoPlayers"
+    "$BASE_DIR/bin/cake" GeoPlayers >> "$LOGFILE" 2>&1
+
 done
-
-echo "➡ CleanUp"
-if ! "$BASE_DIR/bin/cake" CleanUp >> "$LOGFILE" 2>&1; then
-    echo "CleanUp failed!" >> "$LOGFILE"
-fi
-
-echo "➡ GeoPlayers"
-if ! "$BASE_DIR/bin/cake" GeoPlayers >> "$LOGFILE" 2>&1; then
-    echo "GeoPlayers failed!" >> "$LOGFILE"
-fi

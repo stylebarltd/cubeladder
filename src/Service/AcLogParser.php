@@ -259,11 +259,6 @@ class AcLogParser
 
             $killerIsUnarmed = strtolower($killerName) === 'unarmed';
 
-            // world/unarmed cannot be killer
-            if ($killerIsUnarmed) {
-                return;
-            }
-
             // detect teamkill
             $isTeamKill = false;
             $victimName = $victimRaw;
@@ -275,24 +270,24 @@ class AcLogParser
 
             $victimIsUnarmed = strtolower($victimName) === 'unarmed';
 
-            $killerId = $this->getPlayerIdByNameCached($killerName);
-            if (!$killerId) {
-                return;
+            // resolve IDs
+            $killerId = null;
+            if (!$killerIsUnarmed) {
+                $killerId = $this->getPlayerIdByNameCached($killerName);
             }
 
             $victimId = null;
             if (!$victimIsUnarmed) {
                 $victimId = $this->getPlayerIdByNameCached($victimName);
-                if (!$victimId) {
-                    return;
-                }
             }
 
             // TEAMKILL
             if ($isTeamKill) {
 
-                $this->incrementStatBuffered($killerId, 'teamkills', 1);
-                $this->incrementStatBuffered($killerId, 'kills', -1);
+                if ($killerId) {
+                    $this->incrementStatBuffered($killerId, 'teamkills', 1);
+                    $this->incrementStatBuffered($killerId, 'kills', -1);
+                }
 
                 if ($victimId) {
                     $this->incrementStatBuffered($victimId, 'deaths', 1);
@@ -302,25 +297,28 @@ class AcLogParser
                 return;
             }
 
-            // normalize verb column
+            // normalize verb
             $verbCol = str_replace(' ', '_', $verb);
 
-            if (in_array($verbCol, ['headshot','slashed'])) {
+            // ✅ killer stats ONLY if real player
+            if ($killerId) {
+
+                // AssaultCube double kill rule
+                if (in_array($verbCol, ['headshot','slashed'])) {
+                    $this->incrementStatBuffered($killerId, 'kills', 1);
+                }
+
                 $this->incrementStatBuffered($killerId, 'kills', 1);
+
+                if (isset($this->pointsMap[$verbCol])) {
+                    $this->incrementStatBuffered($killerId, $verbCol, 1);
+                    $this->statsParsed++;
+                }
             }
 
-            // killer stats
-            $this->incrementStatBuffered($killerId, 'kills', 1);
-
-            // victim stats (only if real player)
+            // ✅ victim death ALWAYS if real player
             if ($victimId) {
                 $this->incrementStatBuffered($victimId, 'deaths', 1);
-            }
-
-            // weapon / special stat
-            if (isset($this->pointsMap[$verbCol])) {
-                $this->incrementStatBuffered($killerId, $verbCol, 1);
-                $this->statsParsed++;
             }
 
             $this->eventsParsed++;

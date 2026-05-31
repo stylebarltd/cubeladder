@@ -185,7 +185,7 @@ class PlayersController extends AppController
             ->where(['track'=>1])
             ->group(['Players.id'])
             ->having([
-                'SUM(PlayerStatsPerGame.total_score) >=' => 1000
+                'SUM(PlayerStatsPerGame.total_score) >=' => 1500
             ])
             ->order($order)
             ->contain([

@@ -151,8 +151,9 @@ if(!$type){
      * @param string $iso2 ISO2 country code
      * @return string HTML for the flag
      */
-    public function flag(string $iso2): string
+    public function flag($iso2): string
     {
+        if(empty($iso2))return '';
         $iso2 = strtoupper($iso2);
         $offset = 0x1F1E6 - ord('A');
 
