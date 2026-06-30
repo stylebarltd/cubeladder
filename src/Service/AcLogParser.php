@@ -702,6 +702,45 @@ class AcLogParser
             return $player;
         }
 
+        // 1b) Identity by name for a not-yet-claimed (pubkey-less) profile.
+        //
+        // A real player can already exist as a name-only row (e.g. imported or
+        // created before pubkeys were tracked). Without this step the parser
+        // would mint a *second* row the first time that player logs in with a
+        // pubkey, which is exactly how the duplicate accounts were created.
+        //
+        // We intentionally only claim rows that have NO pubkey yet. We never
+        // attach this pubkey to a row that already owns a different pubkey, so
+        // distinct players that happen to share a name stay separate.
+        if ($pubkey) {
+            $existing = $this->Players->find()
+                ->where([
+                    'name' => $name,
+                    'OR' => [['pubkey IS' => null], ['pubkey' => '']],
+                ])
+                ->first();
+
+            if ($existing) {
+                $existing->pubkey = $pubkey;
+                $existing->ip = $ip;
+                if ($existing->country === null) {
+                    $existing->country = $this->ipToCountryCached($ip);
+                }
+                if (
+                    !$existing->last_seen ||
+                    $now->getTimestamp() >= $existing->last_seen->getTimestamp()
+                ) {
+                    $existing->last_seen = $now;
+                }
+                $this->Players->save($existing);
+
+                $this->playersCache[$name] = $existing->id;
+                $this->pubkeyCache[$pubkey] = $existing->id;
+
+                return $existing;
+            }
+        }
+
         // 2) Create new player
         $player = $this->Players->newEmptyEntity();
         $player->name = $name;
@@ -711,7 +750,23 @@ class AcLogParser
         $player->first_seen = $now;
         $player->last_seen = $now;
 
-        $this->Players->save($player);
+        try {
+            $this->Players->save($player);
+        } catch (\PDOException $e) {
+            // Defensive: the unique index on pubkey blocks a duplicate that a
+            // stale cache might otherwise create. Recover by reusing the row
+            // that already owns this pubkey instead of failing the parse.
+            if ($pubkey) {
+                $existing = $this->Players->find()->where(['pubkey' => $pubkey])->first();
+                if ($existing) {
+                    $this->playersCache[$name] = $existing->id;
+                    $this->pubkeyCache[$pubkey] = $existing->id;
+
+                    return $existing;
+                }
+            }
+            throw $e;
+        }
 
         // cache
         $this->playersCache[$name] = $player->id;
