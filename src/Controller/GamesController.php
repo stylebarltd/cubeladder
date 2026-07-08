@@ -31,7 +31,7 @@ class GamesController extends AppController
                 }
             ])
             ->orderByDesc('ended_at')
-            ->limit(Configure::read('Ladder.maxGamesToRank'))
+            ->limit(50)
             ->toArray();
 
         foreach ($games as $game) {
@@ -119,5 +119,27 @@ class GamesController extends AppController
         $this->set(compact('game', 'rankedStats'));
     }
 
+    public function bomberman(?string $id = null)
+    {
+        // templates/Games/bomberman.php is a complete standalone HTML document
+        // (its own <head>, meta, etc.), so render only it — no default layout.
+        $this->viewBuilder()->disableAutoLayout();
+    }
+
+    public function snake(?string $id = null)
+    {
+        // templates/Games/snake.php is a complete standalone HTML document,
+        // so render only it — no default layout.
+        $this->viewBuilder()->disableAutoLayout();
+    }
+
+    public function backAttacker()
+    {
+        // Self-hosted single-file js13k game (its own <head>/<style>/<script>),
+        // so render only the template with no default layout.
+        $this->viewBuilder()
+            ->disableAutoLayout()
+            ->setTemplate('back_attacker');
+    }
 
 }

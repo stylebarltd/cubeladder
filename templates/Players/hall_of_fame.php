@@ -83,7 +83,7 @@ shuffle($playerImages);
                 <div class="flex flex-col lg:flex-row w-full">
 
                     <!-- Left: random player photo + category title -->
-                    <div class="relative w-full lg:w-1/2 aspect-video lg:aspect-auto"
+                    <div class="relative w-full lg:w-[65%] aspect-video lg:aspect-auto"
                          style="background-image:
                              linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.4), rgba(0,0,0,0.15)),
                              url('<?= h($bgImg) ?>');
@@ -98,7 +98,7 @@ shuffle($playerImages);
                     </div>
 
                     <!-- Right: players -->
-                    <div class="w-full lg:w-1/2 p-4 md:p-6">
+                    <div class="w-full lg:w-[35%] p-4 md:p-6">
                         <div class="divide-y divide-zinc-700/60">
                             <?php $rank = 1; foreach ($genre['data'] as $player): ?>
                                 <?php
@@ -133,9 +133,20 @@ shuffle($playerImages);
                                     >
 
                                     <div class="flex-1 min-w-0">
-                                        <div class="font-semibold truncate">
-                                            <?= $this->Html->link($player->name, ['controller' => 'Players', 'action' => 'view', $player->player_id], ['class' => 'hover:text-blue-400']) ?>
-                                            <?= $this->Layout->flag($player->country) ?>
+                                        <!-- Name with the record-game weapon(s) right next to it -->
+                                        <div class="flex items-center flex-wrap gap-x-2 gap-y-0.5">
+                                            <span class="font-semibold truncate">
+                                                <?= $this->Html->link($player->name, ['controller' => 'Players', 'action' => 'view', $player->player_id], ['class' => 'hover:text-blue-400']) ?>
+                                                <?= $this->Layout->flag($player->country) ?>
+                                            </span>
+                                            <?php if (!empty($weapons['weapons'])): ?>
+                                                <span class="flex items-center gap-1 shrink-0">
+                                                    <?php foreach ($weapons['weapons'] as $weapon): ?>
+                                                        <img src="/img/weapons/<?= $weapon ?>.svg"
+                                                             title="<?= h($weapon) ?>" class="w-4 h-4">
+                                                    <?php endforeach; ?>
+                                                </span>
+                                            <?php endif; ?>
                                         </div>
 
                                         <div class="text-xs text-zinc-400 truncate">
@@ -149,28 +160,17 @@ shuffle($playerImages);
                                             </a>
                                         </div>
 
-                                        <!-- Weapons + achievements -->
-                                        <?php if (!empty($weapons['weapons']) || !empty($medals)): ?>
+                                        <!-- Achievements -->
+                                        <?php if (!empty($medals)): ?>
                                             <div class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1.5">
-                                                <?php if (!empty($weapons['weapons'])): ?>
-                                                    <span class="flex items-center gap-1">
-                                                        <?php foreach ($weapons['weapons'] as $weapon): ?>
-                                                            <img src="/img/weapons/<?= $weapon ?>.svg"
-                                                                 title="<?= h($weapon) ?>" class="w-4 h-4">
-                                                        <?php endforeach; ?>
-                                                    </span>
-                                                <?php endif; ?>
-
-                                                <?php if (!empty($medals)): ?>
-                                                    <span class="flex items-center gap-1">
-                                                        <?php foreach ($medals as $ach => $count): ?>
-                                                            <img src="/img/achievements/<?= $ach ?>.svg"
-                                                                 alt="<?= h($achievementLabels[$ach] ?? $ach) ?>"
-                                                                 title="<?= h($achievementLabels[$ach] ?? $ach) ?>"
-                                                                 class="w-5 h-5">
-                                                        <?php endforeach; ?>
-                                                    </span>
-                                                <?php endif; ?>
+                                                <span class="flex items-center gap-1">
+                                                    <?php foreach ($medals as $ach => $count): ?>
+                                                        <img src="/img/achievements/<?= $ach ?>.svg"
+                                                             alt="<?= h($achievementLabels[$ach] ?? $ach) ?>"
+                                                             title="<?= h($achievementLabels[$ach] ?? $ach) ?>"
+                                                             class="w-5 h-5">
+                                                    <?php endforeach; ?>
+                                                </span>
                                             </div>
                                         <?php endif; ?>
                                     </div>

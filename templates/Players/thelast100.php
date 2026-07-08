@@ -85,98 +85,109 @@ $achievementLabels = [
         </form>
     </div>
 
-    <div class="relative max-h-[70vh] overflow-y-auto scrollbar-hide rounded-xl border border-zinc-700 bg-zinc-800">
+    <div class="relative max-h-[75vh] overflow-y-auto scrollbar-hide space-y-3">
 
-        <table class="min-w-full text-sm text-white">
+        <?php $i = 1; foreach ($players as $player):
 
-            <thead class="sticky top-0 z-30 bg-zinc-900 shadow-md">
-            <tr>
-                <th class="px-3 py-2 text-left">Rank</th>
-                <th class="px-3 py-2 text-left">Player</th>
-                <th class="px-3 py-2 hidden md:table-cell text-center">Weapons</th>
-                <th class="px-3 py-2 hidden md:table-cell text-center">AM</th>
+            if (
+                empty($player->total_score) ||
+                $player->total_score < 0 ||
+                $player->stats['kills'] < 1
+            ) continue;
 
-                <?php foreach ($stats as $key => $stat): ?>
-                    <th class="px-3 py-2 text-right
-            <?= $sort === $key ? 'text-blue-400 bg-zinc-800/60' : '' ?>
-            <?= $sort !== $key ? 'hidden md:table-cell' : '' ?>">
-                        <?= $stat['label'] ?>
-                    </th>
-                <?php endforeach; ?>
-            </tr>
-            </thead>
+            $weapons = $this->Layout->weapon($player->stats);
+            $rank = $i++;
+            ?>
 
-            <tbody class="divide-y divide-zinc-700">
+            <!-- Player card (full width) -->
+            <div class="flex flex-col md:flex-row md:items-center gap-4
+                        rounded-xl border border-zinc-700 bg-zinc-800 p-4
+                        hover:bg-zinc-700/60 transition">
 
-            <?php $i = 1; foreach ($players as $player):
+                <!-- Identity -->
+                <div class="flex items-center gap-4 md:w-80 md:shrink-0">
 
-                if (
-                    empty($player->total_score) ||
-                    $player->total_score < 0 ||
-                    $player->stats['kills'] < 1
-                ) continue;
+                    <div class="w-8 text-center text-2xl font-bold
+                                <?= $rank <= 3 ? 'text-yellow-400' : 'text-zinc-500' ?>">
+                        <?= $rank ?>
+                    </div>
 
-                $weapons = $this->Layout->weapon($player->stats);
-                ?>
+                    <img src="<?= $this->Layout->playerPicture($player) ?>"
+                         class="w-14 h-14 rounded-full object-cover shrink-0">
 
-                <tr class="hover:bg-zinc-700 transition">
+                    <div class="min-w-0">
+                        <?= $this->Html->link(
+                            h($player->name) . ' ' . $this->Layout->flag($player->country),
+                            ['controller' => 'Players', 'action' => 'view', $player->id],
+                            ['escape' => false, 'class' => 'font-semibold text-lg hover:text-blue-400 truncate block']
+                        ) ?>
 
-                    <td class="px-3 py-2 text-zinc-400 font-bold"><?= $i++ ?>.</td>
+                        <div class="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-zinc-400">
+                            <!-- Last seen -->
+                            <?php if (!empty($player->last_seen)):
+                                $lastSeen = $player->last_seen instanceof \Cake\I18n\DateTime
+                                    ? $player->last_seen
+                                    : new \Cake\I18n\DateTime($player->last_seen);
+                                $days = (int) floor((time() - $lastSeen->getTimestamp()) / 86400);
+                                $daysLabel = $days <= 0
+                                    ? 'today'
+                                    : ($days === 1 ? '1 day ago' : $days . ' days ago');
+                                ?>
+                                <span title="<?= h($lastSeen->format('M j, Y H:i')) ?>"
+                                      class="whitespace-nowrap">
+                                    <i class="far fa-clock"></i>
+                                    <?= h($daysLabel) ?>
+                                </span>
+                            <?php endif; ?>
 
-                    <td class="px-3 py-2">
-                        <div class="flex items-center gap-3">
-                            <img src="<?= $this->Layout->playerPicture($player) ?>"
-                                 class="w-10 h-10 rounded-full object-cover">
-                            <?= $this->Html->link(
-                                h($player->name) . ' ' . $this->Layout->flag($player->country),
-                                ['controller' => 'Players', 'action' => 'view', $player->id],
-                                ['escape' => false, 'class' => 'font-semibold hover:text-blue-400']
-                            ) ?>
-                        </div>
-                    </td>
+                            <!-- Weapons -->
+                            <?php if (!empty($weapons['weapons'])): ?>
+                                <span class="flex items-center gap-1">
+                                    <?php foreach ($weapons['weapons'] as $weapon): ?>
+                                        <img src="/img/weapons/<?= $weapon ?>.svg" class="w-4 h-4">
+                                    <?php endforeach; ?>
+                                </span>
+                            <?php endif; ?>
 
-                    <!-- Weapons -->
-                    <td class="px-3 py-2 hidden md:table-cell">
-                        <div class="flex justify-center gap-1">
-                            <?php foreach ($weapons['weapons'] as $weapon): ?>
-                                <img src="/img/weapons/<?= $weapon ?>.svg" class="w-5 h-5">
-                            <?php endforeach; ?>
-                        </div>
-                    </td>
-
-                    <!-- Achievements -->
-                    <td class="px-3 py-2 hidden md:table-cell">
-                        <div class="flex justify-center gap-1">
+                            <!-- Achievements -->
                             <?php if (!empty($achievementPlayers[$player->id])): ?>
-                                <?php foreach ($achievementPlayers[$player->id] as $stat => $count): ?>
-                                    <img
-                                        src="/img/achievements/<?= $stat ?>.svg"
-                                        alt="<?= h($achievementLabels[$stat] ?? $stat) ?>"
-                                        title="<?= h($achievementLabels[$stat] ?? $stat) ?>"
-                                        class="w-6 h-6"
-                                    >
-                                <?php endforeach; ?>
+                                <span class="flex items-center gap-1">
+                                    <?php foreach ($achievementPlayers[$player->id] as $ach => $count): ?>
+                                        <img
+                                            src="/img/achievements/<?= $ach ?>.svg"
+                                            alt="<?= h($achievementLabels[$ach] ?? $ach) ?>"
+                                            title="<?= h($achievementLabels[$ach] ?? $ach) ?>"
+                                            class="w-5 h-5"
+                                        >
+                                    <?php endforeach; ?>
+                                </span>
                             <?php endif; ?>
                         </div>
-                    </td>
-                    <!-- Stats -->
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-4 sm:grid-cols-8 gap-2 flex-1 w-full">
                     <?php foreach ($stats as $key => $stat): ?>
-                        <td class="px-3 py-2 text-right
-    <?= $sort === $key ? 'text-blue-300 font-bold bg-zinc-800/40' : '' ?>
-    <?= $sort !== $key ? 'hidden md:table-cell' : '' ?>">
-                            <?= h($stat['value']($player)) ?>
-
-<!--                            --><?php //if($stat['label']=='Points'): ?>
-<!--                                <br><span class="text-xs font-thin">avg. --><?php //= $player->avg_score ?><!--</span>-->
-<!--                            --><?php //endif ?>
-                        </td>
+                        <div class="rounded-lg px-2 py-2 text-center
+                            <?= $sort === $key
+                                ? 'bg-blue-500/15 ring-1 ring-blue-400/50'
+                                : 'bg-zinc-900/40' ?>">
+                            <div class="text-[10px] uppercase tracking-wide
+                                <?= $sort === $key ? 'text-blue-300' : 'text-zinc-500' ?>">
+                                <?= $stat['label'] ?>
+                            </div>
+                            <div class="text-base font-bold
+                                <?= $sort === $key ? 'text-blue-200' : 'text-white' ?>">
+                                <?= h($stat['value']($player)) ?>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
+                </div>
 
-                </tr>
+            </div>
 
-            <?php endforeach; ?>
+        <?php endforeach; ?>
 
-            </tbody>
-        </table>
     </div>
 </div>

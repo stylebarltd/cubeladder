@@ -3,15 +3,15 @@
 use Cake\Core\Configure;
 
 $achievementLabels = [
-    'total_score' => 'Most Points',
-    'kills' => 'Most Kills',
-    'teamkills' => 'Most Teamkills',
-    'kd_ratio' => 'Best KD Ratio',
-    'gibbed' => 'Most Gibs',
-    'slashed' => 'Most Slashes',
-    'scored_with_the_flag' => 'Most Flags scored',
-    'headshot' => 'Most Headshots',
-    'suicided' => 'Most Suicides',
+    'total_score' => 'Points',
+    'kills' => 'Kills',
+    'teamkills' => 'Teamkills',
+    'kd_ratio' => 'KD Ratio',
+    'gibbed' => 'Gibs',
+    'slashed' => 'Slashes',
+    'scored_with_the_flag' => 'Flags scored',
+    'headshot' => 'Headshots',
+    'suicided' => 'Suicides',
 ];
 
 // Per-game stat columns shown for each player (key => label + formatter)
@@ -19,11 +19,7 @@ $statCols = [
     'total_score'          => ['label' => 'Points', 'fmt' => fn($v) => number_format((int)$v)],
     'kd_ratio'             => ['label' => 'KDR',    'fmt' => fn($v) => number_format((float)$v, 2)],
     'kills'                => ['label' => 'Kills',  'fmt' => fn($v) => number_format((int)$v)],
-    'headshot'             => ['label' => 'HS',     'fmt' => fn($v) => number_format((int)$v)],
-    'gibbed'               => ['label' => 'Gib',    'fmt' => fn($v) => number_format((int)$v)],
-    'slashed'              => ['label' => 'Slash',  'fmt' => fn($v) => number_format((int)$v)],
     'scored_with_the_flag' => ['label' => 'Flags',  'fmt' => fn($v) => number_format((int)$v)],
-    'teamkills'            => ['label' => 'TK',     'fmt' => fn($v) => number_format((int)$v)],
 ];
 
 $slideCount = count($games);
@@ -60,7 +56,7 @@ $slideCount = count($games);
                     <div class="flex flex-col lg:flex-row w-full">
 
                         <!-- Left: map image + date / server / type / map name -->
-                        <div class="relative w-full lg:w-1/2 aspect-video lg:aspect-auto"
+                        <div class="relative w-full lg:w-[65%] aspect-video lg:aspect-auto"
                              style="background-image:
                                  linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.45), rgba(0,0,0,0.15)),
                                  url('<?= $mapUrl ?>');
@@ -96,7 +92,7 @@ $slideCount = count($games);
                         </div>
 
                         <!-- Right: players -->
-                        <div class="w-full lg:w-1/2 p-4 md:p-6">
+                        <div class="w-full lg:w-[35%] p-4 md:p-6">
                             <div class="flex items-center justify-between mb-3">
                                 <h2 class="text-xs uppercase tracking-wide text-zinc-500">
                                     Players
@@ -122,31 +118,32 @@ $slideCount = count($games);
                                     }
                                     ?>
                                     <div class="py-2">
-                                        <div class="flex items-center gap-2">
+                                        <!-- Name with the "leads in" achievements sitting right next to it -->
+                                        <div class="flex items-start gap-2">
                                             <span class="w-5 text-right text-zinc-500 font-bold shrink-0 text-sm">
                                                 <?= $rank++ ?>
                                             </span>
-                                            <span class="flex-1 min-w-0 truncate font-semibold text-sm">
-                                                <?= $this->Html->link(
-                                                    h($player->name),
-                                                    ['controller' => 'Players', 'action' => 'view', $player->id],
-                                                    ['class' => 'hover:text-blue-400', 'escape' => false]
-                                                ) ?>
-                                                <?= $this->Layout->flag($player->country) ?>
-                                            </span>
+                                            <div class="flex-1 min-w-0 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                <span class="truncate font-semibold text-sm">
+                                                    <?= $this->Html->link(
+                                                        h($player->name),
+                                                        ['controller' => 'Players', 'action' => 'view', $player->id],
+                                                        ['class' => 'hover:text-blue-400', 'escape' => false]
+                                                    ) ?>
+                                                    <?= $this->Layout->flag($player->country) ?>
+                                                </span>
+                                                <?php if (!empty($leaderLabels)): ?>
+                                                    <span class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-yellow-400">
+                                                        <?php foreach ($leaderLabels as $lbl): ?>
+                                                            <span>🏆 <?= h($lbl) ?></span>
+                                                        <?php endforeach; ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
 
-                                        <!-- Most X labels under the name -->
-                                        <?php if (!empty($leaderLabels)): ?>
-                                            <div class="pl-7 mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-yellow-400">
-                                                <?php foreach ($leaderLabels as $lbl): ?>
-                                                    <span>🏆 <?= h($lbl) ?></span>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        <?php endif; ?>
-
-                                        <!-- Stat columns: 4×2 on mobile, all 8 in one row on desktop -->
-                                        <div class="pl-7 mt-1.5 grid grid-cols-4 md:grid-cols-8 gap-1">
+                                        <!-- Stat columns: Points / KDR / Kills / Flags at all sizes -->
+                                        <div class="pl-7 mt-1.5 grid grid-cols-4 gap-1">
                                             <?php foreach ($statCols as $key => $def):
                                                 $isLeader = ($game->stat_leaders[$key] ?? null) === $player->id; ?>
                                                 <div class="rounded px-1 py-0.5 text-center

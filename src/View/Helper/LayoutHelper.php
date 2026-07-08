@@ -283,8 +283,18 @@ if(!$type){
         $secondWeapon = $primaryKeys[1] ?? null;
         $secondCount  = $primaryValues[1] ?? 0;
 
+        // No primary-weapon kills at all: fall back to any special weapons used
+        // (e.g. a pure knife or grenade game) instead of showing nothing.
         if ($mainCount === 0) {
-            return ['weapons' => []];
+            $only = [];
+            if ($special['knife'] > 0) {
+                $only[] = 'knife';
+            }
+            if ($special['grenade'] > 0) {
+                $only[] = 'grenade';
+            }
+
+            return ['weapons' => $only];
         }
 
         $weapons = [$mainWeapon];

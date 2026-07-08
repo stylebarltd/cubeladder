@@ -44,7 +44,7 @@ $slideCount = count($slideMaps);
                     <div class="flex flex-col lg:flex-row">
 
                         <!-- Map image / hero -->
-                        <div class="relative w-full lg:w-1/2 aspect-video lg:aspect-square bg-cover bg-center"
+                        <div class="relative w-full lg:w-1/2 aspect-[32/27] lg:aspect-square bg-cover bg-center"
                              style="background-image:
                                  linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.35), transparent),
                                  url('<?= $mapUrl ?>');">
