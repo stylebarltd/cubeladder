@@ -9,7 +9,7 @@
     <?= $this->Html->meta('csrfToken', $this->request->getAttribute('csrfToken')) ?>
 
     <!-- Tailwind CSS -->
-    <?= $this->Html->css('tailwind') ?>
+    <?= $this->Html->css('tailwind.css?ver=1.1') ?>
 
     <!-- Optional: favicon -->
     <?= $this->Html->meta('icon', '/favicon.ico') ?>
@@ -38,13 +38,13 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
-                    <a href="/" class="text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder<small class="text-xs hidden md:inline">v1.6</small></a>
+                    <a href="/" class="text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder<small class="text-xs hidden md:inline">v1.7</small></a>
                 </div>
                 <div class="hidden md:flex items-center space-x-8">
 
                     <a href="/players" class="hover:text-zinc-500 transition">All Time Ranking</a>
                     <a href="/players/hall_of_fame" class="hover:text-zinc-500 transition">Hall of Fame</a>
-                    <a href="/games" class="hover:text-zinc-500 transition">Games</a>
+                    <a href="/games/index" class="hover:text-zinc-500 transition">Games</a>
                     <a href="/maps" class="hover:text-zinc-500 transition">Maps</a>
                     <a href="/players/thelast100" class="hover:text-zinc-500 transition">The last 100</a>
 
@@ -126,7 +126,7 @@
 
                 <a href="/players" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">All Time Ranking</a>
                 <a href="/players/hall_of_fame" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Hall of Fame</a>
-                <a href="/games" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Games</a>
+                <a href="/games/index" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Games</a>
                 <a href="/maps" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Maps</a>
                 <a href="/players/thelast100" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">The last 100</a>
 

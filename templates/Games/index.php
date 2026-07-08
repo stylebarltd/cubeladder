@@ -2,196 +2,269 @@
 
 use Cake\Core\Configure;
 
-?>
-<div class="max-w-7xl px-6 py-10 mx-auto">
+$achievementLabels = [
+    'total_score' => 'Most Points',
+    'kills' => 'Most Kills',
+    'teamkills' => 'Most Teamkills',
+    'kd_ratio' => 'Best KD Ratio',
+    'gibbed' => 'Most Gibs',
+    'slashed' => 'Most Slashes',
+    'scored_with_the_flag' => 'Most Flags scored',
+    'headshot' => 'Most Headshots',
+    'suicided' => 'Most Suicides',
+];
 
-    <h1 class="text-4xl font-bold text-white mb-4 text-center">
+// Per-game stat columns shown for each player (key => label + formatter)
+$statCols = [
+    'total_score'          => ['label' => 'Points', 'fmt' => fn($v) => number_format((int)$v)],
+    'kd_ratio'             => ['label' => 'KDR',    'fmt' => fn($v) => number_format((float)$v, 2)],
+    'kills'                => ['label' => 'Kills',  'fmt' => fn($v) => number_format((int)$v)],
+    'headshot'             => ['label' => 'HS',     'fmt' => fn($v) => number_format((int)$v)],
+    'gibbed'               => ['label' => 'Gib',    'fmt' => fn($v) => number_format((int)$v)],
+    'slashed'              => ['label' => 'Slash',  'fmt' => fn($v) => number_format((int)$v)],
+    'scored_with_the_flag' => ['label' => 'Flags',  'fmt' => fn($v) => number_format((int)$v)],
+    'teamkills'            => ['label' => 'TK',     'fmt' => fn($v) => number_format((int)$v)],
+];
+
+$slideCount = count($games);
+?>
+<div class="w-full max-w-7xl px-0 sm:px-6 py-10 mx-auto">
+
+    <h1 class="text-4xl font-bold text-white mb-6 text-center px-4 sm:px-0">
         Recent games
     </h1>
-    <p class="text-sm mb-8 max-w-2xl mx-auto text-center">
-        <?= $lastGameDateRange['start'] ?> until <?= $lastGameDateRange['end'] ?>
-    </p>
 
+    <?php if ($slideCount === 0): ?>
+        <p class="text-center text-zinc-500">No games to show yet.</p>
+    <?php else: ?>
 
-    <div class="relative max-h-[70vh] overflow-y-auto scrollbar-hide rounded-xl border border-zinc-700 bg-zinc-800">
-        <table class="min-w-full text-sm text-white">
-            <thead class="sticky top-0 z-30 bg-zinc-900 shadow-md">
-            <tr>
-                <th class="px-3 py-2 text-left hidden md:table-cell">#</th>
-                <th class="px-3 py-2 text-left">Date</th>
-                <th class="px-3 py-2 text-left">Map</th>
-<!--                <th class="px-3 py-2 text-center hidden md:table-cell">Mode</th>-->
-<!--                <th class="px-3 py-2 text-center hidden md:table-cell">Players</th>-->
-                <th class="px-3 py-2 text-left">Top Players</th>
-<!--                <th class="px-3 py-2 text-right hidden md:table-cell">Duration</th>-->
-                <th class="px-3 py-2"></th>
-            </tr>
-            </thead>
+    <div id="game-slideshow"
+         class="relative select-none sm:rounded-xl border-y sm:border border-zinc-700 bg-zinc-800 overflow-hidden"
+         data-count="<?= $slideCount ?>">
 
-            <tbody class="divide-y divide-zinc-700 bg-zinc-800 text-white text-sm">
-            <?php
-            $achievementLabels = [
-                'total_score' => 'Most Points',
-                'kills' => 'Most Kills',
-                'teamkills' => 'Most Teamkills',
-                'kd_ratio' => 'Best KD Ratio',
-                'gibbed' => 'Most Gibs',
-                'slashed' => 'Most Slashes',
-                'scored_with_the_flag' => 'Most Flags scored',
-                'headshot' => 'Most Headshots',
-                'suicided' => 'Most Suicides',
-            ];
-            ?>
-            <?php $i = 1; foreach ($games as $game): ?>
+        <!-- Track -->
+        <div id="game-track"
+             class="flex transition-transform duration-300 ease-out"
+             style="transform: translateX(0%);">
 
-            <?php
-            $mapImage = WWW_ROOT . 'img/maps/' . $game->map->name . '.jpg';
-            $mapUrl = file_exists($mapImage)
-                ? '/img/maps/' . h($game->map->name) . '.jpg'
-                : '/img/maps/placeholder.jpg';
-            ?>
+            <?php foreach ($games as $game): ?>
+                <?php
+                $mapImage = WWW_ROOT . 'img/maps/' . $game->map->name . '.jpg';
+                $mapUrl = file_exists($mapImage)
+                    ? '/img/maps/' . h($game->map->name) . '.jpg'
+                    : '/img/maps/placeholder.jpg';
+                ?>
 
-            <tr class="hover:bg-zinc-700 transition">
-                <!-- Rank -->
-                <td class="px-3 py-2 text-zinc-400 font-bold hidden md:table-cell">
-                    <?= $i++ ?>.
-                </td>
+                <!-- Slide -->
+                <div class="game-slide w-full flex-shrink-0 flex">
+                    <div class="flex flex-col lg:flex-row w-full">
 
-                <!-- Date -->
-                <td class="px-3 py-2">
-                    <?= $this->Html->link(
-                        $game->started_at->format('Y-m-d'),
-                        ['action' => 'view', $game->id],
-                        ['class' => 'font-semibold hover:text-blue-400']
-                    ) ?>
-                    <div class="text-xs text-zinc-400">
-                        <?= $game->started_at->format('H:i') ?> – <?= $game->ended_at->format('H:i') ?>
-                    </div>
-                </td>
-
-                <!-- Map -->
-                <td class="px-3 py-2">
-                    <div class="flex items-center gap-2">
-                        <img src="<?= $mapUrl ?>" class="w-14 h-14 rounded hidden md:table-cell">
-
-                        <span class="text-xs">
-                            <i class="fa-solid fa-map-location-dot"></i> <?= $this->Layout->cleanMapName($game->map->name) ?><br>
-                            <i class="fa-solid fa-server"></i>
-                            <?= $this->Layout->serverName($game->server_name) ?>
-    <div> <?= $this->Layout->gameModeIcon($game->mode) ?></div>
-
-
-                        </span>
-
-
-
-                    </div>
-                </td>
-
-                <!-- Mode -->
-<!--                <td class="px-3 py-2 text-center hidden md:table-cell">-->
-<!--                    --><?php //= $this->Layout->gameModeIcon($game->mode) ?>
-<!--                </td>-->
-
-                <!-- Player count -->
-<!--                <td class="px-3 py-2 text-center font-bold hidden md:table-cell">-->
-<!--                    --><?php //= count($game->players) ?>
-<!--                </td>-->
-
-                <!-- Top 3 -->
-                <td class="px-3 py-2">
-                    <div class="flex flex-col gap-0.5">
-                        <?php foreach (array_slice($game->players, 0, 3) as $player): ?>
-                            <div class="text-xs">
-                                <?= $this->Html->link(
-                                    h($player->name),
-                                    ['controller' => 'Players', 'action' => 'view', $player->id],
-                                    ['class' => 'hover:text-blue-400', 'escape' => false]
-                                ) ?>
-                                <?= $this->Layout->flag($player->country) ?>
-                                <span class="text-zinc-400">
-                        <?= $player->PlayerStatsPerGame['total_score'] ?> pts
-                    </span>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </td>
-
-                <!-- Duration -->
-<!--                <td class="px-3 py-2 text-right hidden md:table-cell">-->
-<!--                    --><?php //= h($game->duration_minutes) ?><!-- min-->
-<!--                </td>-->
-
-                <!-- Expand -->
-                <td class="px-3 py-2 text-right">
-                    <button
-                        class="toggle-row text-blue-400 hover:text-white"
-                        data-target="game-<?= $game->id ?>">
-                        ▶
-                    </button>
-                </td>
-            </tr>
-                <tr id="game-<?= $game->id ?>" class="hidden bg-zinc-900/60">
-                    <td colspan="8" class="p-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-
-                            <?php foreach ($game->players as $player): ?>
-                                <div class="flex border-b border-zinc-700 rounded px-2 py-1 gap-2">
-
-                                    <?= $this->Html->link(
-                                        h($player->name),
-                                        ['controller' => 'Players', 'action' => 'view', $player->id],
-                                        ['class' => 'hover:text-blue-400', 'escape' => false]
-                                    ) ?>
-                                    <?= $this->Layout->flag($player->country) ?>
-
-                                    <span class="text-zinc-400">
-                                        <?= $player->PlayerStatsPerGame['total_score'] ?> pts
-                                    </span>
-
-                                    <?php foreach ($achievementLabels as $stat => $icon): ?>
-                                        <?php if (($game->stat_leaders[$stat] ?? null) === $player->id): ?>
-
-                                            <img
-                                                src="/img/achievements/<?= $stat ?>.svg"
-                                                alt="<?= h($achievementLabels[$stat] ?? $stat) ?>"
-                                                title="<?= h($achievementLabels[$stat] ?? $stat) ?>"
-                                                class="w-5 h-5"
-                                            >
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
+                        <!-- Left: map image + date / server / type / map name -->
+                        <div class="relative w-full lg:w-1/2 aspect-video lg:aspect-auto"
+                             style="background-image:
+                                 linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.45), rgba(0,0,0,0.15)),
+                                 url('<?= $mapUrl ?>');
+                                 background-size: cover;
+                                 background-position: center;
+                                 background-repeat: no-repeat;">
+                            <div class="absolute bottom-0 left-0 right-0 p-5 md:p-6">
+                                <div class="font-bold text-2xl md:text-3xl text-white drop-shadow leading-tight">
+                                    <?= $this->Layout->cleanMapName($game->map->name) ?>
                                 </div>
-                            <?php endforeach; ?>
 
-
-
-                            <div class="flex justify-between border border-zinc-700 rounded px-2 py-1 bg-zinc-600">
-                                <?= $this->Html->link(
-                                    "More Details",
-                                    ['action' => 'view', $game->id],
-                                    ['class' => 'font-semibold hover:text-blue-400']
-                                ) ?>
+                                <div class="mt-2 space-y-1 text-sm text-zinc-200 drop-shadow">
+                                    <div>
+                                        <i class="far fa-calendar w-4 text-center"></i>
+                                        <?= $game->started_at->format('D, dS M Y') ?>
+                                    </div>
+                                    <div>
+                                        <i class="far fa-clock w-4 text-center"></i>
+                                        <?= $game->started_at->format('H:i') ?>
+                                        <?php if (!empty($game->ended_at)): ?>
+                                            &ndash; <?= $game->ended_at->format('H:i') ?>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div>
+                                        <i class="fa-solid fa-server w-4 text-center"></i>
+                                        <?= $this->Layout->serverName($game->server_name) ?>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <?= $this->Layout->gameModeIcon($game->mode) ?>
+                                    </div>
+                                </div>
                             </div>
-
                         </div>
 
+                        <!-- Right: players -->
+                        <div class="w-full lg:w-1/2 p-4 md:p-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <h2 class="text-xs uppercase tracking-wide text-zinc-500">
+                                    Players
+                                </h2>
+                                <?= $this->Html->link(
+                                    'More details →',
+                                    ['action' => 'view', $game->id],
+                                    ['class' => 'text-xs text-blue-400 hover:text-blue-300']
+                                ) ?>
+                            </div>
 
-                    </td>
-                </tr>
+                            <div class="divide-y divide-zinc-700/60 max-h-[70vh] overflow-y-auto scrollbar-hide">
+                                <?php $rank = 1; foreach ($game->players as $player): ?>
+                                    <?php
+                                    $stats = $player->PlayerStatsPerGame;
 
+                                    // "Most X" titles this player leads in this game
+                                    $leaderLabels = [];
+                                    foreach ($achievementLabels as $stat => $lbl) {
+                                        if (($game->stat_leaders[$stat] ?? null) === $player->id) {
+                                            $leaderLabels[] = $lbl;
+                                        }
+                                    }
+                                    ?>
+                                    <div class="py-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-5 text-right text-zinc-500 font-bold shrink-0 text-sm">
+                                                <?= $rank++ ?>
+                                            </span>
+                                            <span class="flex-1 min-w-0 truncate font-semibold text-sm">
+                                                <?= $this->Html->link(
+                                                    h($player->name),
+                                                    ['controller' => 'Players', 'action' => 'view', $player->id],
+                                                    ['class' => 'hover:text-blue-400', 'escape' => false]
+                                                ) ?>
+                                                <?= $this->Layout->flag($player->country) ?>
+                                            </span>
+                                        </div>
+
+                                        <!-- Most X labels under the name -->
+                                        <?php if (!empty($leaderLabels)): ?>
+                                            <div class="pl-7 mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-yellow-400">
+                                                <?php foreach ($leaderLabels as $lbl): ?>
+                                                    <span>🏆 <?= h($lbl) ?></span>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <!-- Stat columns: 4×2 on mobile, all 8 in one row on desktop -->
+                                        <div class="pl-7 mt-1.5 grid grid-cols-4 md:grid-cols-8 gap-1">
+                                            <?php foreach ($statCols as $key => $def):
+                                                $isLeader = ($game->stat_leaders[$key] ?? null) === $player->id; ?>
+                                                <div class="rounded px-1 py-0.5 text-center
+                                                    <?= $isLeader ? 'bg-blue-500/15 ring-1 ring-blue-400/40' : 'bg-zinc-900/40' ?>">
+                                                    <div class="text-[9px] uppercase tracking-wide
+                                                        <?= $isLeader ? 'text-blue-300' : 'text-zinc-500' ?>">
+                                                        <?= $def['label'] ?>
+                                                    </div>
+                                                    <div class="text-xs font-bold
+                                                        <?= $isLeader ? 'text-blue-200' : 'text-white' ?>">
+                                                        <?= $def['fmt']($stats[$key] ?? 0) ?>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
             <?php endforeach; ?>
 
+        </div>
 
-            </tbody>
-    </table>
+        <!-- Prev / Next arrows -->
+        <button type="button" id="game-prev" aria-label="Previous game"
+                class="absolute top-1/2 left-2 -translate-y-1/2 z-20
+                       h-10 w-10 flex items-center justify-center rounded-full
+                       bg-black/50 hover:bg-black/70 text-white transition">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button type="button" id="game-next" aria-label="Next game"
+                class="absolute top-1/2 right-2 -translate-y-1/2 z-20
+                       h-10 w-10 flex items-center justify-center rounded-full
+                       bg-black/50 hover:bg-black/70 text-white transition">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+
+    <!-- Dots + counter -->
+    <div class="flex flex-col items-center gap-2 mt-4">
+        <div id="game-dots" class="flex flex-wrap justify-center gap-1.5 max-w-full"></div>
+        <div class="text-xs text-zinc-500">
+            <span id="game-counter">1</span> / <?= $slideCount ?>
+        </div>
+    </div>
+
+    <?php endif; ?>
 </div>
-</div>
+
+<?php $this->start('scriptBottom'); ?>
 <script>
-    document.querySelectorAll('.toggle-row').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const row = document.getElementById(btn.dataset.target);
-            row.classList.toggle('hidden');
-            btn.textContent = row.classList.contains('hidden') ? '▶' : '▼';
-        });
+(function () {
+    const root = document.getElementById('game-slideshow');
+    if (!root) return;
+
+    const track   = document.getElementById('game-track');
+    const slides   = Array.from(track.children);
+    const count   = slides.length;
+    const dotsBox  = document.getElementById('game-dots');
+    const counter  = document.getElementById('game-counter');
+    let index = 0;
+
+    const dots = slides.map((_, i) => {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.setAttribute('aria-label', 'Go to game ' + (i + 1));
+        dot.className = 'h-2 w-2 rounded-full bg-zinc-600 hover:bg-zinc-400 transition';
+        dot.addEventListener('click', () => go(i));
+        dotsBox.appendChild(dot);
+        return dot;
     });
+
+    function render() {
+        track.style.transform = 'translateX(' + (-index * 100) + '%)';
+        counter.textContent = index + 1;
+        dots.forEach((d, i) => {
+            d.classList.toggle('bg-blue-500', i === index);
+            d.classList.toggle('bg-zinc-600', i !== index);
+        });
+    }
+
+    function go(i) {
+        index = (i + count) % count; // wrap around
+        render();
+    }
+    const next = () => go(index + 1);
+    const prev = () => go(index - 1);
+
+    document.getElementById('game-next').addEventListener('click', next);
+    document.getElementById('game-prev').addEventListener('click', prev);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') next();
+        else if (e.key === 'ArrowLeft') prev();
+    });
+
+    // Touch swipe (mobile)
+    let startX = 0, startY = 0, tracking = false;
+    root.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        tracking = true;
+    }, { passive: true });
+
+    root.addEventListener('touchend', (e) => {
+        if (!tracking) return;
+        tracking = false;
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+            dx < 0 ? next() : prev();
+        }
+    }, { passive: true });
+
+    render();
+})();
 </script>
+<?php $this->end(); ?>

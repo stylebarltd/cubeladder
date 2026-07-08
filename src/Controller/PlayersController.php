@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 
+use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Http\Cookie\Cookie;
 use Cake\Http\Exception\BadRequestException;
@@ -52,6 +53,17 @@ class PlayersController extends AppController
 
         $bestFlagHelpers = $this->getTopPlayers(['stole_the_flag', 'returned_the_flag']);
 
+        // Weekly achievement medals, keyed by player (same source as Players::index)
+        $achievePlayers = $this->Players->Achievements->find()
+            ->contain(['Players'])
+            ->where([
+                'week_end' => date('Y-m-d', strtotime('last week sunday')),
+                'event_type IS NOT' => 'best_on_map'
+            ]);
+        $achievementPlayers = [];
+        foreach ($achievePlayers as $player) {
+            $achievementPlayers[$player->player_id][$player->event_type] = $player->count;
+        }
 
         $this->set(compact(
             'topHeadshots',
@@ -59,7 +71,8 @@ class PlayersController extends AppController
             'topGibbed',
             'topKills',
             'topFlags',
-            'bestFlagHelpers'
+            'bestFlagHelpers',
+            'achievementPlayers'
         ));
     }
     private function getTopPlayers(string|array $fields, int $limit = 10)
@@ -91,7 +104,19 @@ class PlayersController extends AppController
                 'value' => $fieldExpr,
                 'game_id' => 'Games.id',
                 'played_at' => 'Games.started_at',
-                'map_name' => 'Maps.name'
+                'map_name' => 'Maps.name',
+                // Weapon usage from the record-setting game (for the HoF cards)
+                'kills' => 'PlayerStatsPerGame.kills',
+                'headshot' => 'PlayerStatsPerGame.headshot',
+                'shredded' => 'PlayerStatsPerGame.shredded',
+                'peppered' => 'PlayerStatsPerGame.peppered',
+                'sprayed' => 'PlayerStatsPerGame.sprayed',
+                'punctured' => 'PlayerStatsPerGame.punctured',
+                'splattered' => 'PlayerStatsPerGame.splattered',
+                'slashed' => 'PlayerStatsPerGame.slashed',
+                'gibbed' => 'PlayerStatsPerGame.gibbed',
+                'picked_off' => 'PlayerStatsPerGame.picked_off',
+                'busted' => 'PlayerStatsPerGame.busted',
             ])
             ->innerJoin(
                 ['sub' => $sub],
@@ -158,104 +183,87 @@ class PlayersController extends AppController
                 $order = ['total_score' => 'DESC'];
         }
 
-        $gameIds = $this->getThisYearGameIds();
+        // The ranking only changes when new games are imported, so the whole
+        // (fairly expensive) aggregate is cached per sort and rebuilt on
+        // demand. ProcessLogsCommand clears the 'rankings' cache after ingest.
+        $players = Cache::remember('players_index_' . $sort, function () use ($order, $sort) {
+            // players who participated in this year's games + aggregated stats.
+            //
+            // All sums are computed in SQL. We used to eager-load every
+            // PlayerStatsPerGame row (~44k entities) just to re-sum them in PHP,
+            // which was the main bottleneck on this page. Filtering on
+            // Games.started_at directly (instead of a multi-thousand-id IN list
+            // built by getThisYearGameIds()) keeps the query index-friendly.
+            $players = $this->Players->find()
+                ->select([
+                    'Players.id',
+                    'Players.name',
+                    'Players.country',
+                    'Players.picture',
+                    'total_score' => 'SUM(PlayerStatsPerGame.total_score)',
+                    'avg_score' => 'ROUND(AVG(PlayerStatsPerGame.total_score))',
+                    'headshot' => 'SUM(PlayerStatsPerGame.headshot)',
+                    'kills' => 'SUM(PlayerStatsPerGame.kills)',
+                    'deaths' => 'SUM(PlayerStatsPerGame.deaths)',
+                    'slashed' => 'SUM(PlayerStatsPerGame.slashed)',
+                    'gibbed' => 'SUM(PlayerStatsPerGame.gibbed)',
+                    'teamkills' => 'SUM(PlayerStatsPerGame.teamkills)',
+                    'scored_with_the_flag' => 'SUM(PlayerStatsPerGame.scored_with_the_flag)',
+                    // Weapon breakdown fields consumed by LayoutHelper::weapon()
+                    'shredded' => 'SUM(PlayerStatsPerGame.shredded)',
+                    'sprayed' => 'SUM(PlayerStatsPerGame.sprayed)',
+                    'punctured' => 'SUM(PlayerStatsPerGame.punctured)',
+                    'splattered' => 'SUM(PlayerStatsPerGame.splattered)',
+                    'picked_off' => 'SUM(PlayerStatsPerGame.picked_off)',
+                    'games' => 'COUNT(PlayerStatsPerGame.id)',
+                    'last_seen' => 'MAX(Games.started_at)',
+                    // Game id of that most-recent game, so the date can link to it
+                    'last_game_id' => '(SELECT ps2.game_id FROM player_stats_per_game ps2 '
+                        . 'INNER JOIN games g2 ON g2.id = ps2.game_id '
+                        . 'WHERE ps2.player_id = Players.id '
+                        . 'ORDER BY g2.started_at DESC LIMIT 1)',
+                ])
+                ->innerJoinWith('PlayerStatsPerGame.Games', function ($q) {
+                    return $q->where(['Games.started_at >' => date('Y')]);
+                })
+                ->where(['Players.track' => 1])
+                ->group(['Players.id'])
+                ->having([
+                    'SUM(PlayerStatsPerGame.total_score) >=' => 5000
+                ])
+                ->order($order)
+                ->all();
 
-        // players who participated in those games + stats from those games
-        $players = $this->Players->find()
-            ->select([
-                'Players.id',
-                'Players.name',
-                'Players.country',
-                'Players.picture',
-                'total_score' => 'SUM(PlayerStatsPerGame.total_score)',
-                'avg_score' => 'ROUND(AVG(PlayerStatsPerGame.total_score))',
-                'headshot' => 'SUM(PlayerStatsPerGame.headshot)',
-                'kills' => 'SUM(PlayerStatsPerGame.kills)',
-                'slashed' => 'SUM(PlayerStatsPerGame.slashed)',
-                'gibbed' => 'SUM(PlayerStatsPerGame.gibbed)',
-                'teamkills' => 'SUM(PlayerStatsPerGame.teamkills)',
-                'scored_with_the_flag' => 'SUM(PlayerStatsPerGame.scored_with_the_flag)',
-                'games' => 'COUNT(PlayerStatsPerGame.id)',
-            ])
-            ->innerJoinWith('PlayerStatsPerGame', function ($q) use ($gameIds) {
-                return $q->where([
-                    'PlayerStatsPerGame.game_id IN' => $gameIds
-                ]);
-            })
-            ->where(['track'=>1])
-            ->group(['Players.id'])
-            ->having([
-                'SUM(PlayerStatsPerGame.total_score) >=' => 1500
-            ])
-            ->order($order)
-            ->contain([
-                'PlayerStatsPerGame' => function ($q) use ($gameIds) {
-                    return $q->where([
-                        'PlayerStatsPerGame.game_id IN' => $gameIds
-                    ]);
-                }
-            ])
-            ->all();
+            $players->each(function ($player) {
+                $kills  = (int)$player->kills;
+                $deaths = (int)$player->deaths;
 
-        $players->map(function ($player) {
+                $player->stats = [
+                    'kills'                => $kills,
+                    'deaths'               => $deaths,
+                    'kd_ratio'             => $deaths > 0 ? round($kills / $deaths, 2) : $kills,
+                    'headshot'             => (int)$player->headshot,
+                    'teamkills'            => (int)$player->teamkills,
+                    'gibbed'               => (int)$player->gibbed,
+                    'slashed'              => (int)$player->slashed,
+                    'scored_with_the_flag' => (int)$player->scored_with_the_flag,
+                    'shredded'             => (int)$player->shredded,
+                    'sprayed'              => (int)$player->sprayed,
+                    'punctured'            => (int)$player->punctured,
+                    'splattered'           => (int)$player->splattered,
+                    'picked_off'           => (int)$player->picked_off,
+                ];
+            });
 
-            $stats = [
-                'kills' => 0,
-                'deaths' => 0,
-                'kd_ratio' => 0,
-                'tk_ratio' => 0,
-                'headshot' => 0,
-                'teamkills' => 0,
-                'gibbed' => 0,
-                'slashed' => 0,
-                'peppered' => 0, //shotgun
-                'shredded' => 0, //rifle
-                'sprayed' => 0, //smg
-                'punctured' => 0, //sniper
-                'splattered' => 0, //shotgun
-                'picked_off' => 0, //carabine
-                'suicided' => 0,
-                'stole_the_flag' => 0,
-                'scored_with_the_flag' => 0
-            ];
-
-            foreach ($player->player_stats_per_game as $ps) {
-                $stats['teamkills'] += $ps->teamkills;
-                $stats['kills'] += $ps->kills;
-                $stats['deaths'] += $ps->deaths;
-                $stats['headshot'] += $ps->headshot;
-                $stats['gibbed'] += $ps->gibbed;
-                $stats['slashed'] += $ps->slashed;
-                $stats['shredded'] += $ps->shredded;
-                $stats['peppered'] += $ps->peppered;
-                $stats['sprayed'] += $ps->sprayed;
-                $stats['punctured'] += $ps->punctured;
-                $stats['splattered'] += $ps->splattered;
-                $stats['picked_off'] += $ps->picked_off;
-                $stats['suicided'] += $ps->suicided;
-                $stats['stole_the_flag'] += $ps->stole_the_flag;
-                $stats['scored_with_the_flag'] += $ps->scored_with_the_flag;
+            // kd_ratio is derived in PHP, so it can't be ordered in SQL.
+            if ($sort === 'kd') {
+                return $players
+                    ->sortBy(fn($p) => $p->stats['kd_ratio'], SORT_DESC, SORT_NUMERIC)
+                    ->toList();
             }
 
-            $stats['kd_ratio'] = $stats['deaths'] > 0
-                ? round($stats['kills'] / $stats['deaths'], 2)
-                : $stats['kills'];
-
-
-            $player->stats = $stats;
-
-            return $player;
-        })
-            ->toArray();
-
-
-        if ($sort === 'kd') {
-            $players = $players->sortBy(
-                fn($p) => $p->stats['kd_ratio'],
-                SORT_DESC,
-                SORT_NUMERIC
-            );
-        }
+            return $players->toList();
+        }, 'rankings');
 
         //$lastGameDateRange = $this->getGameDateRange(800);
 

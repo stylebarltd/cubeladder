@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\LogProcessorService;
+use Cake\Cache\Cache;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
@@ -39,6 +40,10 @@ class ProcessLogsCommand extends Command
             $fileId,
             $local
         );
+
+        // New games/stats just landed, so the cached ranking aggregates
+        // (Players::index) are stale — drop them so the next request rebuilds.
+        Cache::clear('rankings');
 
         return self::CODE_SUCCESS;
     }

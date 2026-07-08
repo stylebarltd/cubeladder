@@ -103,6 +103,23 @@ return [
         ],
 
         /*
+         * Cache for expensive, rarely-changing ranking/stat aggregates
+         * (e.g. Players::index). Invalidated explicitly when new games are
+         * imported (see ProcessLogsCommand); the duration is just a safety net.
+         * Kept separate from the framework caches so it can be cleared as a
+         * unit without touching schema/route caches, and so it is not reduced
+         * to '+2 minutes' by debug mode.
+         */
+        'rankings' => [
+            'className' => FileEngine::class,
+            'prefix' => 'myapp_rankings_',
+            'path' => CACHE . 'rankings' . DS,
+            'serialize' => true,
+            'duration' => '+6 hours',
+            'url' => env('CACHE_RANKINGS_URL', null),
+        ],
+
+        /*
          * Configure the cache used for general framework caching.
          * Translation cache files are stored with this configuration.
          * Duration will be set to '+2 minutes' in bootstrap.php when debug = true
