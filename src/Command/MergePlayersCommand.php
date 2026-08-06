@@ -20,10 +20,19 @@ use Cake\Datasource\ConnectionManager;
  * Usage:
  *   bin/cake merge_players --auto                 Merge every name that maps to
  *                                                 exactly one pubkey identity.
+ *   bin/cake merge_players --by-subnet            Merge rotating-pubkey dupes:
+ *                                                 same name on the same /24
+ *                                                 subnet (one human, new key
+ *                                                 every session).
  *   bin/cake merge_players "A" "Nameseeker"       Force-merge the given names
  *                                                 (use for real players who own
  *                                                 several pubkeys).
- *   bin/cake merge_players --auto --dry-run       Preview without writing.
+ *   bin/cake merge_players --from <id> --to <id>  Merge one specific profile
+ *                                                 into another; the --to profile
+ *                                                 survives regardless of game
+ *                                                 counts. Ids may be unique
+ *                                                 prefixes.
+ *   bin/cake merge_players --by-subnet --dry-run  Preview without writing.
  */
 class MergePlayersCommand extends Command
 {
@@ -38,6 +47,16 @@ class MergePlayersCommand extends Command
                 'boolean' => true,
                 'help' => 'Merge all names that map to exactly one pubkey identity.',
             ])
+            ->addOption('by-subnet', [
+                'boolean' => true,
+                'help' => 'Merge same-name profiles that share a /24 subnet (rotating-pubkey dupes).',
+            ])
+            ->addOption('from', [
+                'help' => 'Id of the profile to merge away (accepts a unique id prefix). Requires --to.',
+            ])
+            ->addOption('to', [
+                'help' => 'Id of the surviving profile (accepts a unique id prefix). Requires --from.',
+            ])
             ->addOption('dry-run', [
                 'boolean' => true,
                 'help' => 'Show what would happen without modifying the database.',
@@ -49,24 +68,33 @@ class MergePlayersCommand extends Command
         $conn = ConnectionManager::get('default');
         $dryRun = (bool)$args->getOption('dry-run');
 
-        $names = $this->resolveNames($args, $conn);
-        if (empty($names)) {
-            $io->error('No names to merge. Pass names as arguments or use --auto.');
+        $groups = $this->resolveGroups($args, $conn, $io);
+        if (empty($groups)) {
+            $io->error('Nothing to merge. Pass names as arguments or use --auto / --by-subnet.');
             return self::CODE_ERROR;
         }
 
-        $io->out(sprintf('Merging %d name(s)%s', count($names), $dryRun ? ' [DRY RUN]' : ''));
+        $io->out(sprintf('Merging %d group(s)%s', count($groups), $dryRun ? ' [DRY RUN]' : ''));
 
         $totalMerged = 0;
-        $totalNames = 0;
+        $totalGroups = 0;
 
-        foreach ($names as $name) {
-            $profiles = $this->profilesForName($conn, $name);
+        foreach ($groups as $group) {
+            $profiles = $group['profiles'];
             if (count($profiles) < 2) {
                 continue;
             }
 
-            $survivor = $this->pickSurvivor($profiles);
+            $survivor = null;
+            if (!empty($group['survivor_id'])) {
+                foreach ($profiles as $p) {
+                    if ($p['id'] === $group['survivor_id']) {
+                        $survivor = $p;
+                        break;
+                    }
+                }
+            }
+            $survivor = $survivor ?? $this->pickSurvivor($profiles);
             $dupIds = [];
             foreach ($profiles as $p) {
                 if ($p['id'] !== $survivor['id']) {
@@ -75,8 +103,8 @@ class MergePlayersCommand extends Command
             }
 
             $io->out(sprintf(
-                '- %-20s %d profiles -> survivor %s (%d games), merging %d',
-                $name,
+                '- %-24s %d profiles -> survivor %s (%d games), merging %d',
+                $group['label'],
                 count($profiles),
                 substr($survivor['id'], 0, 8),
                 $survivor['games'],
@@ -84,7 +112,7 @@ class MergePlayersCommand extends Command
             ));
 
             if ($dryRun) {
-                $totalNames++;
+                $totalGroups++;
                 $totalMerged += count($dupIds);
                 continue;
             }
@@ -93,27 +121,66 @@ class MergePlayersCommand extends Command
                 $this->mergeInto($c, $survivor, $dupIds, $profiles);
             });
 
-            $totalNames++;
+            $totalGroups++;
             $totalMerged += count($dupIds);
         }
 
         $io->success(sprintf(
-            '%s %d duplicate profile(s) across %d name(s).',
+            '%s %d duplicate profile(s) across %d group(s).',
             $dryRun ? 'Would merge' : 'Merged',
             $totalMerged,
-            $totalNames
+            $totalGroups
         ));
 
         return self::CODE_SUCCESS;
     }
 
     /**
-     * Decide which names to merge.
-     *
-     * @return string[]
+     * Shared default / non-identity names that must never be merged together.
+     * "unarmed" is the AssaultCube client default and is used by countless
+     * distinct people, so its rows are not a single player.
      */
-    private function resolveNames(Arguments $args, $conn): array
+    private const IGNORED_NAMES = ['unarmed'];
+
+    /**
+     * Build the list of profile groups to merge. Each group is a set of
+     * duplicate profiles that should collapse into one survivor.
+     *
+     * @return array<int, array{label:string, profiles:array}>
+     */
+    private function resolveGroups(Arguments $args, $conn, ConsoleIo $io): array
     {
+        $fromOpt = $args->getOption('from');
+        $toOpt = $args->getOption('to');
+        if ($fromOpt !== null || $toOpt !== null) {
+            if ($fromOpt === null || $toOpt === null) {
+                $io->error('--from and --to must be used together.');
+
+                return [];
+            }
+
+            $from = $this->profileById($conn, (string)$fromOpt, $io);
+            $to = $this->profileById($conn, (string)$toOpt, $io);
+            if ($from === null || $to === null) {
+                return [];
+            }
+            if ($from['id'] === $to['id']) {
+                $io->error('--from and --to resolve to the same profile.');
+
+                return [];
+            }
+
+            return [[
+                'label' => sprintf('%s -> %s', substr($from['id'], 0, 8), substr($to['id'], 0, 8)),
+                'profiles' => [$from, $to],
+                'survivor_id' => $to['id'],
+            ]];
+        }
+
+        if ($args->getOption('by-subnet')) {
+            return $this->subnetGroups($conn);
+        }
+
         if ($args->getOption('auto')) {
             $rows = $conn->execute(
                 "SELECT name FROM players
@@ -122,7 +189,18 @@ class MergePlayersCommand extends Command
                     AND COUNT(DISTINCT CASE WHEN pubkey IS NOT NULL AND pubkey <> '' THEN pubkey END) = 1"
             )->fetchAll('assoc');
 
-            return array_map(fn($r) => $r['name'], $rows);
+            $groups = [];
+            foreach ($rows as $r) {
+                if (in_array(strtolower($r['name']), self::IGNORED_NAMES, true)) {
+                    continue;
+                }
+                $groups[] = [
+                    'label' => $r['name'],
+                    'profiles' => $this->profilesForName($conn, $r['name']),
+                ];
+            }
+
+            return $groups;
         }
 
         $arg = $args->getArgument('names');
@@ -132,8 +210,81 @@ class MergePlayersCommand extends Command
 
         $names = array_map('trim', explode(',', $arg));
         $names = array_filter($names, fn($n) => $n !== '');
+        $names = array_values(array_unique($names));
 
-        return array_values(array_unique($names));
+        $groups = [];
+        foreach ($names as $name) {
+            $groups[] = [
+                'label' => $name,
+                'profiles' => $this->profilesForName($conn, $name),
+            ];
+        }
+
+        return $groups;
+    }
+
+    /**
+     * Rotating-pubkey duplicates: the same name appearing more than once on the
+     * same /24 subnet. That is one human whose client mints a fresh pubkey each
+     * session on a dynamic IP. Different networks stay separate so distinct
+     * people who share a common name are never merged.
+     *
+     * @return array<int, array{label:string, profiles:array}>
+     */
+    private function subnetGroups($conn): array
+    {
+        $placeholders = implode(',', array_fill(0, count(self::IGNORED_NAMES), '?'));
+        $rows = $conn->execute(
+            "SELECT name, SUBSTRING_INDEX(ip, '.', 3) AS net
+             FROM players
+             WHERE ip IS NOT NULL AND ip <> ''
+               AND LOWER(name) NOT IN ($placeholders)
+             GROUP BY name, net
+             HAVING COUNT(*) > 1",
+            self::IGNORED_NAMES
+        )->fetchAll('assoc');
+
+        $groups = [];
+        foreach ($rows as $r) {
+            $groups[] = [
+                'label' => $r['name'] . ' @' . $r['net'] . '.0/24',
+                'profiles' => $this->profilesForNameNet($conn, $r['name'], $r['net']),
+            ];
+        }
+
+        return $groups;
+    }
+
+    /**
+     * Look up one profile by exact id, falling back to a unique id prefix
+     * (the command prints 8-char prefixes, so those are accepted back).
+     *
+     * @return array{id:string,pubkey:?string,games:int,first_seen:?string,last_seen:?string,picture:?string,ip:?string,country:?string}|null
+     */
+    private function profileById($conn, string $id, ConsoleIo $io): ?array
+    {
+        $select = "SELECT p.id, p.pubkey, p.first_seen, p.last_seen, p.picture, p.ip, p.country,
+                          (SELECT COUNT(*) FROM player_stats_per_game s WHERE s.player_id = p.id) AS games
+                   FROM players p";
+
+        $rows = $conn->execute("$select WHERE p.id = :id", ['id' => $id])->fetchAll('assoc');
+        if (count($rows) === 1) {
+            return $rows[0];
+        }
+
+        $escaped = addcslashes($id, '%_\\');
+        $rows = $conn->execute("$select WHERE p.id LIKE :prefix", ['prefix' => $escaped . '%'])->fetchAll('assoc');
+        if (count($rows) === 1) {
+            return $rows[0];
+        }
+
+        if (count($rows) > 1) {
+            $io->error(sprintf('Id prefix "%s" matches %d profiles; use a longer id.', $id, count($rows)));
+        } else {
+            $io->error(sprintf('No player found with id "%s".', $id));
+        }
+
+        return null;
     }
 
     /**
@@ -147,6 +298,22 @@ class MergePlayersCommand extends Command
              FROM players p
              WHERE p.name = :name",
             ['name' => $name]
+        )->fetchAll('assoc');
+    }
+
+    /**
+     * Profiles for one name restricted to a single /24 subnet.
+     *
+     * @return array<int, array{id:string,pubkey:?string,games:int,first_seen:?string,last_seen:?string,picture:?string,ip:?string,country:?string}>
+     */
+    private function profilesForNameNet($conn, string $name, string $net): array
+    {
+        return $conn->execute(
+            "SELECT p.id, p.pubkey, p.first_seen, p.last_seen, p.picture, p.ip, p.country,
+                    (SELECT COUNT(*) FROM player_stats_per_game s WHERE s.player_id = p.id) AS games
+             FROM players p
+             WHERE p.name = :name AND SUBSTRING_INDEX(p.ip, '.', 3) = :net",
+            ['name' => $name, 'net' => $net]
         )->fetchAll('assoc');
     }
 

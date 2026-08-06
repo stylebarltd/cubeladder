@@ -42,6 +42,11 @@ class AcLogParser
     protected array $geoCache = [];             // ip => iso2
     protected array $statsBuffer = [];          // "gameId:playerId" => stats array
 
+    // AssaultCube default / non-identity names we never turn into player rows.
+    // "unarmed" is the client default and is also the killer shown for
+    // environmental deaths, so it is shared by countless distinct people.
+    protected array $ignoredNames = ['unarmed'];
+
     // Current game in memory (ORM entity) and map for quick check
     protected $currentGame = null;
     protected $skipCurrentGame = false;
@@ -223,6 +228,12 @@ class AcLogParser
             $ip = $m[1];
             $name = $m[2];
             $pub = $m[3];
+
+            // Never mint a profile for a shared default name (e.g. "unarmed").
+            if (in_array(strtolower($name), $this->ignoredNames, true)) {
+                $this->eventsParsed++;
+                return;
+            }
 
             $player = $this->findOrCreatePlayerCached($name, $pub, $ip, $ts);
             $this->currentGamePlayers[$name] = $player->id;
@@ -718,6 +729,53 @@ class AcLogParser
                     'name' => $name,
                     'OR' => [['pubkey IS' => null], ['pubkey' => '']],
                 ])
+                ->first();
+
+            if ($existing) {
+                $existing->pubkey = $pubkey;
+                $existing->ip = $ip;
+                if ($existing->country === null) {
+                    $existing->country = $this->ipToCountryCached($ip);
+                }
+                if (
+                    !$existing->last_seen ||
+                    $now->getTimestamp() >= $existing->last_seen->getTimestamp()
+                ) {
+                    $existing->last_seen = $now;
+                }
+                $this->Players->save($existing);
+
+                $this->playersCache[$name] = $existing->id;
+                $this->pubkeyCache[$pubkey] = $existing->id;
+
+                return $existing;
+            }
+        }
+
+        // 1c) Rotating-pubkey fallback.
+        //
+        // Many AssaultCube clients generate a BRAND-NEW pubkey every session,
+        // so a returning player logs in with a pubkey we have never seen. The
+        // pubkey cache misses, step 1b misses (their existing rows already own
+        // a pubkey), and we would mint yet another duplicate every session.
+        //
+        // Reuse an existing profile with the SAME name on the SAME /24 subnet:
+        // that combination is the same human on a dynamic IP. We deliberately
+        // require the subnet match so distinct people who share a common name
+        // (e.g. "test") but connect from different networks stay separate. The
+        // fresh session key is adopted onto the existing row.
+        if ($pubkey && $ip && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            $net = implode('.', array_slice(explode('.', $ip), 0, 3));
+
+            // ip is always a numeric dotted quad, so 'a.b.c.%' matches exactly
+            // the /24 without over-matching neighbouring octets.
+            $existing = $this->Players->find()
+                ->where(function ($exp) use ($name, $net) {
+                    return $exp
+                        ->eq('name', $name)
+                        ->like('ip', $net . '.%');
+                })
+                ->order(['last_seen' => 'DESC'])
                 ->first();
 
             if ($existing) {
