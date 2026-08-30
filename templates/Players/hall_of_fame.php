@@ -22,6 +22,11 @@ $genres = [
         'data'  => $topFlags,
     ],
     [
+        'title' => 'Longest Streak',
+        'color' => 'text-orange-400',
+        'data'  => $topStreaks,
+    ],
+    [
         'title' => 'Most Slashes',
         'color' => 'text-purple-400',
         'data'  => $topSlashes,

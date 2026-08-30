@@ -41,6 +41,7 @@ class AcLogParser
     protected array $mapsCache = [];            // name => entity
     protected array $geoCache = [];             // ip => iso2
     protected array $statsBuffer = [];          // "gameId:playerId" => stats array
+    protected array $streakBuffer = [];         // playerId => current kill streak in the running game
 
     // AssaultCube default / non-identity names we never turn into player rows.
     // "unarmed" is the client default and is also the killer shown for
@@ -209,6 +210,7 @@ class AcLogParser
 
             $this->currentGame = $game;
             $this->currentGamePlayers = [];
+            $this->streakBuffer = [];
 
             $this->eventsParsed++;
 
@@ -302,6 +304,7 @@ class AcLogParser
 
                 if ($victimId) {
                     $this->incrementStatBuffered($victimId, 'deaths', 1);
+                    $this->breakStreak($victimId);
                 }
 
                 $this->eventsParsed++;
@@ -325,11 +328,14 @@ class AcLogParser
                     $this->incrementStatBuffered($killerId, $verbCol, 1);
                     $this->statsParsed++;
                 }
+
+                $this->extendStreak($killerId);
             }
 
             // ✅ victim death ALWAYS if real player
             if ($victimId) {
                 $this->incrementStatBuffered($victimId, 'deaths', 1);
+                $this->breakStreak($victimId);
             }
 
             $this->eventsParsed++;
@@ -419,6 +425,7 @@ class AcLogParser
             if($statCol=='suicided'){
                 $this->incrementStatBuffered($playerId, 'deaths', 1);
                 $this->incrementStatBuffered($playerId, 'kills', -1);
+                $this->breakStreak($playerId);
             }
 
             $this->incrementStatBuffered($playerId, $statCol, 1);
@@ -444,6 +451,7 @@ class AcLogParser
                 // reset in-memory game
                 $this->currentGame = null;
                 $this->currentGamePlayers = [];
+                $this->streakBuffer = [];
             }
             return;
         }
@@ -545,7 +553,7 @@ class AcLogParser
                     'busted' => 0, 'shredded' => 0, 'peppered' => 0, 'sprayed' => 0, 'punctured' => 0,
                     'splattered' => 0, 'slashed' => 0, 'gibbed' => 0, 'picked_off' => 0,
                     'suicided' => 0, 'stole_the_flag' => 0, 'lost_the_flag' => 0,
-                    'returned_the_flag' => 0, 'scored_with_the_flag' => 0,
+                    'returned_the_flag' => 0, 'scored_with_the_flag' => 0, 'longest_streak' => 0,
                     'total_score' => 0, 'kd_ratio' => 0
                 ];
             }
@@ -577,6 +585,32 @@ class AcLogParser
 
     }
 
+    /**
+     * One more kill without dying: bump the running streak and remember the
+     * best one of the game in the stats row (longest_streak).
+     */
+    protected function extendStreak(string $playerId): void
+    {
+        if (!$this->currentGame) return;
+
+        $streak = ($this->streakBuffer[$playerId] ?? 0) + 1;
+        $this->streakBuffer[$playerId] = $streak;
+
+        $key = $this->currentGame->id . ':' . $playerId;
+        $this->ensurePlayerStatsBuffered($playerId);
+        if ($streak > (int)($this->statsBuffer[$key]['longest_streak'] ?? 0)) {
+            $this->statsBuffer[$key]['longest_streak'] = $streak;
+        }
+    }
+
+    /**
+     * Player died (killed, teamkilled or suicided): the streak is over.
+     */
+    protected function breakStreak(string $playerId): void
+    {
+        $this->streakBuffer[$playerId] = 0;
+    }
+
     protected function recalculateTotalScoreInMemory(string $key): void
     {
         $row = &$this->statsBuffer[$key];
@@ -605,7 +639,7 @@ class AcLogParser
             'game_id','player_id','kills','teamkills','deaths','headshot','busted','shredded',
             'sprayed','punctured','splattered','peppered','slashed','gibbed','picked_off','suicided',
             'stole_the_flag','lost_the_flag','returned_the_flag','scored_with_the_flag',
-            'total_score','kd_ratio'
+            'longest_streak','total_score','kd_ratio'
         ];
 
         $placeholders = [];

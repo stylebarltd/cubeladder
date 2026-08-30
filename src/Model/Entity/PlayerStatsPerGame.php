@@ -67,6 +67,7 @@ class PlayerStatsPerGame extends Entity
         'lost_the_flag' => true,
         'returned_the_flag' => true,
         'scored_with_the_flag' => true,
+        'longest_streak' => true,
         'kd_ratio' => true,
         'total_score' => true,
         'game' => true,

@@ -123,6 +123,10 @@ class PlayerStatsPerGameTable extends Table
             ->allowEmptyString('suicided');
 
         $validator
+            ->integer('longest_streak')
+            ->allowEmptyString('longest_streak');
+
+        $validator
             ->integer('picked_off')
             ->allowEmptyString('picked_off');
 

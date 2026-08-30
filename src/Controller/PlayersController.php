@@ -47,6 +47,7 @@ class PlayersController extends AppController
         $topGibbed    = $this->getTopPlayers('gibbed');
         $topKills     = $this->getTopPlayers('kills');
         $topFlags     = $this->getTopPlayers('scored_with_the_flag');
+        $topStreaks   = $this->getTopPlayers('longest_streak');
 
 //        $topSteals    = $this->getTopPlayers('stole_the_flag');
 //        $topReturned    = $this->getTopPlayers('returned_the_flag');
@@ -71,6 +72,7 @@ class PlayersController extends AppController
             'topGibbed',
             'topKills',
             'topFlags',
+            'topStreaks',
             'bestFlagHelpers',
             'achievementPlayers'
         ));
@@ -122,7 +124,8 @@ class PlayersController extends AppController
                 ['sub' => $sub],
                 [
                     'sub.player_id = PlayerStatsPerGame.player_id',
-                    "sub.max_value = $fieldExpr"
+                    "sub.max_value = $fieldExpr",
+                    'sub.max_value > 0',
                 ]
             )
             ->innerJoinWith('Players')
