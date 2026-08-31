@@ -96,7 +96,27 @@ class PagesController extends AppController
 //dd($achievements);
             $lastGameDateRange = $this->getGameDateRange();
 
-            $this->set(compact('lastLogs', 'bestPlayersByScore', 'bestPlayersByMap', 'achievementPlayers', 'lastGameDateRange'));
+            // All-time longest kill streak in a single game (banner on the
+            // frontpage). Only new games track streaks, so this can be empty
+            // for a while - the banner is hidden then. Cached in 'rankings',
+            // which ProcessLogsCommand clears after every import.
+            $recordStreak = \Cake\Cache\Cache::remember('record_streak', function () {
+                $row = $this->fetchTable('PlayerStatsPerGame')->find()
+                    ->select([
+                        'streak' => 'PlayerStatsPerGame.longest_streak',
+                        'Players.id', 'Players.name', 'Players.country', 'Players.picture',
+                        'Games.started_at',
+                    ])
+                    ->contain(['Players', 'Games'])
+                    ->where(['Players.track' => 1, 'PlayerStatsPerGame.longest_streak >' => 0])
+                    ->orderBy(['PlayerStatsPerGame.longest_streak' => 'DESC', 'Games.started_at' => 'ASC'])
+                    ->enableHydration(false)
+                    ->first();
+
+                return $row ?: null;
+            }, 'rankings');
+
+            $this->set(compact('lastLogs', 'bestPlayersByScore', 'bestPlayersByMap', 'achievementPlayers', 'lastGameDateRange', 'recordStreak'));
         }
 
 

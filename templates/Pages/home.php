@@ -1,4 +1,32 @@
 
+<?php if (!empty($recordStreak)): ?>
+<!-- Longest streak record banner (values overlaid on the artwork) -->
+<style>
+.streak-banner { position: relative; container-type: inline-size; display: block; width: 100%; max-width: 72rem; margin: 0 auto; }
+.streak-banner img.bg { display: block; width: 100%; height: auto; }
+.streak-banner .ov { position: absolute; color: #fff; font-family: 'Rubik', sans-serif; line-height: 1; white-space: nowrap; }
+.streak-kills { left: 66.5%; top: 39.8%; width: 12.6%; text-align: center; transform: translateY(-50%);
+    font-size: 4cqw; font-weight: 800; letter-spacing: .02em; }
+.streak-avatar { left: 61.1%; top: 58.6%; width: 4.8%; height: 17%; object-fit: cover; border-radius: 8%;
+    position: absolute; box-shadow: 0 0 0 2px rgba(255,255,255,.12); }
+.streak-name { left: 67%; top: 63.6%; transform: translateY(-50%); font-size: 1.7cqw; font-weight: 700;
+    max-width: 14.5%; overflow: hidden; text-overflow: ellipsis; }
+.streak-date { left: 73.8%; top: 73%; transform: translateY(-50%); font-size: 1.1cqw; color: #9ca3af; letter-spacing: .05em; }
+.streak-flag { left: 83.7%; top: 67%; transform: translate(-50%, -50%); font-size: 2.7cqw; }
+</style>
+<a href="/players/view/<?= h($recordStreak['player']['id']) ?>" class="streak-banner" title="all-time longest streak – view profile">
+    <img class="bg" src="/img/longest-streak.png" alt="Longest streak in AssaultCube">
+    <span class="ov streak-kills"><?= (int)$recordStreak['streak'] ?></span>
+    <img class="streak-avatar"
+         src="<?= h(!empty($recordStreak['player']['picture']) ? '/img/players/' . $recordStreak['player']['picture'] : '/img/acl.png') ?>" alt="">
+    <span class="ov streak-name"><?= h($recordStreak['player']['name']) ?></span>
+    <span class="ov streak-date"><?= h(strtoupper((new \DateTime((string)$recordStreak['game']['started_at']))->format('M j, Y'))) ?></span>
+    <?php $iso = strtoupper((string)($recordStreak['player']['country'] ?? '')); if (strlen($iso) === 2): ?>
+        <span class="ov streak-flag"><?= mb_chr(0x1F1E6 + ord($iso[0]) - 65) . mb_chr(0x1F1E6 + ord($iso[1]) - 65) ?></span>
+    <?php endif; ?>
+</a>
+<?php endif; ?>
+
 <!-- Hero Section -->
 <section id="home" class="relative h-screen flex items-center justify-center bg-coffee-900 text-white overflow-hidden">
     <img src="/img/bullet.jpg"
