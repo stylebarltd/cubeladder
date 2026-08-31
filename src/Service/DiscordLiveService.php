@@ -255,20 +255,6 @@ class DiscordLiveService
         return $out;
     }
 
-    /** AC modes played in two teams (CLA vs RVSF) */
-    private const TEAM_MODES = [0, 4, 5, 7, 11, 13, 14, 16, 17, 20, 21];
-
-    /** Modes decided by flags (ctf, htf, tktf, ktf) – everything else is decided by frags */
-    private const FLAG_MODES = [5, 13, 14, 15];
-
-    /** extinfo mode id → games.mode code as written by the log parser */
-    private const MODE_CODES = [
-        0 => 'tdm', 1 => 'coop', 2 => 'dm', 3 => 'surv', 4 => 'tsurv', 5 => 'ctf', 6 => 'pf',
-        7 => 'btdm', 8 => 'bdm', 9 => 'lss', 10 => 'osok', 11 => 'tosok', 12 => 'bosok',
-        13 => 'htf', 14 => 'tktf', 15 => 'ktf', 16 => 'tpf', 17 => 'tlss', 18 => 'bpf',
-        19 => 'blss', 20 => 'btsurv', 21 => 'btosok',
-    ];
-
     /** Discord: max embeds per message */
     private const MAX_EMBEDS = 10;
 
@@ -402,7 +388,7 @@ class DiscordLiveService
                 $embed['description'] .= sprintf(' · _%d spec%s_', $specs, $specs === 1 ? '' : 's');
             }
         }
-        if (!empty($s['last_flag']) && in_array((int)$s['mode'], self::FLAG_MODES, true)) {
+        if (!empty($s['last_flag']) && in_array((int)$s['mode'], AcExtInfoService::FLAG_MODES, true)) {
             $who = [];
             foreach ($s['last_flag']['players'] as $p) {
                 $who[] = $this->mdEscape($p['name']) . ' (' . $p['team'] . ')' . ($p['n'] > 1 ? " ×{$p['n']}" : '');
@@ -428,11 +414,11 @@ class DiscordLiveService
             return $embed;
         }
 
-        $byFlags = in_array((int)$s['mode'], self::FLAG_MODES, true);
+        $byFlags = in_array((int)$s['mode'], AcExtInfoService::FLAG_MODES, true);
         $key = $byFlags ? 'flags' : 'frags';
         $sort = fn($a, $b) => [$b[$key], $b['frags'], $a['deaths']] <=> [$a[$key], $a['frags'], $b['deaths']];
 
-        $teamMode = in_array((int)$s['mode'], self::TEAM_MODES, true);
+        $teamMode = in_array((int)$s['mode'], AcExtInfoService::TEAM_MODES, true);
         if (!$teamMode) {
             usort($plist, $sort);
             $embed['fields'] = [[
@@ -487,6 +473,8 @@ class DiscordLiveService
     {
         $author = ['name' => $label];
         if ($this->site()) {
+            // clicking the server name opens its live match page
+            $author['url'] = $this->site() . '/live/game/' . rawurlencode($s['key']);
             $icon = '/img/cube.png';
             foreach (['png', 'jpg'] as $ext) {
                 if (is_file(WWW_ROOT . 'img/servers/' . $s['key'] . '.' . $ext)) {
@@ -569,7 +557,7 @@ class DiscordLiveService
      */
     private function gameId(array $s): ?string
     {
-        $mode = self::MODE_CODES[(int)$s['mode']] ?? null;
+        $mode = AcExtInfoService::MODE_CODES[(int)$s['mode']] ?? null;
         if ($mode === null || empty($s['map'])) {
             return null;
         }

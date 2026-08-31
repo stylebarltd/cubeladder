@@ -37,6 +37,20 @@ class AcExtInfoService
         20 => 'bot team survivor', 21 => 'bot team one shot one kill',
     ];
 
+    /** Modes decided by flags (ctf, htf, tktf, ktf) – the rest by frags */
+    public const FLAG_MODES = [5, 13, 14, 15];
+
+    /** Modes played in two teams (CLA vs RVSF) */
+    public const TEAM_MODES = [0, 4, 5, 7, 11, 13, 14, 16, 17, 20, 21];
+
+    /** mode id → short code as used in games.mode by the log parser */
+    public const MODE_CODES = [
+        0 => 'tdm', 1 => 'coop', 2 => 'dm', 3 => 'surv', 4 => 'tsurv', 5 => 'ctf', 6 => 'pf',
+        7 => 'btdm', 8 => 'bdm', 9 => 'lss', 10 => 'osok', 11 => 'tosok', 12 => 'bosok',
+        13 => 'htf', 14 => 'tktf', 15 => 'ktf', 16 => 'tpf', 17 => 'tlss', 18 => 'bpf',
+        19 => 'blss', 20 => 'btsurv', 21 => 'btosok',
+    ];
+
     public const GUNS = [
         0 => 'knife', 1 => 'pistol', 2 => 'carbine', 3 => 'shotgun', 4 => 'submachine gun',
         5 => 'sniper rifle', 6 => 'assault rifle', 7 => 'combat pistol', 8 => 'grenade', 9 => 'akimbo',

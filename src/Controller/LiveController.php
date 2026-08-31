@@ -39,6 +39,75 @@ class LiveController extends AppController
         $this->viewBuilder()->setOption('serialize', 'data');
     }
 
+    /**
+     * Live match page for one server: CLA vs RVSF, in-game style.
+     */
+    public function game(string $key)
+    {
+        $servers = Configure::read('Ladder.servers') ?: [];
+        if (!isset($servers[$key])) {
+            throw new \Cake\Http\Exception\NotFoundException();
+        }
+        $server = $servers[$key] + ['key' => $key];
+        $this->set(compact('server', 'key'));
+    }
+
+    /**
+     * JSON for the live match page: one server only, cached a few seconds.
+     */
+    public function gameStatus(string $key)
+    {
+        $this->request->allowMethod(['get']);
+        $servers = Configure::read('Ladder.servers') ?: [];
+        if (!isset($servers[$key])) {
+            throw new \Cake\Http\Exception\NotFoundException();
+        }
+
+        $data = Cache::remember('game_' . $key, function () use ($key, $servers) {
+            $info = (new AcExtInfoService())->query($servers[$key]['host'], (int)$servers[$key]['port']);
+            $info['key'] = $key;
+            $info['name'] = $servers[$key]['name'] ?? $key;
+            $info['team_mode'] = in_array((int)$info['mode'], AcExtInfoService::TEAM_MODES, true);
+            $info['by_flags'] = in_array((int)$info['mode'], AcExtInfoService::FLAG_MODES, true);
+            $info['map_image'] = $info['map'] && is_file(WWW_ROOT . 'img/maps/' . $info['map'] . '.jpg')
+                ? '/img/maps/' . $info['map'] . '.jpg'
+                : '/img/maps/placeholder.jpg';
+            $info['game_id'] = $this->currentGameId($info);
+            $list = [$info];
+            $this->linkProfiles($list);
+
+            return ['fetched_at' => date('c'), 'server' => $list[0]];
+        }, 'live');
+
+        $this->viewBuilder()->setClassName('Json');
+        $this->set('data', $data);
+        $this->viewBuilder()->setOption('serialize', 'data');
+    }
+
+    /**
+     * Id of this game on the ladder, when the log parser already created it
+     * (latest game of the server, same map + mode).
+     */
+    private function currentGameId(array $info): ?string
+    {
+        $mode = AcExtInfoService::MODE_CODES[(int)$info['mode']] ?? null;
+        if ($mode === null || empty($info['map'])) {
+            return null;
+        }
+        $game = $this->fetchTable('Games')->find()
+            ->select(['Games.id', 'Games.mode', 'Maps.name'])
+            ->contain(['Maps'])
+            ->where(['Games.server_name' => $info['key']])
+            ->orderBy(['Games.started_at' => 'DESC'])
+            ->enableHydration(false)
+            ->first();
+        if (!$game || $game['mode'] !== $mode || ($game['map']['name'] ?? null) !== $info['map']) {
+            return null;
+        }
+
+        return (string)$game['id'];
+    }
+
     private function fetchAll(): array
     {
         $own = Configure::read('Ladder.servers') ?: [];
