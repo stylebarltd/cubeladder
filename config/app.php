@@ -507,6 +507,10 @@ return [
      * the page talks to is port + 1. Override / extend in app_local.php.
      */
     'Ladder' => [
+        // Frontpage "longest streak" banner (off in production for now;
+        // enabled locally via app_local.php).
+        'streakBanner' => false,
+
         'servers' => [
             'chobbz-banana'  => ['name' => 'Banana',  'host' => 'ac.cbz.ovh',   'port' => 1111],
             'chobbz-potato'  => ['name' => 'POTATO',  'host' => 'ac.cbz.ovh',   'port' => 2222],

@@ -100,7 +100,8 @@ class PagesController extends AppController
             // frontpage). Only new games track streaks, so this can be empty
             // for a while - the banner is hidden then. Cached in 'rankings',
             // which ProcessLogsCommand clears after every import.
-            $recordStreak = \Cake\Cache\Cache::remember('record_streak', function () {
+            $recordStreak = !\Cake\Core\Configure::read('Ladder.streakBanner') ? null
+                : \Cake\Cache\Cache::remember('record_streak', function () {
                 $row = $this->fetchTable('PlayerStatsPerGame')->find()
                     ->select([
                         'streak' => 'PlayerStatsPerGame.longest_streak',
