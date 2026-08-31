@@ -363,7 +363,7 @@ class DiscordLiveService
         if (!$s['online']) {
             $why = str_starts_with((string)$s['error'], 'outgoing UDP blocked') ? 'cannot be polled from here' : 'offline / no reply';
             return [
-                'title' => '🔴 ' . $s['name'],
+                'author' => $this->serverAuthor($s, $s['name'] . ' — offline'),
                 'description' => $why . ' · ' . $connect,
                 'color' => self::COLOR_OFFLINE,
             ];
@@ -372,7 +372,7 @@ class DiscordLiveService
         $n = (int)$s['numplayers'];
         $max = (int)($s['maxclients'] ?? 0);
         $embed = [
-            'title' => sprintf('%s %s — %d/%d', $n > 0 ? '🟢' : '⚪', $s['name'], $n, $max),
+            'author' => $this->serverAuthor($s, sprintf('%s — %d/%d', $s['name'], $n, $max)),
             'color' => $n > 0 ? self::COLOR_ONLINE : self::COLOR_EMPTY,
         ];
 
@@ -476,6 +476,28 @@ class DiscordLiveService
         }
 
         return $embed;
+    }
+
+    /**
+     * Embed author line: small round icon + server name. The icon is
+     * webroot/img/servers/<server key>.<png|jpg> when present (drop a logo
+     * there to brand a server), the cube logo otherwise.
+     */
+    private function serverAuthor(array $s, string $label): array
+    {
+        $author = ['name' => $label];
+        if ($this->site()) {
+            $icon = '/img/cube.png';
+            foreach (['png', 'jpg'] as $ext) {
+                if (is_file(WWW_ROOT . 'img/servers/' . $s['key'] . '.' . $ext)) {
+                    $icon = '/img/servers/' . rawurlencode($s['key']) . '.' . $ext;
+                    break;
+                }
+            }
+            $author['icon_url'] = $this->site() . $icon;
+        }
+
+        return $author;
     }
 
     /**
