@@ -120,6 +120,32 @@ return [
         ],
 
         /*
+         * Live server status (Live::status). Very short lived: it only exists
+         * so that many visitors polling the page do not each send UDP queries
+         * to the game servers.
+         */
+        'live' => [
+            'className' => FileEngine::class,
+            'prefix' => 'myapp_live_',
+            'path' => CACHE . 'live' . DS,
+            'serialize' => true,
+            'duration' => '+10 seconds',
+        ],
+
+        /*
+         * Server list from the AssaultCube master server (AcMasterServerService).
+         * Kept for a day so a flaky master still leaves us with the last good
+         * list; the service itself refreshes it every Ladder.master.ttl seconds.
+         */
+        'master' => [
+            'className' => FileEngine::class,
+            'prefix' => 'myapp_master_',
+            'path' => CACHE . 'master' . DS,
+            'serialize' => true,
+            'duration' => '+1 day',
+        ],
+
+        /*
          * Configure the cache used for general framework caching.
          * Translation cache files are stored with this configuration.
          * Duration will be set to '+2 minutes' in bootstrap.php when debug = true
@@ -471,5 +497,71 @@ return [
     'TestSuite' => [
         'errorLevel' => null,
         'fixtureStrategy' => null,
+    ],
+
+    /*
+     * Game servers shown on the Live page. Keys match games.server_name
+     * (see process_logs.sh). `port` is the GAME port; the extinfo/ping port
+     * the page talks to is port + 1. Override / extend in app_local.php.
+     */
+    'Ladder' => [
+        'servers' => [
+            'chobbz-banana'  => ['name' => 'Banana',  'host' => 'ac.cbz.ovh',   'port' => 1111],
+            'chobbz-potato'  => ['name' => 'POTATO',  'host' => 'ac.cbz.ovh',   'port' => 2222],
+            'mys-1111'  => ['name' => 'MyS 1111',  'host' => 'mysick.org',   'port' => 1111],
+            'mys-2222'  => ['name' => 'MyS 2222',  'host' => 'mysick.org',   'port' => 2222],
+            'mys-3333'       => ['name' => 'MyS 3333',           'host' => 'mysick.org',   'port' => 3333],
+            'acka-custom'    => ['name' => '[aCKa] Custom',      'host' => '54.36.188.74', 'port' => 9000],
+            'acka-nostalgic' => ['name' => '[aCKa] Nostalgic',   'host' => '54.36.188.74', 'port' => 9002],
+            'acka-assault'   => ['name' => '[aCKa] Assault',     'host' => '54.36.188.74', 'port' => 9999],
+            'acka-europa'    => ['name' => '[aCKa] Europa',      'host' => '54.36.188.74', 'port' => 28765],
+        ],
+
+        /*
+         * Discord "live" message (bin/cake discord_live): one webhook message
+         * that is posted once and then edited in place on every run.
+         *  - webhook  : full Discord webhook URL – keep it in app_local.php / env, never commit it
+         *  - servers  : keys of Ladder.servers to include (in this order)
+         *  - site     : absolute URL of the ladder, used for the embed links (null = no link)
+         *  - state    : file that remembers the id of the message we keep editing
+         */
+        'discord' => [
+            'webhook' => env('DISCORD_LIVE_WEBHOOK'),
+            'servers' => ['chobbz-banana', 'chobbz-potato', 'acka-custom', 'acka-nostalgic', 'acka-assault', 'acka-europa'],
+            'site' => env('APP_FULL_BASE_URL', 'https://cubeladder.ovh'),
+            'state' => TMP . 'discord_live.json',
+            /*
+             * Post a NEW message (edits never make a sound) when a server
+             * reaches `threshold` players coming from below it, at most once
+             * per `cooldown` seconds per server. `mention` is prepended and
+             * may ping a role: '<@&ROLE_ID>' (or '@here'); null = no ping.
+             * threshold 0 disables the notifications.
+             */
+            'notify' => [
+                'threshold' => 3,
+                'cooldown' => 1800,
+                'mention' => null,
+                // join notices are deleted again after this many seconds,
+                // keeping the channel clean (0 = keep them forever)
+                'ttl' => 900,
+            ],
+
+            /*
+             * Additional channels. Every feed inherits all settings above
+             * and overrides what it needs – at least `webhook` (its own
+             * channel) and usually `servers`. A feed without a webhook is
+             * skipped. State files are kept apart automatically.
+             */
+            'feeds' => [
+                'mys' => [
+                    'webhook' => env('DISCORD_MYS_WEBHOOK'),
+                    'servers' => ['mys-1111', 'mys-2222', 'mys-3333'],
+                    'title' => 'MyS Inter – live servers',
+                    'brand' => 'MyS Inter',
+                    // inter: spectators are people waiting for a mix – name them
+                    'show_spectators' => true,
+                ],
+            ],
+        ],
     ],
 ];
