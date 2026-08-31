@@ -20,8 +20,19 @@ class LiveController extends AppController
 {
     public function index()
     {
-        $servers = Configure::read('Ladder.servers') ?: [];
+        $servers = $this->liveServers();
         $this->set(compact('servers'));
+    }
+
+    /**
+     * Ladder.servers minus the entries hidden from the live page.
+     */
+    private function liveServers(): array
+    {
+        return array_filter(
+            Configure::read('Ladder.servers') ?: [],
+            fn($cfg) => $cfg['live'] ?? true
+        );
     }
 
     /**
@@ -110,7 +121,7 @@ class LiveController extends AppController
 
     private function fetchAll(): array
     {
-        $own = Configure::read('Ladder.servers') ?: [];
+        $own = $this->liveServers();
 
         // Master list entries are "ip:port"; resolve our own hosts so the
         // same server is not polled twice under two names.

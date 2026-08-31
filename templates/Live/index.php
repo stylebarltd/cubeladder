@@ -14,7 +14,9 @@
         <div class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden" data-server="<?= h($key) ?>">
             <div class="p-4 md:p-5 border-b border-zinc-700/60">
                 <div class="flex items-center justify-between gap-3">
-                    <h2 class="text-2xl font-bold text-white truncate"><?= h($cfg['name'] ?? $key) ?></h2>
+                    <h2 class="text-2xl font-bold text-white truncate">
+                        <a href="/live/game/<?= h($key) ?>" class="hover:text-blue-400 transition" title="live match view"><?= h($cfg['name'] ?? $key) ?></a>
+                    </h2>
                     <span class="js-status text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">checking&hellip;</span>
                 </div>
                 <div class="js-desc text-xs text-zinc-500 truncate mt-0.5"><?= h($cfg['host']) ?>:<?= (int)$cfg['port'] ?></div>

@@ -500,7 +500,9 @@ return [
     ],
 
     /*
-     * Game servers shown on the Live page. Keys match games.server_name
+     * Game servers shown on the Live page ('live' => false keeps a server
+     * off that page but still available to Discord feeds and the per-server
+     * match view). Keys match games.server_name
      * (see process_logs.sh). `port` is the GAME port; the extinfo/ping port
      * the page talks to is port + 1. Override / extend in app_local.php.
      */
@@ -508,9 +510,9 @@ return [
         'servers' => [
             'chobbz-banana'  => ['name' => 'Banana',  'host' => 'ac.cbz.ovh',   'port' => 1111],
             'chobbz-potato'  => ['name' => 'POTATO',  'host' => 'ac.cbz.ovh',   'port' => 2222],
-            'mys-1111'  => ['name' => 'MyS 1111',  'host' => 'mysick.org',   'port' => 1111],
-            'mys-2222'  => ['name' => 'MyS 2222',  'host' => 'mysick.org',   'port' => 2222],
-            'mys-3333'       => ['name' => 'MyS 3333',           'host' => 'mysick.org',   'port' => 3333],
+            'mys-1111'  => ['name' => 'MyS 1111',  'host' => 'mysick.org',   'port' => 1111, 'live' => false],
+            'mys-2222'  => ['name' => 'MyS 2222',  'host' => 'mysick.org',   'port' => 2222, 'live' => false],
+            'mys-3333'       => ['name' => 'MyS 3333',           'host' => 'mysick.org',   'port' => 3333, 'live' => false],
             'acka-custom'    => ['name' => '[aCKa] Custom',      'host' => '54.36.188.74', 'port' => 9000],
             'acka-nostalgic' => ['name' => '[aCKa] Nostalgic',   'host' => '54.36.188.74', 'port' => 9002],
             'acka-assault'   => ['name' => '[aCKa] Assault',     'host' => '54.36.188.74', 'port' => 9999],
