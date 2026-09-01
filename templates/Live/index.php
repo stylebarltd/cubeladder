@@ -1,3 +1,13 @@
+<?php
+/**
+ * Live page: server list in the left sidebar, the selected server's
+ * running game (shared live_match element) on the right. Selection is
+ * kept in the URL hash (/live#acka-assault).
+ *
+ * @var \App\View\AppView $this
+ * @var array $servers  Ladder.servers minus hidden ones
+ */
+?>
 <div class="w-full max-w-7xl px-4 sm:px-6 py-10 mx-auto">
 
 <h1 class="text-4xl font-bold text-white mb-2 text-center">Live</h1>
@@ -9,192 +19,153 @@
     <p class="text-center text-zinc-500">No servers configured (Ladder.servers).</p>
 <?php else: ?>
 
-<div id="live-servers" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-    <?php foreach ($servers as $key => $cfg): ?>
-        <div class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden" data-server="<?= h($key) ?>">
-            <div class="p-4 md:p-5 border-b border-zinc-700/60">
-                <div class="flex items-center justify-between gap-3">
-                    <h2 class="text-2xl font-bold text-white truncate">
-                        <a href="/live/game/<?= h($key) ?>" class="hover:text-blue-400 transition" title="live match view"><?= h($cfg['name'] ?? $key) ?></a>
-                    </h2>
-                    <span class="js-status text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">checking&hellip;</span>
-                </div>
-                <div class="js-desc text-xs text-zinc-500 truncate mt-0.5"><?= h($cfg['host']) ?>:<?= (int)$cfg['port'] ?></div>
-                <div class="js-game flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-sm text-zinc-300"></div>
-            </div>
-            <div class="js-players"></div>
+<style>
+.live-layout { display: flex; flex-direction: column; gap: 1.5rem; align-items: flex-start; }
+.live-side { width: 100%; }
+.live-main { flex: 1 1 0%; min-width: 0; width: 100%; }
+@media (min-width: 1024px) {
+    .live-layout { flex-direction: row; }
+    .live-side { width: 18rem; flex-shrink: 0; }
+}
+</style>
+<div class="live-layout">
+
+    <!-- Sidebar: our servers + elsewhere -->
+    <aside class="live-side">
+        <div class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden divide-y divide-zinc-700/60" id="live-sidebar">
+            <?php foreach ($servers as $key => $cfg): ?>
+            <button type="button" data-server="<?= h($key) ?>"
+                    class="w-full text-left p-3 hover:bg-zinc-700/60 transition flex items-center gap-3">
+                <span class="js-dot w-2.5 h-2.5 rounded-full bg-zinc-600 shrink-0"></span>
+                <span class="flex-1 min-w-0">
+                    <span class="block font-semibold text-white truncate"><?= h($cfg['name'] ?? $key) ?></span>
+                    <span class="js-sub block text-xs text-zinc-500 truncate"><?= h($cfg['host']) ?>:<?= (int)$cfg['port'] ?></span>
+                </span>
+                <span class="js-count text-xs font-mono text-zinc-400"></span>
+            </button>
+            <?php endforeach; ?>
         </div>
-    <?php endforeach; ?>
+
+        <div id="live-elsewhere-wrap" class="mt-6" hidden>
+            <h2 class="text-sm font-bold text-zinc-400 mb-1 px-1">Elsewhere in AssaultCube</h2>
+            <p id="live-elsewhere-sub" class="text-xs text-zinc-600 mb-2 px-1"></p>
+            <div id="live-elsewhere" class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden divide-y divide-zinc-700/60"></div>
+        </div>
+    </aside>
+
+    <!-- Selected server's running game -->
+    <div class="live-main">
+        <?= $this->element('live_match') ?>
+    </div>
+
 </div>
 
 <?php endif; ?>
-
-<div id="live-elsewhere-wrap" class="mt-14" hidden>
-    <h2 class="text-2xl font-bold text-white mb-1 text-center">Elsewhere in AssaultCube</h2>
-    <p id="live-elsewhere-sub" class="text-center text-zinc-500 text-sm mb-6"></p>
-    <div id="live-elsewhere" class="grid grid-cols-1 xl:grid-cols-2 gap-6"></div>
-</div>
 </div>
 
 <?php $this->start('scriptBottom'); ?>
 <script>
 (function () {
-    const root = document.getElementById('live-servers');
-    if (!root) return;
+    const sidebar = document.getElementById('live-sidebar');
+    if (!sidebar) return;
 
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const flag = (iso) => {
-        if (!iso || iso.length !== 2) return '';
-        const A = 0x1F1E6 - 65;
-        return String.fromCodePoint(iso.toUpperCase().charCodeAt(0) + A, iso.toUpperCase().charCodeAt(1) + A);
-    };
-    const teamClass = (t) => {
-        t = (t || '').toUpperCase();
-        if (t.startsWith('CLA')) return 'bg-red-500/20 text-red-300';
-        if (t.startsWith('RVSF')) return 'bg-blue-500/20 text-blue-300';
-        return 'bg-zinc-700 text-zinc-400';
-    };
-    const fmtUptime = (s) => {
-        if (s == null) return '';
-        const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600);
-        return d > 0 ? d + 'd ' + h + 'h' : h + 'h ' + Math.floor(s % 3600 / 60) + 'm';
-    };
+    const keys = [...sidebar.querySelectorAll('[data-server]')].map(b => b.dataset.server);
 
-    // Card skeleton for servers we do not know up front (master server list)
-    const cardHtml = (srv) =>
-        '<div class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden" data-server="' + esc(srv.key) + '">' +
-            '<div class="p-4 md:p-5 border-b border-zinc-700/60">' +
-                '<div class="flex items-center justify-between gap-3">' +
-                    '<h2 class="text-2xl font-bold text-white truncate">' + esc(srv.name) + '</h2>' +
-                    '<span class="js-status text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300"></span>' +
-                '</div>' +
-                '<div class="js-desc text-xs text-zinc-500 truncate mt-0.5">' + esc(srv.host) + ':' + esc(srv.port) + '</div>' +
-                '<div class="js-game flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-sm text-zinc-300"></div>' +
-            '</div>' +
-            '<div class="js-players"></div>' +
-        '</div>';
+    // --- selection --------------------------------------------------
+    let current = null;
+    let match = null;
 
-    function render(data) {
+    function select(key, pushHash = true) {
+        if (!keys.includes(key) || key === current) return;
+        current = key;
+        sidebar.querySelectorAll('[data-server]').forEach(b => {
+            b.classList.toggle('bg-zinc-700', b.dataset.server === key);
+        });
+        if (pushHash && location.hash !== '#' + key) {
+            history.replaceState(null, '', '#' + key);
+        }
+        if (match) match.setKey(key);
+        else match = window.initLiveMatch(document.querySelector('[data-live-match]'), key);
+    }
+
+    sidebar.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-server]');
+        if (btn) select(btn.dataset.server);
+    });
+    window.addEventListener('hashchange', () => {
+        const key = decodeURIComponent(location.hash.slice(1));
+        if (keys.includes(key)) select(key, false);
+    });
+
+    // --- sidebar status polling ------------------------------------
+    function fillSidebar(data) {
         document.getElementById('live-updated').textContent =
             'updated ' + new Date(data.fetched_at).toLocaleTimeString();
 
         data.servers.forEach(srv => {
-            const card = root.querySelector('[data-server="' + CSS.escape(srv.key) + '"]');
-            if (card) fillCard(card, srv);
+            const btn = sidebar.querySelector('[data-server="' + CSS.escape(srv.key) + '"]');
+            if (!btn) return;
+            const dot = btn.querySelector('.js-dot');
+            const sub = btn.querySelector('.js-sub');
+            const count = btn.querySelector('.js-count');
+            if (!srv.online) {
+                dot.className = 'js-dot w-2.5 h-2.5 rounded-full bg-red-500 shrink-0';
+                sub.textContent = 'offline';
+                count.textContent = '';
+            } else {
+                dot.className = 'js-dot w-2.5 h-2.5 rounded-full shrink-0 ' + (srv.numplayers > 0 ? 'bg-green-500' : 'bg-zinc-600');
+                sub.textContent = srv.numplayers > 0
+                    ? (srv.map || '—') + ' · ' + srv.mode_name
+                    : 'empty';
+                count.textContent = srv.numplayers + '/' + (srv.maxclients ?? '?');
+            }
         });
 
-        renderElsewhere(data.elsewhere);
-    }
-
-    function renderElsewhere(ew) {
         const wrap = document.getElementById('live-elsewhere-wrap');
-        const grid = document.getElementById('live-elsewhere');
+        const listEl = document.getElementById('live-elsewhere');
+        const ew = data.elsewhere;
         if (!ew || !ew.polled) { wrap.hidden = true; return; }
-
         wrap.hidden = false;
         document.getElementById('live-elsewhere-sub').textContent =
-            ew.players + ' player' + (ew.players === 1 ? '' : 's') + ' on ' + ew.online + ' other public server' + (ew.online === 1 ? '' : 's') +
-            (ew.servers.length ? '' : ' \u2014 all empty right now');
+            ew.players + ' player' + (ew.players === 1 ? '' : 's') + ' on ' + ew.online + ' other public server' + (ew.online === 1 ? '' : 's');
+        listEl.innerHTML = ew.servers.map(srv =>
+            '<div class="p-3">' +
+                '<div class="flex items-center gap-3">' +
+                    '<span class="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0"></span>' +
+                    '<span class="flex-1 min-w-0">' +
+                        '<span class="block text-sm font-semibold text-white truncate">' + esc(srv.name) + '</span>' +
+                        '<span class="block text-xs text-zinc-500 truncate">' + esc(srv.map || '—') + ' · ' + esc(srv.mode_name) + '</span>' +
+                    '</span>' +
+                    '<span class="text-xs font-mono text-zinc-400">' + srv.numplayers + '</span>' +
+                '</div>' +
+                '<div class="text-[11px] text-zinc-600 mt-1 ml-5">/connect ' + esc(srv.host) + ' ' + esc(srv.port) + '</div>' +
+            '</div>'
+        ).join('') || '<p class="p-3 text-xs text-zinc-500">all quiet</p>';
 
-        // Rebuild: the set of busy servers changes from poll to poll
-        grid.innerHTML = ew.servers.map(cardHtml).join('');
-        ew.servers.forEach(srv => {
-            const card = grid.querySelector('[data-server="' + CSS.escape(srv.key) + '"]');
-            if (card) fillCard(card, srv);
-        });
-    }
-
-    function fillCard(card, srv) {
-        {
-            const status = card.querySelector('.js-status');
-            const game = card.querySelector('.js-game');
-            const list = card.querySelector('.js-players');
-
-            if (!srv.online) {
-                status.textContent = 'offline';
-                status.className = 'js-status text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300';
-                game.innerHTML = '';
-                list.innerHTML = '<p class="p-4 text-sm text-zinc-500">' + esc(srv.error || 'no reply') + '</p>';
-                return;
-            }
-
-            const playing = srv.players.filter(p => !p.is_spectator);
-            const specs = srv.players.filter(p => p.is_spectator);
-            const teamMode = /team|flag/.test(srv.mode_name || '');
-            const flagMode = /flag/.test(srv.mode_name || '');
-
-            status.textContent = srv.numplayers + ' / ' + srv.maxclients + ' online';
-            status.className = 'js-status text-xs px-2 py-0.5 rounded-full ' +
-                (srv.numplayers > 0 ? 'bg-green-500/20 text-green-300' : 'bg-zinc-700 text-zinc-400');
-
-            if (srv.own && srv.description) card.querySelector('.js-desc').textContent = srv.description;
-
-            game.innerHTML =
-                '<span><i class="fas fa-map mr-1 text-zinc-500"></i>' + esc(srv.map || '—') + '</span>' +
-                '<span><i class="fas fa-gamepad mr-1 text-zinc-500"></i>' + esc(srv.mode_name) + '</span>' +
-                '<span><i class="fas fa-clock mr-1 text-zinc-500"></i>' + esc(srv.minremain) + ' min left</span>' +
-                (srv.uptime != null ? '<span class="text-zinc-500">up ' + fmtUptime(srv.uptime) + '</span>' : '');
-
-            if (!srv.players.length) {
-                list.innerHTML = '<p class="p-4 text-sm text-zinc-500">Nobody is playing right now.</p>';
-                return;
-            }
-
-            let html = '<div class="overflow-x-auto"><table class="w-full text-sm">' +
-                '<thead class="text-[11px] uppercase text-zinc-500"><tr>' +
-                '<th class="text-left px-4 py-2">Player</th>' +
-                (teamMode ? '<th class="text-left px-2 py-2">Team</th>' : '') +
-                '<th class="text-right px-2 py-2">Frags</th>' +
-                (flagMode ? '<th class="text-right px-2 py-2">Flags</th>' : '') +
-                '<th class="text-right px-2 py-2">Deaths</th>' +
-                '<th class="text-right px-2 py-2">TK</th>' +
-                '<th class="text-right px-2 py-2">Acc</th>' +
-                '<th class="text-right px-2 py-2">Ping</th>' +
-                '<th class="text-left px-2 py-2 hidden md:table-cell">Weapon</th>' +
-                '<th class="text-left px-4 py-2 hidden md:table-cell">State</th>' +
-                '</tr></thead><tbody class="divide-y divide-zinc-700/60">';
-
-            const row = (p) => {
-                const name = p.player_id
-                    ? '<a href="/players/view/' + esc(p.player_id) + '" class="hover:text-blue-400">' + esc(p.name) + '</a>'
-                    : esc(p.name);
-                return '<tr class="' + (p.is_spectator ? 'text-zinc-500' : '') + '">' +
-                    '<td class="px-4 py-2"><div class="flex items-center gap-2">' +
-                        '<img src="' + esc(p.picture || '/img/acl.png') + '" class="w-7 h-7 rounded-full object-cover shrink-0" alt="">' +
-                        '<span class="font-semibold truncate">' + name + '</span>' +
-                        (p.country ? '<span>' + flag(p.country) + '</span>' : '') +
-                        (p.is_admin ? '<span class="text-[10px] px-1 rounded bg-yellow-500/20 text-yellow-300">admin</span>' : '') +
-                    '</div></td>' +
-                    (teamMode ? '<td class="px-2 py-2"><span class="text-[11px] px-1.5 py-0.5 rounded ' + teamClass(p.team) + '">' + esc(p.team) + '</span></td>' : '') +
-                    '<td class="px-2 py-2 text-right font-mono text-blue-400">' + p.frags + '</td>' +
-                    (flagMode ? '<td class="px-2 py-2 text-right font-mono">' + p.flags + '</td>' : '') +
-                    '<td class="px-2 py-2 text-right font-mono">' + p.deaths + '</td>' +
-                    '<td class="px-2 py-2 text-right font-mono">' + p.teamkills + '</td>' +
-                    '<td class="px-2 py-2 text-right font-mono">' + p.accuracy + '%</td>' +
-                    '<td class="px-2 py-2 text-right font-mono">' + p.ping + '</td>' +
-                    '<td class="px-2 py-2 hidden md:table-cell text-zinc-400">' + esc(p.gun_name || '') + '</td>' +
-                    '<td class="px-4 py-2 hidden md:table-cell text-zinc-400">' + esc(p.state_name || '') + '</td>' +
-                    '</tr>';
-            };
-
-            playing.forEach(p => html += row(p));
-            specs.forEach(p => html += row(p));
-            html += '</tbody></table></div>';
-            list.innerHTML = html;
-        }
+        return data;
     }
 
     async function poll() {
         try {
-            const res = await fetch('/live/status', { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
-            if (res.ok) render(await res.json());
-        } catch (e) {
-            console.log('[live] poll failed', e);
-        }
+            const res = await fetch('/live/status', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+            if (!res.ok) return null;
+            return fillSidebar(await res.json());
+        } catch (e) { return null; }
     }
 
-    poll();
-    setInterval(poll, 10000);
+    // --- boot: hash > busiest server > first -----------------------
+    (async () => {
+        const hashKey = decodeURIComponent(location.hash.slice(1));
+        const data = await poll();
+        let key = keys.includes(hashKey) ? hashKey : null;
+        if (!key && data) {
+            const busiest = [...data.servers].filter(s => s.online).sort((a, b) => b.numplayers - a.numplayers)[0];
+            if (busiest && busiest.numplayers > 0) key = busiest.key;
+        }
+        select(key || keys[0], !!hashKey);
+        setInterval(poll, 10000);
+    })();
 })();
 </script>
 <?php $this->end(); ?>
