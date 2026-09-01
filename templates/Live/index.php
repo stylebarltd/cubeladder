@@ -1,14 +1,15 @@
 <?php
 /**
- * Live page: server list in the left sidebar, the selected server's
- * running game (shared live_match element) on the right. Selection is
- * kept in the URL hash (/live#acka-assault).
+ * Live page: our servers as a full-width bar on top, the selected server's
+ * running game (shared live_match element) at full width below it, the
+ * Elsewhere / Clan lists at the bottom. Selection is kept in the URL hash
+ * (/live#acka-assault).
  *
  * @var \App\View\AppView $this
  * @var array $servers  Ladder.servers minus hidden ones
  */
 ?>
-<div class="w-full max-w-7xl px-4 sm:px-6 py-10 mx-auto">
+<div class="w-full px-4 sm:px-6 py-10 mx-auto">
 
 <h1 class="text-4xl font-bold text-white mb-2 text-center">Live</h1>
 <p class="text-center text-zinc-500 text-sm mb-8">
@@ -20,47 +21,48 @@
 <?php else: ?>
 
 <style>
-.live-layout { display: flex; flex-direction: column; gap: 1.5rem; align-items: flex-start; }
-.live-side { width: 100%; }
-.live-main { flex: 1 1 0%; min-width: 0; width: 100%; }
-@media (min-width: 1024px) {
-    .live-layout { flex-direction: row; }
-    .live-side { width: 18rem; flex-shrink: 0; }
-}
+.live-layout { display: flex; flex-direction: column; gap: 1.5rem; }
+#live-sidebar { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .75rem; }
+#live-sidebar [data-server] { border: 1px solid rgb(63 63 70); border-radius: .75rem; background: rgb(39 39 42); }
+#live-sidebar [data-server]:hover { background: rgb(63 63 70 / .6); }
+#live-sidebar [data-server].sel { background: rgb(63 63 70); border-color: rgb(113 113 122); }
+.live-extra { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: start; }
+@media (min-width: 1024px) { .live-extra { grid-template-columns: 1fr 1fr; } }
 </style>
 <div class="live-layout">
 
-    <!-- Sidebar: our servers + elsewhere -->
-    <aside class="live-side">
-        <div class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden divide-y divide-zinc-700/60" id="live-sidebar">
-            <?php foreach ($servers as $key => $cfg): ?>
-            <button type="button" data-server="<?= h($key) ?>"
-                    class="w-full text-left p-3 hover:bg-zinc-700/60 transition flex items-center gap-3">
-                <span class="js-dot w-2.5 h-2.5 rounded-full bg-zinc-600 shrink-0"></span>
-                <span class="flex-1 min-w-0">
-                    <span class="block font-semibold text-white truncate"><?= h($cfg['name'] ?? $key) ?></span>
-                    <span class="js-sub block text-xs text-zinc-500 truncate"><?= h($cfg['host']) ?>:<?= (int)$cfg['port'] ?></span>
-                </span>
-                <span class="js-count text-xs font-mono text-zinc-400"></span>
-            </button>
-            <?php endforeach; ?>
-        </div>
+    <!-- Our servers: full-width bar on top -->
+    <div id="live-sidebar">
+        <?php foreach ($servers as $key => $cfg): ?>
+        <button type="button" data-server="<?= h($key) ?>"
+                class="text-left p-3 transition flex items-center gap-3">
+            <span class="js-dot w-2.5 h-2.5 rounded-full bg-zinc-600 shrink-0"></span>
+            <span class="flex-1 min-w-0">
+                <span class="block font-semibold text-white truncate"><?= h($cfg['name'] ?? $key) ?></span>
+                <span class="js-sub block text-xs text-zinc-500 truncate"><?= h($cfg['host']) ?>:<?= (int)$cfg['port'] ?></span>
+            </span>
+            <span class="js-count text-xs font-mono text-zinc-400"></span>
+        </button>
+        <?php endforeach; ?>
+    </div>
 
-        <div id="live-elsewhere-wrap" class="mt-6" hidden>
+    <!-- Selected server's running game: full width -->
+    <div class="live-main">
+        <?= $this->element('live_match') ?>
+    </div>
+
+    <!-- Elsewhere + Clan / Inter below the game -->
+    <div class="live-extra">
+        <div id="live-elsewhere-wrap" hidden>
             <h2 class="text-sm font-bold text-zinc-400 mb-1 px-1">Elsewhere in AssaultCube</h2>
             <p id="live-elsewhere-sub" class="text-xs text-zinc-600 mb-2 px-1"></p>
             <div id="live-elsewhere" class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden divide-y divide-zinc-700/60"></div>
         </div>
 
-        <div id="live-clan-wrap" class="mt-6" hidden>
+        <div id="live-clan-wrap" hidden>
             <h2 class="text-sm font-bold text-zinc-400 mb-2 px-1">Clan Match / Inter Clan Servers</h2>
             <div id="live-clan" class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden divide-y divide-zinc-700/60"></div>
         </div>
-    </aside>
-
-    <!-- Selected server's running game -->
-    <div class="live-main">
-        <?= $this->element('live_match') ?>
     </div>
 
 </div>
@@ -93,7 +95,7 @@
         if (!keys.includes(key) || key === current) return;
         current = key;
         sidebar.querySelectorAll('[data-server]').forEach(b => {
-            b.classList.toggle('bg-zinc-700', b.dataset.server === key);
+            b.classList.toggle('sel', b.dataset.server === key);
         });
         if (pushHash && location.hash !== '#' + key) {
             history.replaceState(null, '', '#' + key);
