@@ -26,6 +26,8 @@
 #live-sidebar [data-server] { border: 1px solid rgb(63 63 70); border-radius: .75rem; background: rgb(39 39 42); }
 #live-sidebar [data-server]:hover { background: rgb(63 63 70 / .6); }
 #live-sidebar [data-server].sel { background: rgb(63 63 70); border-color: rgb(113 113 122); }
+#live-clan [data-server]:hover { background: rgb(63 63 70 / .6); }
+#live-clan [data-server].sel { background: rgb(63 63 70); }
 .live-extra { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: start; }
 @media (min-width: 1024px) { .live-extra { grid-template-columns: 1fr 1fr; } }
 </style>
@@ -77,7 +79,8 @@
     if (!sidebar) return;
 
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const keys = [...sidebar.querySelectorAll('[data-server]')].map(b => b.dataset.server);
+    // clan/inter servers are added to the selectable set once polled
+    const keys = new Set([...sidebar.querySelectorAll('[data-server]')].map(b => b.dataset.server));
 
     // countdown to the next sidebar refresh
     const POLL_MS = 10000;
@@ -91,12 +94,16 @@
     let current = null;
     let match = null;
 
-    function select(key, pushHash = true) {
-        if (!keys.includes(key) || key === current) return;
-        current = key;
-        sidebar.querySelectorAll('[data-server]').forEach(b => {
-            b.classList.toggle('sel', b.dataset.server === key);
+    function markSelected() {
+        document.querySelectorAll('#live-sidebar [data-server], #live-clan [data-server]').forEach(b => {
+            b.classList.toggle('sel', b.dataset.server === current);
         });
+    }
+
+    function select(key, pushHash = true) {
+        if (!keys.has(key) || key === current) return;
+        current = key;
+        markSelected();
         if (pushHash && location.hash !== '#' + key) {
             history.replaceState(null, '', '#' + key);
         }
@@ -104,13 +111,15 @@
         else match = window.initLiveMatch(document.querySelector('[data-live-match]'), key);
     }
 
-    sidebar.addEventListener('click', (e) => {
+    const onServerClick = (e) => {
         const btn = e.target.closest('[data-server]');
         if (btn) select(btn.dataset.server);
-    });
+    };
+    sidebar.addEventListener('click', onServerClick);
+    document.getElementById('live-clan').addEventListener('click', onServerClick);
     window.addEventListener('hashchange', () => {
         const key = decodeURIComponent(location.hash.slice(1));
-        if (keys.includes(key)) select(key, false);
+        if (keys.has(key)) select(key, false);
     });
 
     // --- sidebar status polling ------------------------------------
@@ -142,17 +151,19 @@
         const clan = ((data.clan && data.clan.servers) || []).filter(srv => srv.online);
         clanWrap.hidden = clan.length === 0;
         clanList.innerHTML = clan.map(srv => {
+            keys.add(srv.key);
             const dot = srv.numplayers > 0 ? 'bg-green-500' : 'bg-zinc-600';
             const sub = srv.numplayers > 0 ? (srv.map || '—') + ' · ' + srv.mode_name : 'empty';
-            return '<div class="p-3 flex items-center gap-3">' +
+            return '<button type="button" data-server="' + esc(srv.key) + '" class="w-full text-left p-3 transition flex items-center gap-3">' +
                 '<span class="w-2.5 h-2.5 rounded-full shrink-0 ' + dot + '"></span>' +
                 '<span class="flex-1 min-w-0">' +
                     '<span class="block text-sm font-semibold text-white truncate">' + esc(srv.name) + '</span>' +
                     '<span class="block text-xs text-zinc-500 truncate">' + esc(sub) + '</span>' +
                 '</span>' +
                 '<span class="text-xs font-mono text-zinc-400">' + srv.numplayers + '/' + (srv.maxclients ?? '?') + '</span>' +
-            '</div>';
+            '</button>';
         }).join('');
+        markSelected();
 
         const wrap = document.getElementById('live-elsewhere-wrap');
         const listEl = document.getElementById('live-elsewhere');
@@ -190,12 +201,12 @@
     (async () => {
         const hashKey = decodeURIComponent(location.hash.slice(1));
         const data = await poll();
-        let key = keys.includes(hashKey) ? hashKey : null;
+        let key = keys.has(hashKey) ? hashKey : null;
         if (!key && data) {
             const busiest = [...data.servers].filter(s => s.online).sort((a, b) => b.numplayers - a.numplayers)[0];
             if (busiest && busiest.numplayers > 0) key = busiest.key;
         }
-        select(key || keys[0], !!hashKey);
+        select(key || keys.values().next().value, !!hashKey);
         setInterval(poll, POLL_MS);
     })();
 })();
