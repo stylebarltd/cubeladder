@@ -10,10 +10,10 @@
  */
 ?>
 <style>
-.lg-hero { position: relative; border-radius: 0.75rem; overflow: hidden; border: 1px solid rgb(63 63 70); min-height: 11rem; }
-.lg-hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(.45) saturate(.9); }
-.lg-hero-in { position: relative; padding: 1.5rem; display: flex; flex-direction: column; gap: .35rem; min-height: 11rem; justify-content: flex-end;
-  background: linear-gradient(180deg, rgba(9,9,11,.15), rgba(9,9,11,.75)); }
+.lg-wrap { position: relative; border-radius: 0.75rem; overflow: hidden; border: 1px solid rgb(63 63 70); }
+.lg-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(.4) saturate(.9); }
+.lg-in { position: relative; padding: 1.5rem; background: linear-gradient(180deg, rgba(9,9,11,.25), rgba(9,9,11,.65)); }
+.lg-head { display: flex; flex-direction: column; gap: .35rem; }
 .lg-team { border-radius: 0.75rem; overflow: hidden; border: 1px solid rgb(63 63 70); background: rgb(24 24 27 / .92); }
 .lg-team-bar { display: flex; align-items: center; justify-content: space-between; padding: .7rem 1rem; }
 .lg-team-bar .score { font-size: 2.4rem; font-weight: 800; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
@@ -36,7 +36,7 @@
 .lg-ping { display: inline-block; width: .65rem; height: .65rem; border-radius: 50%; vertical-align: middle;
   animation: lgpingpulse 3s ease-in-out infinite; }
 @keyframes lgpingpulse { 50% { opacity: .5; transform: scale(.8); } }
-.lg-chat { padding: .5rem .9rem; font-size: .8rem; max-height: 9rem; overflow-y: auto; margin-bottom: 1.5rem; }
+.lg-chat { padding: .5rem .9rem; font-size: .8rem; max-height: 9rem; overflow-y: auto; margin-top: 1.5rem; }
 .lg-chat > div { padding: .12rem 0; color: rgb(212 212 216); }
 .lg-chat .t { color: rgb(113 113 122); margin-right: .45rem; font-variant-numeric: tabular-nums; font-size: .72rem; }
 .lg-chat .v-hs { color: #fbbf24; } .lg-chat .v-tk { color: #f87171; } .lg-chat .v-flag { color: #4ade80; }
@@ -45,24 +45,20 @@
 @media (min-width: 1100px) { .lg-teams { grid-template-columns: 1fr 1fr; } }
 </style>
 
-<div data-live-match>
-    <div class="lg-hero mb-6">
-        <div class="lg-hero-bg js-mapbg"></div>
-        <div class="lg-hero-in">
-            <div class="flex items-center justify-between gap-3 flex-wrap">
-                <h1 class="text-3xl font-bold text-white js-title">&nbsp;</h1>
-                <span class="js-status lg-pulse text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">connecting&hellip;</span>
-            </div>
-            <div class="js-game text-zinc-300 text-sm"></div>
-            <div class="text-xs text-zinc-400">
-                <code class="bg-zinc-900/70 px-1.5 py-0.5 rounded js-connect"></code>
-                <span class="js-gamelink"></span>
-            </div>
-        </div>
-    </div>
+<div data-live-match class="lg-wrap">
+    <div class="lg-bg js-mapbg"></div>
+    <div class="lg-in">
 
-    <div class="lg-team lg-chat js-chatbox" hidden>
-        <div class="empty">waiting for action&hellip;</div>
+    <div class="lg-head mb-6">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+            <h1 class="text-3xl font-bold text-white js-title">&nbsp;</h1>
+            <span class="js-status lg-pulse text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">connecting&hellip;</span>
+        </div>
+        <div class="js-game text-zinc-300 text-sm"></div>
+        <div class="text-xs text-zinc-400">
+            <code class="bg-zinc-900/70 px-1.5 py-0.5 rounded js-connect"></code>
+            <span class="js-gamelink"></span>
+        </div>
     </div>
 
     <div class="lg-teams js-teams" hidden>
@@ -93,8 +89,15 @@
         </table>
     </div>
 
-    <p class="js-specs text-sm text-zinc-500 mt-4" hidden></p>
-    <p class="text-xs text-zinc-600 mt-6 text-center">updates every 5 seconds &middot; <span class="js-updated"></span></p>
+    <p class="js-specs text-sm text-zinc-400 mt-4" hidden></p>
+
+    <div class="lg-team lg-chat js-chatbox" hidden>
+        <div class="empty">waiting for action&hellip;</div>
+    </div>
+
+    <p class="text-xs text-zinc-500 mt-6 text-center">updates every 5 seconds &middot; <span class="js-updated"></span></p>
+
+    </div>
 </div>
 
 <script>
@@ -106,9 +109,7 @@ window.initLiveMatch = function (root, key) {
         return String.fromCodePoint(iso.toUpperCase().charCodeAt(0) + A, iso.toUpperCase().charCodeAt(1) + A);
     };
     const $ = (sel) => root.querySelector(sel);
-    // The /live page may adopt the chat box into its own layout column, so
-    // keep a direct reference instead of looking it up inside root each time.
-    const chatBox = root.querySelector('.js-chatbox') || document.querySelector('.js-chatbox');
+    const chatBox = root.querySelector('.js-chatbox');
 
     const pingBall = (ping) => {
         if (ping == null) return '';
