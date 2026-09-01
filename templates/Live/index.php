@@ -77,6 +77,14 @@
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const keys = [...sidebar.querySelectorAll('[data-server]')].map(b => b.dataset.server);
 
+    // countdown to the next sidebar refresh
+    const POLL_MS = 10000;
+    let nextPollAt = Date.now() + POLL_MS;
+    setInterval(() => {
+        const sec = Math.max(0, Math.ceil((nextPollAt - Date.now()) / 1000));
+        document.getElementById('live-updated').textContent = 'next update in ' + sec + ' sec';
+    }, 250);
+
     // --- selection --------------------------------------------------
     let current = null;
     let match = null;
@@ -105,8 +113,7 @@
 
     // --- sidebar status polling ------------------------------------
     function fillSidebar(data) {
-        document.getElementById('live-updated').textContent =
-            'updated ' + new Date(data.fetched_at).toLocaleTimeString();
+        nextPollAt = Date.now() + POLL_MS;
 
         data.servers.forEach(srv => {
             const btn = sidebar.querySelector('[data-server="' + CSS.escape(srv.key) + '"]');
@@ -187,7 +194,7 @@
             if (busiest && busiest.numplayers > 0) key = busiest.key;
         }
         select(key || keys[0], !!hashKey);
-        setInterval(poll, 10000);
+        setInterval(poll, POLL_MS);
     })();
 })();
 </script>
