@@ -9,7 +9,7 @@
     <?= $this->Html->meta('csrfToken', $this->request->getAttribute('csrfToken')) ?>
 
     <!-- Tailwind CSS -->
-    <?= $this->Html->css('tailwind.css?ver=1.6') ?>
+    <?= $this->Html->css('tailwind.css?ver=1.7') ?>
 
     <!-- Optional: favicon -->
     <?= $this->Html->meta('icon', '/favicon.ico') ?>
