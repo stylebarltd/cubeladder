@@ -26,7 +26,9 @@
 .lg-table td:first-child { color: rgb(113 113 122); width: 2rem; text-align: left; }
 .lg-table td:nth-child(2) { text-align: left; }
 .lg-table tr.top td { background: rgb(255 255 255 / .04); }
-.lg-table th:nth-child(n+3), .lg-table td:nth-child(n+3) { width: 4.5rem; }
+.lg-table th:nth-child(n+3), .lg-table td:nth-child(n+3) { width: 3.4rem; }
+.lg-hide-sm { display: none; }
+@media (min-width: 640px) { .lg-hide-sm { display: table-cell; } }
 .lg-decider { font-weight: 800; color: #fff; }
 .lg-cla  .lg-decider-h { color: #fca5a5; } .lg-rvsf .lg-decider-h { color: #93c5fd; }
 .lg-dead { opacity: .55; }
@@ -61,7 +63,8 @@
             </div>
             <table class="lg-table">
                 <thead><tr>
-                    <th>#</th><th>Player</th><th>Frags</th><th>Deaths</th><th class="js-decider-h">Flags</th>
+                    <th>#</th><th>Player</th><th class="js-h-frags">Frags</th><th>Deaths</th>
+                    <th>TK</th><th>Acc</th><th class="lg-hide-sm">Ping</th><th class="js-h-flags">Flags</th>
                 </tr></thead>
                 <tbody class="js-rows"></tbody>
             </table>
@@ -72,7 +75,8 @@
     <div class="lg-team js-ffa" hidden>
         <table class="lg-table">
             <thead><tr>
-                <th>#</th><th>Player</th><th>Frags</th><th>Deaths</th><th>Flags</th>
+                <th>#</th><th>Player</th><th class="js-h-frags">Frags</th><th>Deaths</th>
+                <th>TK</th><th>Acc</th><th class="lg-hide-sm">Ping</th><th class="js-h-flags">Flags</th>
             </tr></thead>
             <tbody class="js-rows"></tbody>
         </table>
@@ -99,9 +103,13 @@ window.initLiveMatch = function (root, key) {
         const pic = '<img src="' + esc(p.picture || '/img/acl.png') + '" class="w-6 h-6 rounded-full object-cover inline-block mr-2 align-middle" alt="">';
         return '<tr class="' + (i === 0 ? 'top' : '') + (p.state_name === 'dead' ? ' lg-dead' : '') + '">' +
             '<td>' + (i + 1) + '</td>' +
-            '<td>' + pic + name + ' ' + flag(p.country) + '</td>' +
+            '<td>' + pic + name + ' ' + flag(p.country) +
+                (p.is_admin ? ' <span class="text-[10px] px-1 rounded bg-yellow-500/20 text-yellow-300">admin</span>' : '') + '</td>' +
             '<td class="' + (!byFlags ? 'lg-decider' : '') + '">' + p.frags + '</td>' +
             '<td>' + p.deaths + '</td>' +
+            '<td>' + p.teamkills + '</td>' +
+            '<td>' + (p.accuracy ?? 0) + '%</td>' +
+            '<td class="lg-hide-sm">' + (p.ping ?? '') + '</td>' +
             '<td class="' + (byFlags ? 'lg-decider' : '') + '">' + p.flags + '</td>' +
         '</tr>';
     };
@@ -151,19 +159,21 @@ window.initLiveMatch = function (root, key) {
                 const team = panel.dataset.team;
                 const members = players.filter(p => (p.team || '').toUpperCase().startsWith(team)).sort(sort);
                 panel.querySelector('.js-score').textContent = members.reduce((n, p) => n + p[dec], 0);
-                panel.querySelector('.js-decider-h').textContent = s.by_flags ? 'Flags' : 'Frags';
-                panel.querySelector('.js-decider-h').className = 'js-decider-h lg-decider-h';
+                panel.querySelector('.js-h-frags').classList.toggle('lg-decider-h', !s.by_flags);
+                panel.querySelector('.js-h-flags').classList.toggle('lg-decider-h', s.by_flags);
                 panel.querySelector('.js-rows').innerHTML =
                     members.map((p, i) => rowHtml(p, i, s.by_flags)).join('') ||
-                    '<tr><td></td><td class="text-zinc-500">nobody</td><td></td><td></td><td></td></tr>';
+                    '<tr><td></td><td class="text-zinc-500" colspan="7">nobody</td></tr>';
             });
         } else {
             $('.js-teams').hidden = true;
             const ffa = $('.js-ffa');
             ffa.hidden = false;
+            ffa.querySelector('.js-h-frags').classList.toggle('lg-decider-h', !s.by_flags);
+            ffa.querySelector('.js-h-flags').classList.toggle('lg-decider-h', s.by_flags);
             players.sort(sort);
             ffa.querySelector('.js-rows').innerHTML = players.map((p, i) => rowHtml(p, i, s.by_flags)).join('') ||
-                '<tr><td></td><td class="text-zinc-500">nobody playing</td><td></td><td></td><td></td></tr>';
+                '<tr><td></td><td class="text-zinc-500" colspan="7">nobody playing</td></tr>';
         }
     }
 
