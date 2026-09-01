@@ -46,15 +46,15 @@
             <?php endforeach; ?>
         </div>
 
-        <div id="live-clan-wrap" class="mt-6" hidden>
-            <h2 class="text-sm font-bold text-zinc-400 mb-2 px-1">Clan Match / Inter Clan Servers</h2>
-            <div id="live-clan" class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden divide-y divide-zinc-700/60"></div>
-        </div>
-
         <div id="live-elsewhere-wrap" class="mt-6" hidden>
             <h2 class="text-sm font-bold text-zinc-400 mb-1 px-1">Elsewhere in AssaultCube</h2>
             <p id="live-elsewhere-sub" class="text-xs text-zinc-600 mb-2 px-1"></p>
             <div id="live-elsewhere" class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden divide-y divide-zinc-700/60"></div>
+        </div>
+
+        <div id="live-clan-wrap" class="mt-6" hidden>
+            <h2 class="text-sm font-bold text-zinc-400 mb-2 px-1">Clan Match / Inter Clan Servers</h2>
+            <div id="live-clan" class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden divide-y divide-zinc-700/60"></div>
         </div>
     </aside>
 
@@ -130,19 +130,18 @@
         // clan match / inter servers: like elsewhere, but fixed list and no /connect
         const clanWrap = document.getElementById('live-clan-wrap');
         const clanList = document.getElementById('live-clan');
-        const clan = (data.clan && data.clan.servers) || [];
+        const clan = ((data.clan && data.clan.servers) || []).filter(srv => srv.online);
         clanWrap.hidden = clan.length === 0;
         clanList.innerHTML = clan.map(srv => {
-            const on = srv.online;
-            const dot = !on ? 'bg-red-500' : (srv.numplayers > 0 ? 'bg-green-500' : 'bg-zinc-600');
-            const sub = !on ? 'offline' : (srv.numplayers > 0 ? (srv.map || '—') + ' · ' + srv.mode_name : 'empty');
+            const dot = srv.numplayers > 0 ? 'bg-green-500' : 'bg-zinc-600';
+            const sub = srv.numplayers > 0 ? (srv.map || '—') + ' · ' + srv.mode_name : 'empty';
             return '<div class="p-3 flex items-center gap-3">' +
                 '<span class="w-2.5 h-2.5 rounded-full shrink-0 ' + dot + '"></span>' +
                 '<span class="flex-1 min-w-0">' +
                     '<span class="block text-sm font-semibold text-white truncate">' + esc(srv.name) + '</span>' +
                     '<span class="block text-xs text-zinc-500 truncate">' + esc(sub) + '</span>' +
                 '</span>' +
-                (on ? '<span class="text-xs font-mono text-zinc-400">' + srv.numplayers + '/' + (srv.maxclients ?? '?') + '</span>' : '') +
+                '<span class="text-xs font-mono text-zinc-400">' + srv.numplayers + '/' + (srv.maxclients ?? '?') + '</span>' +
             '</div>';
         }).join('');
 
