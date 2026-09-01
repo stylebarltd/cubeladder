@@ -10,10 +10,10 @@
  */
 ?>
 <style>
-.lg-wrap { position: relative; border-radius: 0.75rem; overflow: hidden; border: 1px solid rgb(63 63 70); }
+.lg-wrap { position: relative; border-radius: 0.75rem; overflow: hidden; border: 1px solid rgb(63 63 70); min-height: 11rem; }
 .lg-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(.4) saturate(.9); }
-.lg-in { position: relative; padding: 1.5rem; background: linear-gradient(180deg, rgba(9,9,11,.25), rgba(9,9,11,.65)); }
-.lg-head { display: flex; flex-direction: column; gap: .35rem; }
+.lg-in { position: relative; padding: 1.5rem; display: flex; flex-direction: column; gap: .35rem; min-height: 11rem; justify-content: flex-end;
+  background: linear-gradient(180deg, rgba(9,9,11,.15), rgba(9,9,11,.75)); }
 .lg-team { border-radius: 0.75rem; overflow: hidden; border: 1px solid rgb(63 63 70); background: rgb(24 24 27 / .92); }
 .lg-team-bar { display: flex; align-items: center; justify-content: space-between; padding: .7rem 1rem; }
 .lg-team-bar .score { font-size: 2.4rem; font-weight: 800; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
@@ -45,19 +45,19 @@
 @media (min-width: 1100px) { .lg-teams { grid-template-columns: 1fr 1fr; } }
 </style>
 
-<div data-live-match class="lg-wrap">
-    <div class="lg-bg js-mapbg"></div>
-    <div class="lg-in">
-
-    <div class="lg-head mb-6">
-        <div class="flex items-center justify-between gap-3 flex-wrap">
-            <h1 class="text-3xl font-bold text-white js-title">&nbsp;</h1>
-            <span class="js-status lg-pulse text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">connecting&hellip;</span>
-        </div>
-        <div class="js-game text-zinc-300 text-sm"></div>
-        <div class="text-xs text-zinc-400">
-            <code class="bg-zinc-900/70 px-1.5 py-0.5 rounded js-connect"></code>
-            <span class="js-gamelink"></span>
+<div data-live-match>
+    <div class="lg-wrap mb-6">
+        <div class="lg-bg js-mapbg"></div>
+        <div class="lg-in">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <h1 class="text-3xl font-bold text-white js-title">&nbsp;</h1>
+                <span class="js-status lg-pulse text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">connecting&hellip;</span>
+            </div>
+            <div class="js-game text-zinc-300 text-sm"></div>
+            <div class="text-xs text-zinc-400">
+                <code class="bg-zinc-900/70 px-1.5 py-0.5 rounded js-connect"></code>
+                <span class="js-gamelink"></span>
+            </div>
         </div>
     </div>
 
@@ -89,15 +89,13 @@
         </table>
     </div>
 
-    <p class="js-specs text-sm text-zinc-400 mt-4" hidden></p>
+    <p class="js-specs text-sm text-zinc-500 mt-4" hidden></p>
 
     <div class="lg-team lg-chat js-chatbox" hidden>
         <div class="empty">waiting for action&hellip;</div>
     </div>
 
-    <p class="text-xs text-zinc-500 mt-6 text-center">updates every 5 seconds &middot; <span class="js-updated"></span></p>
-
-    </div>
+    <p class="text-xs text-zinc-600 mt-6 text-center">updates every 5 seconds &middot; <span class="js-updated"></span></p>
 </div>
 
 <script>
