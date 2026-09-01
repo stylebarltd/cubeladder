@@ -546,7 +546,7 @@ return [
              * threshold 0 disables the notifications.
              */
             'notify' => [
-                'threshold' => 3,
+                'threshold' => 4,
                 'cooldown' => 1800,
                 'mention' => null,
                 // join notices are deleted again after this many seconds,

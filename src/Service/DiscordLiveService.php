@@ -146,7 +146,7 @@ class DiscordLiveService
      */
     private function notifyJoins(array $servers, array &$state): void
     {
-        $cfg = ($this->cfg['notify'] ?? []) + ['threshold' => 3, 'cooldown' => 1800, 'mention' => null, 'ttl' => 900];
+        $cfg = ($this->cfg['notify'] ?? []) + ['threshold' => 4, 'cooldown' => 1800, 'mention' => null, 'ttl' => 900];
         $threshold = (int)$cfg['threshold'];
         $now = time();
 
