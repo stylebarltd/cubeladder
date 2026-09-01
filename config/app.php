@@ -512,15 +512,17 @@ return [
         'streakBanner' => false,
 
         'servers' => [
-            'chobbz-banana'  => ['name' => 'Banana',  'host' => 'ac.cbz.ovh',   'port' => 1111],
-            'chobbz-potato'  => ['name' => 'POTATO',  'host' => 'ac.cbz.ovh',   'port' => 2222],
-            'mys-1111'  => ['name' => 'MyS 1111',  'host' => 'mysick.org',   'port' => 1111, 'live' => false],
-            'mys-2222'  => ['name' => 'MyS 2222',  'host' => 'mysick.org',   'port' => 2222, 'live' => false],
-            'mys-3333'       => ['name' => 'MyS 3333',           'host' => 'mysick.org',   'port' => 3333, 'live' => false],
+            // rule: aCKa servers first, then Banana and POTATO
             'acka-custom'    => ['name' => '[aCKa] Custom',      'host' => '54.36.188.74', 'port' => 9000],
             'acka-nostalgic' => ['name' => '[aCKa] Nostalgic',   'host' => '54.36.188.74', 'port' => 9002],
             'acka-assault'   => ['name' => '[aCKa] Assault',     'host' => '54.36.188.74', 'port' => 9999],
             'acka-europa'    => ['name' => '[aCKa] Europa',      'host' => '54.36.188.74', 'port' => 28765],
+            'chobbz-banana'  => ['name' => 'Banana',  'host' => 'ac.cbz.ovh',   'port' => 1111],
+            'chobbz-potato'  => ['name' => 'POTATO',  'host' => 'ac.cbz.ovh',   'port' => 2222],
+            // clan match / inter servers: own sidebar box on /live ('live' => false)
+            'mys-1111'  => ['name' => 'MyS 1111',  'host' => 'mysick.org',   'port' => 1111, 'live' => false],
+            'mys-2222'  => ['name' => 'MyS 2222',  'host' => 'mysick.org',   'port' => 2222, 'live' => false],
+            'mys-3333'       => ['name' => 'MyS 3333',           'host' => 'mysick.org',   'port' => 3333, 'live' => false],
         ],
 
         /*
@@ -533,7 +535,7 @@ return [
          */
         'discord' => [
             'webhook' => env('DISCORD_LIVE_WEBHOOK'),
-            'servers' => ['chobbz-banana', 'chobbz-potato', 'acka-custom', 'acka-nostalgic', 'acka-assault', 'acka-europa'],
+            'servers' => ['acka-custom', 'acka-nostalgic', 'acka-assault', 'acka-europa', 'chobbz-banana', 'chobbz-potato'],
             'site' => env('APP_FULL_BASE_URL', 'https://cubeladder.ovh'),
             'state' => TMP . 'discord_live.json',
             /*

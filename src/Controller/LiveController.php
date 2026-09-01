@@ -121,13 +121,17 @@ class LiveController extends AppController
 
     private function fetchAll(): array
     {
+        $all = Configure::read('Ladder.servers') ?: [];
         $own = $this->liveServers();
+        // servers hidden from the main list ('live' => false) form their own
+        // "clan match / inter" group on the live page
+        $clan = array_filter($all, fn($cfg) => ($cfg['live'] ?? true) === false);
 
         // Master list entries are "ip:port"; resolve our own hosts so the
         // same server is not polled twice under two names.
-        $targets = $own;
+        $targets = $own + $clan;
         $ownAddr = [];
-        foreach ($own as $cfg) {
+        foreach ($all as $cfg) {
             $ownAddr[gethostbyname($cfg['host']) . ':' . (int)$cfg['port']] = true;
         }
         $master = (new AcMasterServerService())->servers();
@@ -139,6 +143,7 @@ class LiveController extends AppController
 
         $ext = new AcExtInfoService();
         $servers = [];
+        $clanServers = [];
         $elsewhere = [];
         $polled = $online = $players = 0;
         foreach ($ext->queryMany($targets) as $key => $info) {
@@ -147,6 +152,12 @@ class LiveController extends AppController
                 $info['own'] = true;
                 $info['name'] = $own[$key]['name'] ?? $key;
                 $servers[] = $info;
+                continue;
+            }
+            if (isset($clan[$key])) {
+                $info['own'] = false;
+                $info['name'] = $clan[$key]['name'] ?? $key;
+                $clanServers[] = $info;
                 continue;
             }
             $polled++;
@@ -169,6 +180,7 @@ class LiveController extends AppController
         return [
             'fetched_at' => date('c'),
             'servers' => $servers,
+            'clan' => ['servers' => $clanServers],
             'elsewhere' => [
                 'servers' => $elsewhere,
                 'polled' => $polled,
