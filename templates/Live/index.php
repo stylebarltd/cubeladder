@@ -22,7 +22,14 @@
 
 <style>
 .live-layout { display: flex; flex-direction: column; gap: 1.5rem; }
-#live-sidebar { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .75rem; }
+.live-top { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: stretch; }
+#live-sidebar { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .75rem; align-content: start; }
+@media (min-width: 1024px) {
+    .live-top { grid-template-columns: 20rem minmax(0, 1fr); }
+    #live-sidebar { grid-template-columns: 1fr; }
+    #live-chat-slot { min-width: 0; }
+    #live-chat-slot .lg-chat { margin-bottom: 0; height: 100%; max-height: 16rem; }
+}
 #live-sidebar [data-server] { border: 1px solid rgb(63 63 70); border-radius: .75rem; background: rgb(39 39 42); }
 #live-sidebar [data-server]:hover { background: rgb(63 63 70 / .6); }
 #live-sidebar [data-server].sel { background: rgb(63 63 70); border-color: rgb(113 113 122); }
@@ -31,19 +38,22 @@
 </style>
 <div class="live-layout">
 
-    <!-- Our servers: full-width bar on top -->
-    <div id="live-sidebar">
-        <?php foreach ($servers as $key => $cfg): ?>
-        <button type="button" data-server="<?= h($key) ?>"
-                class="text-left p-3 transition flex items-center gap-3">
-            <span class="js-dot w-2.5 h-2.5 rounded-full bg-zinc-600 shrink-0"></span>
-            <span class="flex-1 min-w-0">
-                <span class="block font-semibold text-white truncate"><?= h($cfg['name'] ?? $key) ?></span>
-                <span class="js-sub block text-xs text-zinc-500 truncate"><?= h($cfg['host']) ?>:<?= (int)$cfg['port'] ?></span>
-            </span>
-            <span class="js-count text-xs font-mono text-zinc-400"></span>
-        </button>
-        <?php endforeach; ?>
+    <!-- Top row: our servers left, kill feed right (stacked on mobile) -->
+    <div class="live-top">
+        <div id="live-sidebar">
+            <?php foreach ($servers as $key => $cfg): ?>
+            <button type="button" data-server="<?= h($key) ?>"
+                    class="text-left p-3 transition flex items-center gap-3">
+                <span class="js-dot w-2.5 h-2.5 rounded-full bg-zinc-600 shrink-0"></span>
+                <span class="flex-1 min-w-0">
+                    <span class="block font-semibold text-white truncate"><?= h($cfg['name'] ?? $key) ?></span>
+                    <span class="js-sub block text-xs text-zinc-500 truncate"><?= h($cfg['host']) ?>:<?= (int)$cfg['port'] ?></span>
+                </span>
+                <span class="js-count text-xs font-mono text-zinc-400"></span>
+            </button>
+            <?php endforeach; ?>
+        </div>
+        <div id="live-chat-slot"></div>
     </div>
 
     <!-- Selected server's running game: full width -->
@@ -78,6 +88,11 @@
 
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const keys = [...sidebar.querySelectorAll('[data-server]')].map(b => b.dataset.server);
+
+    // adopt the match element's kill feed into the top-right column
+    const chatSlot = document.getElementById('live-chat-slot');
+    const chatBox = document.querySelector('[data-live-match] .js-chatbox');
+    if (chatSlot && chatBox) chatSlot.appendChild(chatBox);
 
     // countdown to the next sidebar refresh
     const POLL_MS = 10000;

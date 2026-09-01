@@ -106,6 +106,9 @@ window.initLiveMatch = function (root, key) {
         return String.fromCodePoint(iso.toUpperCase().charCodeAt(0) + A, iso.toUpperCase().charCodeAt(1) + A);
     };
     const $ = (sel) => root.querySelector(sel);
+    // The /live page may adopt the chat box into its own layout column, so
+    // keep a direct reference instead of looking it up inside root each time.
+    const chatBox = root.querySelector('.js-chatbox') || document.querySelector('.js-chatbox');
 
     const pingBall = (ping) => {
         if (ping == null) return '';
@@ -172,7 +175,7 @@ window.initLiveMatch = function (root, key) {
     }
 
     function renderFeed(players) {
-        const box = $('.js-chatbox');
+        const box = chatBox;
         box.hidden = false;
         const ev = feedEvents(players);
         if (!ev.length) return;
@@ -219,7 +222,7 @@ window.initLiveMatch = function (root, key) {
             $('.js-teams').hidden = true;
             $('.js-ffa').hidden = true;
             $('.js-specs').hidden = true;
-            $('.js-chatbox').hidden = true;
+            chatBox.hidden = true;
             prevStats = null;
             return;
         }
@@ -288,7 +291,7 @@ window.initLiveMatch = function (root, key) {
             key = k;
             prevStats = null;
             chatLines.length = 0;
-            const box = $('.js-chatbox');
+            const box = chatBox;
             box.hidden = true;
             box.innerHTML = '<div class="empty">waiting for action&hellip;</div>';
             const st = $('.js-status');
