@@ -32,6 +32,12 @@ class AcLogParser
     protected $Maps;
     protected $Players;
     protected $Events;
+
+    /** killer|victim => ['kills' => n, 'teamkills' => n] for the current game (kill_pairs) */
+    protected array $killBuffer = [];
+
+    /** buffered chat rows for the events table (type 'chat') */
+    protected array $chatBuffer = [];
     protected $PlayerStatsPerGame;
     protected $Demos;
 
@@ -192,6 +198,7 @@ class AcLogParser
             if ($existing) {
                 $this->currentGame = $existing;
                 $this->currentGamePlayers = [];
+                $this->killBuffer = [];
                 return;
             }
 
@@ -211,6 +218,7 @@ class AcLogParser
             $this->currentGame = $game;
             $this->currentGamePlayers = [];
             $this->streakBuffer = [];
+            $this->killBuffer = [];
 
             $this->eventsParsed++;
 
@@ -257,6 +265,29 @@ class AcLogParser
             return;
         }
 
+        // chat: [ip] name says: 'message' - saved to events (type "chat").
+        // Checked before the kill regex so a message quoting a kill verb
+        // is not mistaken for a kill line.
+        if (preg_match($this->chatRegex, $rest, $m)) {
+            $name = trim($m[2]);
+            $msg = trim($m[3]);
+            if ($msg !== '' && strtolower($name) !== 'unarmed') {
+                $this->chatBuffer[] = [
+                    'game_id' => $this->currentGame->id ?? null,
+                    'event_time' => $ts ? $ts->format('Y-m-d H:i:s') : null,
+                    'event_hash' => md5($this->getServerName() . '|' . ($ts ? $ts->format('c') : '') . '|' . $name . '|' . $msg),
+                    'type' => 'chat',
+                    'actor_id' => $this->getPlayerIdByNameCached($name),
+                    'details' => json_encode(['name' => $name, 'msg' => $msg], JSON_UNESCAPED_UNICODE),
+                ];
+                if (count($this->chatBuffer) >= 200) {
+                    $this->flushChats();
+                }
+            }
+            $this->eventsParsed++;
+            return;
+        }
+
         // kill events
 // kill events
         if (preg_match($this->killRegex, $rest, $m)) {
@@ -292,6 +323,13 @@ class AcLogParser
             $victimId = null;
             if (!$victimIsUnarmed) {
                 $victimId = $this->getPlayerIdByNameCached($victimName);
+            }
+
+            // who killed whom (nemesis stats) - one entry per actual kill
+            if ($this->currentGame && $killerId && $victimId && $killerId !== $victimId) {
+                $key = $killerId . '|' . $victimId;
+                $this->killBuffer[$key] ??= ['kills' => 0, 'teamkills' => 0];
+                $this->killBuffer[$key][$isTeamKill ? 'teamkills' : 'kills']++;
             }
 
             // TEAMKILL
@@ -447,6 +485,8 @@ class AcLogParser
 
                 // flush stats & events for finished game immediately
                 $this->flushStats();
+                $this->flushKills();
+                $this->flushChats();
 
                 // reset in-memory game
                 $this->currentGame = null;
@@ -675,6 +715,41 @@ class AcLogParser
 
         // clear buffer
         $this->statsBuffer = [];
+    }
+
+    /**
+     * Write the current game's killer->victim pairs (kill_pairs). Same
+     * last-write-wins upsert semantics as flushStats, so re-parsing a log
+     * window (the offset rewind) does not double count. Only flushed at
+     * game end / end of input - the buffer holds one game at most.
+     */
+    public function flushKills(): void
+    {
+        if (empty($this->killBuffer) || !$this->currentGame) {
+            $this->killBuffer = [];
+            return;
+        }
+        $gameId = $this->currentGame->id;
+        $conn = ConnectionManager::get('default');
+
+        $placeholders = [];
+        $bindings = [];
+        foreach ($this->killBuffer as $key => $row) {
+            [$killerId, $victimId] = explode('|', $key);
+            $placeholders[] = '(?,?,?,?,?)';
+            array_push($bindings, $gameId, $killerId, $victimId, $row['kills'], $row['teamkills']);
+        }
+
+        $sql = 'INSERT INTO kill_pairs (game_id, killer_id, victim_id, kills, teamkills) VALUES '
+            . implode(',', $placeholders)
+            . ' ON DUPLICATE KEY UPDATE kills=VALUES(kills), teamkills=VALUES(teamkills)';
+        try {
+            $conn->execute($sql, $bindings);
+        } catch (\Exception $e) {
+            // never break log processing over nemesis stats
+        }
+
+        $this->killBuffer = [];
     }
 
     // -------------------------------
@@ -1006,9 +1081,37 @@ class AcLogParser
      * Flush parser state at end-of-file.
      * Does NOT close unfinished games.
      */
+    /**
+     * Write buffered chat lines to events. INSERT IGNORE on the unique
+     * event_hash makes re-parsing a log window (offset rewind) harmless.
+     */
+    public function flushChats(): void
+    {
+        if (empty($this->chatBuffer)) {
+            return;
+        }
+        $conn = ConnectionManager::get('default');
+        $placeholders = [];
+        $bindings = [];
+        foreach ($this->chatBuffer as $row) {
+            $placeholders[] = '(?,?,?,?,?,?)';
+            array_push($bindings, $row['game_id'], $row['event_time'], $row['event_hash'], $row['type'], $row['actor_id'], $row['details']);
+        }
+        $sql = 'INSERT IGNORE INTO events (game_id, event_time, event_hash, type, actor_id, details) VALUES '
+            . implode(',', $placeholders);
+        try {
+            $conn->execute($sql, $bindings);
+        } catch (\Exception $e) {
+            // never break log processing over chat logging
+        }
+        $this->chatBuffer = [];
+    }
+
     public function flush(): void
     {
         // Only flush stats buffer
         $this->flushStats();
+        $this->flushKills();
+        $this->flushChats();
     }
 }

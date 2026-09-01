@@ -117,7 +117,30 @@ class PagesController extends AppController
                 return $row ?: null;
             }, 'rankings');
 
-            $this->set(compact('lastLogs', 'bestPlayersByScore', 'bestPlayersByMap', 'achievementPlayers', 'lastGameDateRange', 'recordStreak'));
+            // Most chatty players (in-game chat, recorded since Sep 2026)
+            $chatterbox = \Cake\Cache\Cache::remember('chatterbox', function () {
+                $conn = \Cake\Datasource\ConnectionManager::get('default');
+                $top = $conn->execute(
+                    "SELECT p.id, p.name, p.country, p.picture, COUNT(*) n FROM events e
+                     JOIN players p ON p.id = e.actor_id
+                     WHERE e.type = 'chat' AND p.track = 1
+                     GROUP BY p.id, p.name, p.country, p.picture ORDER BY n DESC LIMIT 3"
+                )->fetchAll('assoc');
+                if (!$top) {
+                    return null;
+                }
+                $quotes = array_map(
+                    fn($r) => json_decode($r['details'], true)['msg'] ?? '',
+                    $conn->execute(
+                        "SELECT details FROM events WHERE type = 'chat' AND actor_id = ? ORDER BY id DESC LIMIT 3",
+                        [$top[0]['id']]
+                    )->fetchAll('assoc')
+                );
+
+                return ['top' => $top, 'quotes' => array_values(array_filter($quotes))];
+            }, 'rankings');
+
+            $this->set(compact('lastLogs', 'bestPlayersByScore', 'bestPlayersByMap', 'achievementPlayers', 'lastGameDateRange', 'recordStreak', 'chatterbox'));
         }
 
 

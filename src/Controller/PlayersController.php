@@ -657,6 +657,29 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $player->rankTheLast100 = $this->getPlayerRank($player->id, $theLast100GameIds);
         $player->rankAllTime = $this->getPlayerRank($player->id, $gameIds);
 
+        // Nemesis stats (kill_pairs is only filled since Sep 2026, no backfill)
+        $conn = \Cake\Datasource\ConnectionManager::get('default');
+        $nemeses = $conn->execute(
+            'SELECT p.id, p.name, p.country, p.picture, SUM(kp.kills) n FROM kill_pairs kp
+             JOIN players p ON p.id = kp.killer_id WHERE kp.victim_id = ?
+             GROUP BY p.id, p.name, p.country, p.picture HAVING n > 0 ORDER BY n DESC LIMIT 3',
+            [$player->id]
+        )->fetchAll('assoc');
+        $victims = $conn->execute(
+            'SELECT p.id, p.name, p.country, p.picture, SUM(kp.kills) n FROM kill_pairs kp
+             JOIN players p ON p.id = kp.victim_id WHERE kp.killer_id = ?
+             GROUP BY p.id, p.name, p.country, p.picture HAVING n > 0 ORDER BY n DESC LIMIT 3',
+            [$player->id]
+        )->fetchAll('assoc');
+        $quotes = array_map(
+            fn($r) => ['msg' => json_decode($r['details'], true)['msg'] ?? '', 'at' => $r['event_time']],
+            $conn->execute(
+                "SELECT details, event_time FROM events WHERE type = 'chat' AND actor_id = ? ORDER BY id DESC LIMIT 5",
+                [$player->id]
+            )->fetchAll('assoc')
+        );
+
+        $this->set(compact('nemeses', 'victims', 'quotes'));
         $this->set(compact(
             'player',
             'totalKills',

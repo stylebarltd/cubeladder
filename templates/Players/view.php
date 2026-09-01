@@ -274,6 +274,46 @@ use Cake\Core\Configure;
 
 
 
+    <?php if (!empty($nemeses) || !empty($victims) || !empty($quotes)): ?>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <?php
+        $duelCards = [
+            ['title' => '💀 Nemesis', 'sub' => 'kills ' . h($player->name) . ' the most', 'rows' => $nemeses ?? [], 'color' => 'text-red-400'],
+            ['title' => '🎯 Favorite victims', 'sub' => h($player->name) . ' kills them the most', 'rows' => $victims ?? [], 'color' => 'text-green-400'],
+        ];
+        foreach ($duelCards as $card): if (empty($card['rows'])) continue; ?>
+        <div class="bg-zinc-900 rounded-xl p-6">
+            <h3 class="text-xl font-bold text-white mb-1"><?= $card['title'] ?></h3>
+            <div class="text-xs text-zinc-500 mb-4"><?= $card['sub'] ?> <span class="text-zinc-600">· since Sep 2026</span></div>
+            <div class="space-y-2">
+                <?php foreach ($card['rows'] as $r): ?>
+                <a href="/players/view/<?= h($r['id']) ?>" class="flex items-center gap-3 p-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition">
+                    <img src="<?= !empty($r['picture']) ? '/img/players/' . h($r['picture']) : '/img/acl.png' ?>" class="w-8 h-8 rounded-full object-cover" alt="">
+                    <div class="flex-1 font-semibold text-white truncate"><?= h($r['name']) ?> <?= $this->Layout->flag($r['country']) ?></div>
+                    <div class="<?= $card['color'] ?> font-mono text-lg"><?= (int)$r['n'] ?></div>
+                </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endforeach; ?>
+
+        <?php if (!empty($quotes)): ?>
+        <div class="bg-zinc-900 rounded-xl p-6">
+            <h3 class="text-xl font-bold text-white mb-1">💬 Latest words</h3>
+            <div class="text-xs text-zinc-500 mb-4">in-game chat · since Sep 2026</div>
+            <div class="space-y-2">
+                <?php foreach ($quotes as $q): if ($q['msg'] === '') continue; ?>
+                <div class="p-2 bg-zinc-800 rounded-lg text-sm text-zinc-300">
+                    &ldquo;<?= h($q['msg']) ?>&rdquo;
+                    <?php if (!empty($q['at'])): ?><span class="text-xs text-zinc-600">· <?= h(date('M j', strtotime($q['at']))) ?></span><?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
     <!-- Recent Games Table -->
     <h2 class="text-2xl font-bold text-white mb-4 mt-6"><?= h($player->name) ?> recent games</h2>
 
