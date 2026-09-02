@@ -297,7 +297,8 @@ use Cake\Core\Configure;
         </div>
         <?php endforeach; ?>
 
-        <?php if (!empty($quotes)): ?>
+        <?php // hidden for now - flip to true to show the in-game chat quotes ?>
+        <?php if (false && !empty($quotes)): ?>
         <div class="bg-zinc-900 rounded-xl p-6">
             <h3 class="text-xl font-bold text-white mb-1">💬 Latest words</h3>
             <div class="text-xs text-zinc-500 mb-4">in-game chat · since Sep 2026</div>
