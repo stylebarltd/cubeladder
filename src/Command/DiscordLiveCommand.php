@@ -18,10 +18,13 @@ use Throwable;
  * more channels (each inherits the default settings and overrides its
  * own webhook / servers / …). Every run updates all configured feeds.
  *
- *   bin/cake discord_live              one update (cron: * * * * *)
- *   bin/cake discord_live --every=15   keep running, update every 15 s (screen/systemd)
- *   bin/cake discord_live --feed=mys   only this feed (default feed is called "default")
- *   bin/cake discord_live --new        post fresh messages instead of editing the old ones
+ *   bin/cake discord_live                      one update
+ *   bin/cake discord_live --every=15           keep running, update every 15 s (screen/systemd)
+ *   bin/cake discord_live --every=15 --for=55  refresh every 15 s but exit after ~55 s; meant
+ *                                              to be started by cron every minute, so it works
+ *                                              on shared hosting that kills long processes
+ *   bin/cake discord_live --feed=mys           only this feed (default feed is called "default")
+ *   bin/cake discord_live --new                post fresh messages instead of editing the old ones
  */
 class DiscordLiveCommand extends Command
 {
@@ -38,6 +41,10 @@ class DiscordLiveCommand extends Command
                 'help' => 'Keep running and refresh every N seconds (default: run once)',
                 'default' => null,
             ])
+            ->addOption('for', [
+                'help' => 'With --every: exit after N seconds, for cron-restarted runs',
+                'default' => null,
+            ])
             ->addOption('feed', [
                 'help' => 'Only update this feed ("default" or a key of Ladder.discord.feeds)',
                 'default' => null,
@@ -51,8 +58,20 @@ class DiscordLiveCommand extends Command
     public function execute(Arguments $args, ConsoleIo $io): ?int
     {
         $every = (int)($args->getOption('every') ?? 0);
+        $for = (int)($args->getOption('for') ?? 0);
         $forceNew = (bool)$args->getOption('new');
         $only = $args->getOption('feed');
+
+        // Looping runs hold a lock so overlapping cron starts (or a leftover
+        // screen session) never edit the same webhook messages concurrently.
+        if ($every > 0) {
+            $lock = fopen(TMP . 'discord_live_' . ($only ?? 'all') . '.lock', 'c');
+            if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
+                $io->out('another discord_live run is active - exiting');
+
+                return self::CODE_SUCCESS;
+            }
+        }
 
         $services = [];
         foreach ($this->feedConfigs() as $name => $cfg) {
@@ -73,6 +92,7 @@ class DiscordLiveCommand extends Command
             return self::CODE_ERROR;
         }
 
+        $deadline = ($every > 0 && $for > 0) ? time() + $for : null;
         do {
             $failed = false;
             foreach ($services as $name => $service) {
@@ -89,6 +109,9 @@ class DiscordLiveCommand extends Command
             }
             $forceNew = false;
             if ($every > 0) {
+                if ($deadline !== null && time() + $every >= $deadline) {
+                    break;
+                }
                 sleep($every);
             }
         } while ($every > 0);
