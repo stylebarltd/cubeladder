@@ -69,15 +69,21 @@ class LiveController extends AppController
     public function gameStatus(string $key)
     {
         $this->request->allowMethod(['get']);
-        $servers = Configure::read('Ladder.servers') ?: [];
-        if (!isset($servers[$key])) {
+        $cfg = (Configure::read('Ladder.servers') ?: [])[$key] ?? null;
+        if ($cfg === null) {
+            // "elsewhere" servers: any "ip:port" key from the public master
+            // list may be viewed too - but nothing outside that list
+            $cfg = (new AcMasterServerService())->servers()[$key] ?? null;
+        }
+        if ($cfg === null) {
             throw new \Cake\Http\Exception\NotFoundException();
         }
 
-        $data = Cache::remember('game_' . $key, function () use ($key, $servers) {
-            $info = (new AcExtInfoService())->query($servers[$key]['host'], (int)$servers[$key]['port']);
+        $cacheKey = 'game_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $key);
+        $data = Cache::remember($cacheKey, function () use ($key, $cfg) {
+            $info = (new AcExtInfoService())->query($cfg['host'], (int)$cfg['port']);
             $info['key'] = $key;
-            $info['name'] = $servers[$key]['name'] ?? $key;
+            $info['name'] = $cfg['name'] ?? (trim((string)($info['description'] ?? '')) ?: $key);
             $info['team_mode'] = in_array((int)$info['mode'], AcExtInfoService::TEAM_MODES, true);
             $info['by_flags'] = in_array((int)$info['mode'], AcExtInfoService::FLAG_MODES, true);
             $info['map_image'] = $info['map'] && is_file(WWW_ROOT . 'img/maps/' . $info['map'] . '.jpg')

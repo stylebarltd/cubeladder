@@ -26,8 +26,8 @@
 #live-sidebar [data-server] { border: 1px solid rgb(63 63 70); border-radius: .75rem; background: rgb(39 39 42); }
 #live-sidebar [data-server]:hover { background: rgb(63 63 70 / .6); }
 #live-sidebar [data-server].sel { background: rgb(63 63 70); border-color: rgb(113 113 122); }
-#live-clan [data-server]:hover { background: rgb(63 63 70 / .6); }
-#live-clan [data-server].sel { background: rgb(63 63 70); }
+#live-clan [data-server]:hover, #live-elsewhere [data-server]:hover { background: rgb(63 63 70 / .6); }
+#live-clan [data-server].sel, #live-elsewhere [data-server].sel { background: rgb(63 63 70); }
 .live-extra { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: start; }
 @media (min-width: 1024px) { .live-extra { grid-template-columns: 1fr 1fr; } }
 </style>
@@ -95,7 +95,7 @@
     let match = null;
 
     function markSelected() {
-        document.querySelectorAll('#live-sidebar [data-server], #live-clan [data-server]').forEach(b => {
+        document.querySelectorAll('#live-sidebar [data-server], #live-clan [data-server], #live-elsewhere [data-server]').forEach(b => {
             b.classList.toggle('sel', b.dataset.server === current);
         });
     }
@@ -117,6 +117,7 @@
     };
     sidebar.addEventListener('click', onServerClick);
     document.getElementById('live-clan').addEventListener('click', onServerClick);
+    document.getElementById('live-elsewhere').addEventListener('click', onServerClick);
     window.addEventListener('hashchange', () => {
         const key = decodeURIComponent(location.hash.slice(1));
         if (keys.has(key)) select(key, false);
@@ -172,19 +173,21 @@
         wrap.hidden = false;
         document.getElementById('live-elsewhere-sub').textContent =
             ew.players + ' player' + (ew.players === 1 ? '' : 's') + ' on ' + ew.online + ' other public server' + (ew.online === 1 ? '' : 's');
-        listEl.innerHTML = ew.servers.map(srv =>
-            '<div class="p-3">' +
-                '<div class="flex items-center gap-3">' +
+        listEl.innerHTML = ew.servers.map(srv => {
+            keys.add(srv.key);
+            return '<button type="button" data-server="' + esc(srv.key) + '" class="block w-full text-left p-3 transition">' +
+                '<span class="flex items-center gap-3">' +
                     '<span class="w-2.5 h-2.5 rounded-full bg-green-500 lg-pulse shrink-0"></span>' +
                     '<span class="flex-1 min-w-0">' +
                         '<span class="block text-sm font-semibold text-white truncate">' + esc(srv.name) + '</span>' +
                         '<span class="block text-xs text-zinc-500 truncate">' + esc(srv.map || '—') + ' · ' + esc(srv.mode_name) + '</span>' +
                     '</span>' +
                     '<span class="text-xs font-mono text-zinc-400">' + srv.numplayers + '</span>' +
-                '</div>' +
-                '<div class="text-[11px] text-zinc-600 mt-1 ml-5">/connect ' + esc(srv.host) + ' ' + esc(srv.port) + '</div>' +
-            '</div>'
-        ).join('') || '<p class="p-3 text-xs text-zinc-500">all quiet</p>';
+                '</span>' +
+                '<span class="block text-[11px] text-zinc-600 mt-1 ml-5">/connect ' + esc(srv.host) + ' ' + esc(srv.port) + '</span>' +
+            '</button>';
+        }).join('') || '<p class="p-3 text-xs text-zinc-500">all quiet</p>';
+        markSelected();
 
         return data;
     }
