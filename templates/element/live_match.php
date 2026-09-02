@@ -36,7 +36,7 @@
 .lg-ping { display: inline-block; width: .65rem; height: .65rem; border-radius: 50%; vertical-align: middle;
   animation: lgpingpulse 3s ease-in-out infinite; }
 @keyframes lgpingpulse { 50% { opacity: .5; transform: scale(.8); } }
-.lg-chat { padding: .5rem .9rem; font-size: .8rem; max-height: 9rem; overflow-y: auto; margin-top: 1.5rem; }
+.lg-chat { padding: .5rem .9rem; font-size: .8rem; max-height: 9rem; overflow-y: auto; margin-top: 1rem; background: rgb(24 24 27 / .75); }
 .lg-chat > div { padding: .12rem 0; color: rgb(212 212 216); }
 .lg-chat .t { color: rgb(113 113 122); margin-right: .45rem; font-variant-numeric: tabular-nums; font-size: .72rem; }
 .lg-chat .v-hs { color: #fbbf24; } .lg-chat .v-tk { color: #f87171; } .lg-chat .v-flag { color: #4ade80; }
@@ -57,6 +57,10 @@
             <div class="text-xs text-zinc-400">
                 <code class="bg-zinc-900/70 px-1.5 py-0.5 rounded js-connect"></code>
                 <span class="js-gamelink"></span>
+            </div>
+
+            <div class="lg-team lg-chat js-chatbox" hidden>
+                <div class="empty">waiting for action&hellip;</div>
             </div>
         </div>
     </div>
@@ -90,10 +94,6 @@
     </div>
 
     <p class="js-specs text-sm text-zinc-500 mt-4" hidden></p>
-
-    <div class="lg-team lg-chat js-chatbox" hidden>
-        <div class="empty">waiting for action&hellip;</div>
-    </div>
 
     <p class="text-xs text-zinc-600 mt-6 text-center">updates every 5 seconds &middot; <span class="js-updated"></span></p>
 </div>
