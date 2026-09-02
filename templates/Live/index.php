@@ -137,7 +137,7 @@
                 sub.textContent = 'offline';
                 count.textContent = '';
             } else {
-                dot.className = 'js-dot w-2.5 h-2.5 rounded-full shrink-0 bg-green-500 lg-pulse';
+                dot.className = 'js-dot w-2.5 h-2.5 rounded-full shrink-0 ' + (srv.numplayers > 0 ? 'bg-green-500 lg-pulse' : 'bg-zinc-600');
                 sub.textContent = srv.numplayers > 0
                     ? (srv.map || '—') + ' · ' + srv.mode_name
                     : 'empty';
@@ -152,9 +152,10 @@
         clanWrap.hidden = clan.length === 0;
         clanList.innerHTML = clan.map(srv => {
             keys.add(srv.key);
+            const dot = srv.numplayers > 0 ? 'bg-green-500 lg-pulse' : 'bg-zinc-600';
             const sub = srv.numplayers > 0 ? (srv.map || '—') + ' · ' + srv.mode_name : 'empty';
             return '<button type="button" data-server="' + esc(srv.key) + '" class="w-full text-left p-3 transition flex items-center gap-3">' +
-                '<span class="w-2.5 h-2.5 rounded-full shrink-0 bg-green-500 lg-pulse"></span>' +
+                '<span class="w-2.5 h-2.5 rounded-full shrink-0 ' + dot + '"></span>' +
                 '<span class="flex-1 min-w-0">' +
                     '<span class="block text-sm font-semibold text-white truncate">' + esc(srv.name) + '</span>' +
                     '<span class="block text-xs text-zinc-500 truncate">' + esc(sub) + '</span>' +
