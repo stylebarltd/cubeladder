@@ -206,7 +206,10 @@
         const data = await poll();
         let key = keys.has(hashKey) ? hashKey : null;
         if (!key && data) {
-            const busiest = [...data.servers].filter(s => s.online).sort((a, b) => b.numplayers - a.numplayers)[0];
+            // busiest server anywhere - own list first, so it wins ties
+            const busiest = [...data.servers, ...((data.clan && data.clan.servers) || []), ...data.elsewhere.servers]
+                .filter(s => s.online && keys.has(s.key))
+                .sort((a, b) => b.numplayers - a.numplayers)[0];
             if (busiest && busiest.numplayers > 0) key = busiest.key;
         }
         select(key || keys.values().next().value, !!hashKey);
