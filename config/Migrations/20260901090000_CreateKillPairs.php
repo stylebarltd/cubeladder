@@ -10,7 +10,9 @@ class CreateKillPairs extends BaseMigration
      */
     public function change(): void
     {
-        $table = $this->table('kill_pairs');
+        // collation pinned to match the existing tables (players etc.) - the
+        // webhost's server default differs and joins on id columns would fail
+        $table = $this->table('kill_pairs', ['collation' => 'utf8mb4_general_ci']);
 
         $table
             ->addColumn('game_id', 'char', ['limit' => 36, 'null' => false])
