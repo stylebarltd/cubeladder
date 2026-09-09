@@ -115,40 +115,6 @@
 
         </div>
 
-
-
-
-
-
-        <?php if (!empty($chatterbox)): ?>
-        <!-- Chatterbox -->
-        <div class="bg-zinc-900 rounded-xl p-8 mb-8">
-            <div class="text-4xl mb-4"><i class="fa-solid fa-comments"></i></div>
-            <h3 class="text-xl font-bold mb-1 text-white">Chatterbox</h3>
-            <div class="text-xs text-zinc-500 mb-4">who talks the most in game &middot; since Sep 2026</div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div class="space-y-2">
-                    <?php foreach ($chatterbox['top'] as $i => $p): ?>
-                    <a href="/players/view/<?= h($p['id']) ?>" class="flex items-center gap-3 p-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition">
-                        <div class="text-2xl font-bold w-8 text-center"><?= $i + 1 ?>.</div>
-                        <img src="<?= !empty($p['picture']) ? '/img/players/' . h($p['picture']) : '/img/acl.png' ?>" class="w-10 h-10 rounded-full object-cover" alt="">
-                        <div class="flex-1 font-semibold text-white"><?= h($p['name']) ?> <?= $this->Layout->flag($p['country']) ?></div>
-                        <div class="text-blue-500 font-mono text-lg"><?= number_format($p['n']) ?></div>
-                    </a>
-                    <?php endforeach; ?>
-                </div>
-                <?php if (!empty($chatterbox['quotes'])): ?>
-                <div class="space-y-2">
-                    <div class="text-xs text-zinc-500"><?= h($chatterbox['top'][0]['name']) ?>'s latest words:</div>
-                    <?php foreach ($chatterbox['quotes'] as $q): ?>
-                    <div class="p-2 bg-zinc-800 rounded-lg text-sm text-zinc-300 italic">&ldquo;<?= h($q) ?>&rdquo;</div>
-                    <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php endif; ?>
-
         <!-- Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-8 mb-8">
             <!-- Players -->

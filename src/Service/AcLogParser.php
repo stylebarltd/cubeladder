@@ -38,6 +38,16 @@ class AcLogParser
 
     /** buffered chat rows for the events table (type 'chat') */
     protected array $chatBuffer = [];
+
+    /**
+     * Canned in-game voice commands (bound to keys, not typed) that are
+     * not worth recording as chat. Compared case-insensitively.
+     */
+    public const IGNORED_CHAT = [
+        'thanks', 'thanks!', 'thanks, man', 'nice shot', 'awesome', 'gg',
+        'stay together!', "there's no way, sir!", 'spread out!', 'come on, move!',
+        'haha', 'recover the flag!', 'negative',
+    ];
     protected $PlayerStatsPerGame;
     protected $Demos;
 
@@ -271,7 +281,7 @@ class AcLogParser
         if (preg_match($this->chatRegex, $rest, $m)) {
             $name = trim($m[2]);
             $msg = trim($m[3]);
-            if ($msg !== '' && strtolower($name) !== 'unarmed') {
+            if ($msg !== '' && strtolower($name) !== 'unarmed' && !in_array(mb_strtolower($msg), self::IGNORED_CHAT, true)) {
                 $this->chatBuffer[] = [
                     'game_id' => $this->currentGame->id ?? null,
                     'event_time' => $ts ? $ts->format('Y-m-d H:i:s') : null,
