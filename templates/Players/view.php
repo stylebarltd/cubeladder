@@ -274,6 +274,57 @@ use Cake\Core\Configure;
 
 
 
+    <?php if (!empty($records)): ?>
+    <!-- Personal records (Hall of Fame categories) -->
+    <?php
+    $recordStyle = [
+        'kills'                => ['icon' => 'fa-skull',       'color' => 'text-green-400'],
+        'headshot'             => ['icon' => 'fa-crosshairs',  'color' => 'text-red-400'],
+        'scored_with_the_flag' => ['icon' => 'fa-trophy',      'color' => 'text-red-400'],
+        'longest_streak'       => ['icon' => 'fa-fire',        'color' => 'text-orange-400'],
+        'slashed'              => ['icon' => 'fa-knife',       'color' => 'text-purple-400'],
+        'gibbed'               => ['icon' => 'fa-bomb',        'color' => 'text-yellow-400'],
+        'flag_helper'          => ['icon' => 'fa-flag',        'color' => 'text-blue-400'],
+    ];
+    $rankBadge = fn(int $rank) => match (true) {
+        $rank === 1 => 'bg-yellow-400 text-black',
+        $rank === 2 => 'bg-zinc-300 text-black',
+        $rank === 3 => 'bg-amber-700 text-white',
+        $rank <= 10 => 'bg-zinc-700 text-white',
+        default     => 'bg-zinc-800 text-zinc-400',
+    };
+    ?>
+    <div class="bg-zinc-900 rounded-xl p-6 mb-8">
+        <div class="flex items-baseline justify-between flex-wrap gap-2 mb-4">
+            <div>
+                <h3 class="text-xl font-bold text-white">🏆 Personal records</h3>
+                <div class="text-xs text-zinc-500">best single game per Hall of Fame category · rank among all players</div>
+            </div>
+            <a href="/players/hall_of_fame" class="text-xs text-zinc-400 hover:text-blue-400 transition">Hall of Fame &rarr;</a>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            <?php foreach ($records as $key => $rec): $st = $recordStyle[$key] ?? ['icon' => 'fa-circle-dot', 'color' => 'text-white']; ?>
+            <a href="<?= $rec['game_id'] ? '/games/view/' . h($rec['game_id']) : '#' ?>"
+               class="relative block bg-zinc-800 rounded-lg p-4 hover:bg-zinc-700 transition">
+                <span class="absolute top-2 right-2 text-[11px] font-bold px-2 py-0.5 rounded-full <?= $rankBadge((int)$rec['rank']) ?>"
+                      title="rank <?= (int)$rec['rank'] ?> of <?= (int)$rec['players'] ?> players">
+                    #<?= (int)$rec['rank'] ?>
+                </span>
+                <div class="text-lg mb-1 <?= $st['color'] ?>"><i class="fa-solid <?= $st['icon'] ?>"></i></div>
+                <div class="text-xs uppercase tracking-wide text-zinc-400"><?= h($rec['title']) ?></div>
+                <div class="text-3xl font-extrabold text-white"><?= number_format($rec['value']) ?></div>
+                <?php if ($rec['map_name']): ?>
+                <div class="text-xs text-zinc-500 truncate mt-1">
+                    <?= h($rec['map_name']) ?>
+                    <?php if ($rec['played_at']): ?> · <?= h($rec['played_at']->format('D, jS M Y')) ?><?php endif; ?>
+                </div>
+                <?php endif; ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($nemeses) || !empty($victims) || !empty($quotes)): ?>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <?php

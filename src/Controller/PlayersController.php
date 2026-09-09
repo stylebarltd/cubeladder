@@ -77,6 +77,104 @@ class PlayersController extends AppController
             'achievementPlayers'
         ));
     }
+    /**
+     * Hall of Fame categories: template key => field expression over
+     * player_stats_per_game. Single source for the HoF page and the
+     * personal-records card on the player view.
+     */
+    /** Hall of Fame window start (keep in sync with LastGamesTrait::getHallOfFameGameIds) */
+    public const HOF_SINCE = '2026-03-01';
+
+    public const HOF_CATEGORIES = [
+        'kills' => ['title' => 'Most Kills', 'fields' => ['kills']],
+        'headshot' => ['title' => 'Most Headshots', 'fields' => ['headshot']],
+        'scored_with_the_flag' => ['title' => 'Most Flags scored', 'fields' => ['scored_with_the_flag']],
+        'longest_streak' => ['title' => 'Longest Streak', 'fields' => ['longest_streak']],
+        'slashed' => ['title' => 'Most Slashes', 'fields' => ['slashed']],
+        'gibbed' => ['title' => 'Most Gibbed', 'fields' => ['gibbed']],
+        'flag_helper' => ['title' => 'Flag Helper', 'fields' => ['stole_the_flag', 'returned_the_flag']],
+    ];
+
+    /**
+     * One player's best single-game value per Hall of Fame category, with the
+     * game it happened in and the player's rank among all tracked players
+     * (same game window and tie rules as the Hall of Fame page).
+     */
+    private function getPlayerRecords(string $playerId): array
+    {
+        return Cache::remember('player_records_' . $playerId, function () use ($playerId) {
+            $psg = $this->Players->PlayerStatsPerGame;
+            $since = self::HOF_SINCE;
+
+            // Every tracked player's per-category maximum in one grouped query.
+            $select = ['player_id' => 'PlayerStatsPerGame.player_id'];
+            foreach (self::HOF_CATEGORIES as $key => $cat) {
+                $expr = implode(' + ', array_map(fn($f) => "PlayerStatsPerGame.$f", $cat['fields']));
+                $select[$key] = "MAX($expr)";
+            }
+            $maxima = $psg->find()
+                ->select($select)
+                ->innerJoinWith('Players')
+                ->innerJoinWith('Games')
+                ->where(['Games.started_at >=' => $since, 'Players.track' => 1])
+                ->groupBy(['PlayerStatsPerGame.player_id'])
+                ->enableHydration(false)
+                ->all()
+                ->toArray();
+
+            $own = null;
+            foreach ($maxima as $row) {
+                if ((string)$row['player_id'] === $playerId) {
+                    $own = $row;
+                    break;
+                }
+            }
+            if (!$own) {
+                return [];
+            }
+
+            $records = [];
+            foreach (self::HOF_CATEGORIES as $key => $cat) {
+                $value = (int)$own[$key];
+                if ($value <= 0) {
+                    continue;
+                }
+                $expr = implode(' + ', array_map(fn($f) => "PlayerStatsPerGame.$f", $cat['fields']));
+
+                $game = $psg->find()
+                    ->select([
+                        'game_id' => 'Games.id',
+                        'played_at' => 'Games.started_at',
+                        'map_name' => 'Maps.name',
+                    ])
+                    ->innerJoinWith('Games.Maps')
+                    ->where(['PlayerStatsPerGame.player_id' => $playerId, 'Games.started_at >=' => $since, "$expr = " . $value])
+                    ->orderDesc('Games.started_at')
+                    ->enableHydration(false)
+                    ->first();
+
+                $rank = 1;
+                foreach ($maxima as $row) {
+                    if ((int)$row[$key] > $value) {
+                        $rank++;
+                    }
+                }
+
+                $records[$key] = [
+                    'title' => $cat['title'],
+                    'value' => $value,
+                    'rank' => $rank,
+                    'players' => count($maxima),
+                    'game_id' => $game['game_id'] ?? null,
+                    'map_name' => $game['map_name'] ?? null,
+                    'played_at' => $game['played_at'] ?? null,
+                ];
+            }
+
+            return $records;
+        }, 'rankings');
+    }
+
     private function getTopPlayers(string|array $fields, int $limit = 10)
     {
         $gameIds = $this->getHallOfFameGameIds();
@@ -679,7 +777,9 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             )->fetchAll('assoc')
         );
 
-        $this->set(compact('nemeses', 'victims', 'quotes'));
+        $records = $this->getPlayerRecords((string)$player->id);
+
+        $this->set(compact('nemeses', 'victims', 'quotes', 'records'));
         $this->set(compact(
             'player',
             'totalKills',
