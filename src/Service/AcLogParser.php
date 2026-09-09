@@ -44,10 +44,23 @@ class AcLogParser
      * not worth recording as chat. Compared case-insensitively.
      */
     public const IGNORED_CHAT = [
-        'thanks', 'thanks!', 'thanks, man', 'nice shot', 'awesome', 'gg',
+        'thanks', 'thanks!', 'thanks, man', 'nice shot', 'awesome', 'awesome!', 'gg',
         'stay together!', "there's no way, sir!", 'spread out!', 'come on, move!',
-        'haha', 'recover the flag!', 'negative',
+        'haha', 'recover the flag!', 'negative', 'affirmative', 'i made contact',
+        "i'm on your team, man!", 'we did it!', 'sorry', 'report in!',
     ];
+
+    /** chat messages shorter than this (in characters) are not recorded */
+    public const MIN_CHAT_LENGTH = 4;
+
+    /** Whether a chat line is worth recording as an event. */
+    public static function isChatWorthRecording(string $msg): bool
+    {
+        $msg = trim($msg);
+
+        return mb_strlen($msg) >= self::MIN_CHAT_LENGTH
+            && !in_array(mb_strtolower($msg), self::IGNORED_CHAT, true);
+    }
     protected $PlayerStatsPerGame;
     protected $Demos;
 
@@ -281,7 +294,7 @@ class AcLogParser
         if (preg_match($this->chatRegex, $rest, $m)) {
             $name = trim($m[2]);
             $msg = trim($m[3]);
-            if ($msg !== '' && strtolower($name) !== 'unarmed' && !in_array(mb_strtolower($msg), self::IGNORED_CHAT, true)) {
+            if (strtolower($name) !== 'unarmed' && self::isChatWorthRecording($msg)) {
                 $this->chatBuffer[] = [
                     'game_id' => $this->currentGame->id ?? null,
                     'event_time' => $ts ? $ts->format('Y-m-d H:i:s') : null,
