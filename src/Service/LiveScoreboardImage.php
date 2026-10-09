@@ -18,9 +18,13 @@ use RuntimeException;
  */
 class LiveScoreboardImage
 {
-    private const WIDTH = 1200;
-    private const PAD = 32;
-    private const ROW = 42;
+    // Discord shows embed pictures at a fixed width, so a narrow canvas with
+    // big type and no empty space reads largest in the channel
+    private const WIDTH = 1000;
+    private const PAD = 20;
+    private const ROW = 50;
+    private const BAR = 70;     // team bar
+    private const HEAD = 38;    // column header row
     private const MAX_ROWS = 12;
 
     private const FONT_DIRS = [
@@ -67,8 +71,8 @@ class LiveScoreboardImage
 
         $rows = min(self::MAX_ROWS, max(array_map(fn($c) => count($c['players']), $columns) ?: [0]));
         $more = max(array_map(fn($c) => count($c['players']), $columns) ?: [0]) > self::MAX_ROWS;
-        $tableTop = 150;
-        $height = max(600, $tableTop + 64 + 36 + max(1, $rows) * self::ROW + ($more ? self::ROW : 0) + 70);
+        $tableTop = 122;
+        $height = max(360, $tableTop + self::BAR + self::HEAD + max(1, $rows) * self::ROW + ($more ? self::ROW : 0) + 8 + self::PAD);
 
         $this->im = imagecreatetruecolor(self::WIDTH, $height);
         imagealphablending($this->im, true);
@@ -76,15 +80,14 @@ class LiveScoreboardImage
 
         // header: map, mode · server · time left
         $map = (new LayoutHelper(new View()))->cleanMapName((string)$s['map']) ?: (string)$s['map'];
-        $this->text(strtoupper($map), self::PAD, 72, 44, $this->bold, [255, 255, 255]);
-        $meta = strtoupper((string)($s['mode_name'] ?? '?')) . '  ·  ' . $s['name']
-            . ($s['minremain'] !== null ? sprintf('  ·  %d min left', $s['minremain']) : '');
-        $this->text($meta, self::PAD, 112, 20, $this->regular, [212, 212, 216]);
+        $this->text(strtoupper($map), self::PAD, 62, 50, $this->bold, [255, 255, 255]);
+        $meta = strtoupper((string)($s['mode_name'] ?? '?')) . ' · ' . $s['name']
+            . ($s['minremain'] !== null ? sprintf(' · %d min left', $s['minremain']) : '');
+        $this->text($meta, self::PAD, 102, 24, $this->regular, [212, 212, 216]);
         $count = sprintf('%d/%d', (int)$s['numplayers'], (int)($s['maxclients'] ?? 0));
-        $this->text($count, self::WIDTH - self::PAD - $this->width($count, 30, $this->bold), 72, 30, $this->bold, [134, 239, 172]);
-        $this->text('players', self::WIDTH - self::PAD - $this->width('players', 16, $this->regular), 104, 16, $this->regular, [161, 161, 170]);
+        $this->text($count, self::WIDTH - self::PAD - $this->width($count, 38, $this->bold), 58, 38, $this->bold, [134, 239, 172]);
 
-        $gap = 24;
+        $gap = 16;
         $colWidth = (int)((self::WIDTH - 2 * self::PAD - (count($columns) - 1) * $gap) / count($columns));
         $scores = array_column($columns, 'score');
         $leader = $teamMode && count(array_unique($scores)) > 1 ? max($scores) : null;
@@ -93,13 +96,8 @@ class LiveScoreboardImage
             $this->column($c, $x, $tableTop, $colWidth, $rows, $byFlags, $c['score'] !== null && $c['score'] === $leader);
         }
 
-        // no clock: an unchanged scoreboard must give the same image (Discord
-        // shows "updated …" itself), so it is not uploaded again
-        $foot = 'cubeladder.ovh/live';
-        $this->text($foot, self::WIDTH - self::PAD - $this->width($foot, 15, $this->regular), $height - 24, 15, $this->regular, [161, 161, 170]);
-        if (!empty($s['host'])) {
-            $this->text(sprintf('/connect %s %d', $s['host'], (int)$s['port']), self::PAD, $height - 24, 15, $this->regular, [161, 161, 170]);
-        }
+        // no clock or footer: an unchanged scoreboard must give the same
+        // image (not uploaded again); /connect is in the embed footer
 
         ob_start();
         imagejpeg($this->im, null, 85);
@@ -120,57 +118,57 @@ class LiveScoreboardImage
         };
 
         // translucent panel behind the whole table
-        $panelHeight = 64 + 36 + max(1, $rows) * self::ROW + (count($c['players']) > self::MAX_ROWS ? self::ROW : 0) + 8;
+        $panelHeight = self::BAR + self::HEAD + max(1, $rows) * self::ROW + (count($c['players']) > self::MAX_ROWS ? self::ROW : 0) + 8;
         $this->rect($x, $y, $w, $panelHeight, [0, 0, 0], 50);
 
         // team bar: name left, score right
-        $this->rect($x, $y, $w, 64, $tint, $c['team'] ? 30 : 60);
-        $label = $c['team'] ? ($leads ? $c['team'] . '  ★' : $c['team']) : 'SCOREBOARD';
-        $this->text($label, $x + 18, $y + 44, 28, $this->bold, [255, 255, 255]);
+        $this->rect($x, $y, $w, self::BAR, $tint, $c['team'] ? 30 : 60);
+        $label = $c['team'] ? ($leads ? $c['team'] . ' ★' : $c['team']) : 'SCOREBOARD';
+        $this->text($label, $x + 16, $y + 50, 34, $this->bold, [255, 255, 255]);
         if ($c['score'] !== null) {
             $score = (string)$c['score'];
-            $this->text($score, $x + $w - 18 - $this->width($score, 36, $this->bold), $y + 48, 36, $this->bold, [255, 255, 255]);
+            $this->text($score, $x + $w - 16 - $this->width($score, 44, $this->bold), $y + 56, 44, $this->bold, [255, 255, 255]);
             $unit = $byFlags ? 'flags' : 'frags';
-            $this->text($unit, $x + $w - 26 - $this->width($score, 36, $this->bold) - $this->width($unit, 15, $this->regular), $y + 44, 15, $this->regular, [228, 228, 231]);
+            $this->text($unit, $x + $w - 26 - $this->width($score, 44, $this->bold) - $this->width($unit, 18, $this->regular), $y + 50, 18, $this->regular, [228, 228, 231]);
         }
 
         // header row: # player | flags frags deaths (numbers right-aligned)
-        $num = 78;
+        $num = 56;
         $cols = [['flags', 'FL'], ['frags', 'FR'], ['deaths', 'DE']];
-        $hy = $y + 64 + 26;
+        $hy = $y + self::BAR + 28;
         $grey = [161, 161, 170];
-        $this->text('#', $x + 14, $hy, 15, $this->bold, $grey);
-        $this->text('PLAYER', $x + 52, $hy, 15, $this->bold, $grey);
+        $this->text('#', $x + 12, $hy, 18, $this->bold, $grey);
+        $this->text('PLAYER', $x + 46, $hy, 18, $this->bold, $grey);
         foreach ($cols as $j => [$field, $head]) {
-            $right = $x + $w - 18 - (count($cols) - 1 - $j) * $num;
+            $right = $x + $w - 14 - (count($cols) - 1 - $j) * $num;
             $decides = ($field === 'flags') === $byFlags && $field !== 'deaths';
-            $this->text($head, $right - $this->width($head, 15, $this->bold), $hy, 15, $this->bold, $decides ? [255, 255, 255] : $grey);
+            $this->text($head, $right - $this->width($head, 18, $this->bold), $hy, 18, $this->bold, $decides ? [255, 255, 255] : $grey);
         }
 
-        $nameWidth = $w - 52 - 18 - count($cols) * $num - 10;
-        $ry = $y + 64 + 36;
+        $nameWidth = $w - 46 - 14 - count($cols) * $num - 6;
+        $ry = $y + self::BAR + self::HEAD;
         foreach (array_slice($c['players'], 0, self::MAX_ROWS) as $i => $p) {
             if ($i % 2 === 1) {
                 $this->rect($x, $ry, $w, self::ROW, [255, 255, 255], 120);
             }
-            $base = $ry + 29;
-            $this->text((string)($i + 1), $x + 14, $base, 18, $this->regular, $i === 0 ? [253, 224, 71] : $grey);
-            $this->text($this->fit((string)$p['name'], 21, $nameWidth), $x + 52, $base, 21, $this->bold, [255, 255, 255]);
+            $base = $ry + 36;
+            $this->text((string)($i + 1), $x + 12, $base, 22, $this->regular, $i === 0 ? [253, 224, 71] : $grey);
+            $this->text($this->fit((string)$p['name'], 26, $nameWidth), $x + 46, $base, 26, $this->bold, [255, 255, 255]);
             foreach ($cols as $j => [$field]) {
                 $value = (string)(int)$p[$field];
                 $decides = ($field === 'flags') === $byFlags && $field !== 'deaths';
                 $font = $decides ? $this->bold : $this->regular;
                 $color = $decides ? [255, 255, 255] : ($field === 'deaths' ? [161, 161, 170] : [212, 212, 216]);
-                $right = $x + $w - 18 - (count($cols) - 1 - $j) * $num;
-                $this->text($value, $right - $this->width($value, 21, $font), $base, 21, $font, $color);
+                $right = $x + $w - 14 - (count($cols) - 1 - $j) * $num;
+                $this->text($value, $right - $this->width($value, 26, $font), $base, 26, $font, $color);
             }
             $ry += self::ROW;
         }
         if (!$c['players']) {
-            $this->text('nobody', $x + 52, $ry + 29, 19, $this->regular, $grey);
+            $this->text('nobody', $x + 46, $ry + 36, 24, $this->regular, $grey);
         }
         if (count($c['players']) > self::MAX_ROWS) {
-            $this->text(sprintf('+%d more', count($c['players']) - self::MAX_ROWS), $x + 52, $ry + 29, 17, $this->regular, $grey);
+            $this->text(sprintf('+%d more', count($c['players']) - self::MAX_ROWS), $x + 46, $ry + 36, 22, $this->regular, $grey);
         }
     }
 
@@ -197,8 +195,8 @@ class LiveScoreboardImage
         }
         // overall darkening + a darker band behind the header
         $this->rect(0, 0, self::WIDTH, $height, [0, 0, 0], 60);
-        for ($i = 0; $i < 140; $i += 4) {
-            $this->rect(0, $i, self::WIDTH, 4, [0, 0, 0], 70 + (int)($i / 140 * 57));
+        for ($i = 0; $i < 120; $i += 4) {
+            $this->rect(0, $i, self::WIDTH, 4, [0, 0, 0], 70 + (int)($i / 120 * 57));
         }
     }
 
