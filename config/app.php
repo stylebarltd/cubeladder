@@ -605,6 +605,8 @@ return [
             // results channel: bin/cake discord_results after every log import
             'results' => [
                 'webhook' => env('DISCORD_RESULTS_WEBHOOK'),
+                // only games with at least this many players (3+ minutes played)
+                'minPlayers' => 6,
             ],
 
             // welcome channel: bin/cake discord_welcome (posted once, re-run edits it)

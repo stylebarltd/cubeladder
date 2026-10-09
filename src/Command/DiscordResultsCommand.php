@@ -38,8 +38,11 @@ class DiscordResultsCommand extends Command
     /** At most this many results per run (a big import after a pause) */
     private const MAX_PER_RUN = 8;
 
-    /** Posted game ids kept in the state file */
-    private const KEEP_IDS = 300;
+    /** Handled (posted or skipped) game ids kept in the state file */
+    private const KEEP_IDS = 1000;
+
+    /** Only games finished within this window are looked at */
+    private const WINDOW = '-1 day';
 
     public static function defaultName(): string
     {
@@ -89,16 +92,33 @@ class DiscordResultsCommand extends Command
         } else {
             // a game is finished by a later import than the one that saw
             // it start, so look at recently changed rows, not new ones
-            $query->where(['Games.modified >=' => $state['since']]);
+            // ... and only games that really just ended: a script touching
+            // old games (backfills, marking) must not flood the channel
+            $window = date('Y-m-d H:i:s', strtotime(self::WINDOW));
+            $query->where(['Games.modified >=' => max($state['since'], $window), 'Games.ended_at >=' => $window]);
             if (!empty($state['posted'])) {
                 $query->where(['Games.id NOT IN' => $state['posted']]);
             }
-            $query->limit(self::MAX_PER_RUN);
         }
 
+        $minPlayers = (int)(Configure::read('Ladder.discord.results.minPlayers') ?? 6);
         $http = new Client(['timeout' => 20]);
         $failed = false;
+        $posted = 0;
         foreach ($query->all() as $game) {
+            if ($only === null && $posted >= self::MAX_PER_RUN) {
+                break; // the rest follows with the next import
+            }
+            // small games are not worth a result: fewer than $minPlayers
+            // players who played at least MIN_MINUTES (as on the website)
+            $players = count(array_filter(
+                $game->player_stats_per_game ?? [],
+                fn($st) => $st->minutes_played === null || $st->minutes_played >= \App\Model\Table\PlayerStatsPerGameTable::MIN_MINUTES
+            ));
+            if ($only === null && $players < $minPlayers) {
+                $this->remember($state, $statePath, $game->id, $dryRun);
+                continue;
+            }
             // the final team scores follow a few log lines after "game
             // finished": when this import stopped in between, wait for the
             // next one (but not forever)
@@ -131,7 +151,8 @@ class DiscordResultsCommand extends Command
                 if (!$res->isOk()) {
                     throw new \RuntimeException('HTTP ' . $res->getStatusCode() . ' ' . $res->getStringBody());
                 }
-                $io->out(sprintf('Posted %s (%s on %s)', $game->id, $game->mode, $game->map->name ?? '?'));
+                $io->out(sprintf('Posted %s (%s on %s, %d players)', $game->id, $game->mode, $game->map->name ?? '?', $players));
+                $posted++;
             } catch (Throwable $e) {
                 $io->err('Game ' . $game->id . ': ' . $e->getMessage());
                 $failed = true;
@@ -139,13 +160,23 @@ class DiscordResultsCommand extends Command
             }
 
             if ($only === null) {
-                $state['posted'][] = $game->id;
-                $state['posted'] = array_slice($state['posted'], -self::KEEP_IDS);
-                file_put_contents($statePath, json_encode($state));
+                $this->remember($state, $statePath, $game->id, $dryRun);
             }
         }
 
         return $failed ? self::CODE_ERROR : self::CODE_SUCCESS;
+    }
+
+    /**
+     * Mark a game as handled (posted or skipped) in the state file.
+     */
+    private function remember(array &$state, string $statePath, string $gameId, bool $dryRun): void
+    {
+        $state['posted'][] = $gameId;
+        $state['posted'] = array_slice($state['posted'], -self::KEEP_IDS);
+        if (!$dryRun) {
+            file_put_contents($statePath, json_encode($state));
+        }
     }
 
     /**
@@ -172,9 +203,14 @@ class DiscordResultsCommand extends Command
             : ($board['teams'][$team]['score']['frags'] ?? 0));
 
         if ($teamGame) {
-            $title = $board['winner'] !== null
-                ? sprintf('%s wins %d : %d', $board['winner'], $score($board['winner']), $score($board['winner'] === 'CLA' ? 'RVSF' : 'CLA'))
-                : sprintf('Draw %d : %d', $score('CLA'), $score('RVSF'));
+            $winner = $board['winner'];
+            $loser = $winner === 'CLA' ? 'RVSF' : 'CLA';
+            $title = match (true) {
+                $winner === null => sprintf('Draw %d : %d', $score('CLA'), $score('RVSF')),
+                // equal flags: the website decides on frags
+                $score($winner) === $score($loser) => sprintf('%s wins on frags · %d : %d', $winner, $score($winner), $score($loser)),
+                default => sprintf('%s wins %d : %d', $winner, $score($winner), $score($loser)),
+            };
         } else {
             $title = !empty($board['rows']) ? $board['rows'][0]['player']->name . ' wins' : 'Game over';
         }
@@ -204,7 +240,7 @@ class DiscordResultsCommand extends Command
             'name' => $server,
             'minremain' => null,
             'players' => $players,
-            'meta' => 'FINAL  ·  ' . $mode . '  ·  ' . $server . ($minutes > 0 ? "  ·  {$minutes} min" : ''),
+            'meta' => implode('  ·  ', array_filter(['FINAL', $mode, $server, $minutes > 0 ? "{$minutes} min" : ''])),
             'badge' => [(string)count($players), 'players'],
             'host' => null,
             'footer' => 'cubeladder.ovh',
@@ -242,7 +278,7 @@ class DiscordResultsCommand extends Command
             'username' => 'cubeLadder Results',
             'avatar_url' => $site . '/img/brand/cubeladder-discord-icon-512.png',
             'embeds' => [[
-                'title' => sprintf('🏁 %s · %s — %s', $map, $mode, $title),
+                'title' => '🏁 ' . $map . ($mode !== '' ? ' · ' . $mode : '') . ' — ' . $title,
                 'url' => $site . '/games/view/' . $game->id,
                 'description' => sprintf('**%s** · <t:%d:f>%s', $server, $ended, $minutes > 0 ? " · {$minutes} min" : ''),
                 'color' => $color,
