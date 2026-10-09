@@ -737,6 +737,14 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $rating = $PlayerRatings->find()->where(['player_id' => $player->id])->first();
         $ratedPlayers = $rating ? $PlayerRatings->find()->count() : 0;
 
+        // Last seen: the player's latest game (inaccurate ones too - they were there)
+        $lastSeen = $conn->execute(
+            'SELECT g.id, g.started_at FROM player_stats_per_game p
+             INNER JOIN games g ON g.id = p.game_id
+             WHERE p.player_id = ? ORDER BY g.started_at DESC LIMIT 1',
+            [$player->id]
+        )->fetch('assoc') ?: null;
+
         // Milestones (bin/cake CalculateMilestones) and fun facts
         $milestones = $this->fetchTable('PlayerMilestones')->find()
             ->where(['player_id' => $player->id])
@@ -747,7 +755,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $funFacts = $milestoneProgress ? $this->funFacts((string)$player->id) : [];
 
         $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
-            'milestones', 'milestoneProgress', 'funFacts'));
+            'milestones', 'milestoneProgress', 'funFacts', 'lastSeen'));
         $this->set(compact(
             'player',
             'totalKills',

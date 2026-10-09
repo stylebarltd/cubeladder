@@ -45,6 +45,15 @@ $achievementLabels = [
                 <?php if (!empty($timePlayed['all'])): ?>
                     <span title="time on a team, all counted games"><i class="fa-solid fa-clock mr-1"></i><?= $this->Layout->duration($timePlayed['all']) ?> played</span>
                 <?php endif; ?>
+                <?php if (!empty($lastSeen)):
+                    $seenAt = new \Cake\I18n\DateTime($lastSeen['started_at']);
+                    $days = (int)floor((time() - $seenAt->getTimestamp()) / 86400);
+                    $seenLabel = $days <= 0 ? 'today' : ($days === 1 ? 'yesterday' : $days . ' days ago');
+                    ?>
+                    <?= $this->Html->link('<i class="fa-regular fa-clock mr-1"></i>last seen ' . h($seenLabel),
+                        ['controller' => 'Games', 'action' => 'view', $lastSeen['id']],
+                        ['escape' => false, 'title' => 'Last game: ' . $seenAt->format('j M Y, H:i'), 'class' => 'hover:text-blue-300']) ?>
+                <?php endif; ?>
                 <?php if ($player->country): ?><span><?= h($player->country) ?></span><?php endif; ?>
             </div>
             <div class="mt-3 flex flex-wrap items-center gap-3">
