@@ -40,6 +40,8 @@ class MapsController extends AppController
         $map->best_on_map = $this->getBestOnMapByMap([$map->id])[$map->id] ?? [];
         // Per-map single-game records
         $map->leaders = $this->getMapLeaders([$map->id])[$map->id] ?? [];
+        // how often CLA / RVSF win on this map
+        $map->team_wins = $this->getTeamWins((string)$map->id);
         // The visitor's own stats on this map (cookie / IP identity)
         $identity = $this->request->getAttribute('identity');
         $myStats = $identity ? $this->getPlayerMapStats($identity->id, $map->id) : null;
@@ -401,5 +403,34 @@ class MapsController extends AppController
             'records' => $records,
             'top' => $top,
         ];
+    }
+
+    /**
+     * CLA / RVSF wins and draws on a map: every finished, accurate team game
+     * with known final scores, decided like the scoreboards (flags first in
+     * flag modes, then frags).
+     *
+     * @return array{games: int, CLA: int, RVSF: int, draw: int}|null
+     */
+    private function getTeamWins(string $mapId): ?array
+    {
+        $flag = "g.mode IN ('" . implode("','", \App\Model\Table\GamesTable::FLAG_MODES) . "')";
+        $team = "g.mode IN ('" . implode("','", \App\Model\Table\GamesTable::TEAM_MODES) . "')";
+        $score = fn(string $t) => "(IF($flag, COALESCE(JSON_VALUE(g.team_scores, '$.$t.flags'), 0) + 0, 0), COALESCE(JSON_VALUE(g.team_scores, '$.$t.frags'), 0) + 0)";
+        $row = $this->fetchTable('Games')->getConnection()->execute(
+            "SELECT COUNT(*) AS games,
+                    SUM({$score('CLA')} > {$score('RVSF')}) AS cla,
+                    SUM({$score('CLA')} < {$score('RVSF')}) AS rvsf
+             FROM games g
+             WHERE g.map_id = ? AND g.inaccurate = 0 AND g.ended_at IS NOT NULL AND $team
+               AND g.team_scores IS NOT NULL AND JSON_CONTAINS_PATH(g.team_scores, 'all', '$.CLA', '$.RVSF')",
+            [$mapId]
+        )->fetch('assoc');
+        $games = (int)($row['games'] ?? 0);
+        if ($games === 0) {
+            return null;
+        }
+
+        return ['games' => $games, 'CLA' => (int)$row['cla'], 'RVSF' => (int)$row['rvsf'], 'draw' => $games - (int)$row['cla'] - (int)$row['rvsf']];
     }
 }

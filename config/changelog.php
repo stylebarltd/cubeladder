@@ -11,6 +11,8 @@ return [
             'items' => [
                 'All-Rounders now show their specialization - Attack (flag play), Defense (returns) or Combat (K/D and frags) - on player pages, in the All Time Ranking and in link previews.',
                 'Every game and every map can now have two pictures: games show one or the other, new pictures for Casa, Favela, Kasa, Rapier, Syria, Village and VM Village.',
+                'Maps show how often CLA and RVSF win there - on Favela RVSF wins two of three games.',
+                'the last 100 got the CTF rating column and the player types too, and the Hall of Fame shows each player\'s rating, rank and type.',
             ],
         ],
         [

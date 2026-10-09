@@ -28,6 +28,9 @@ $ogText = implode(' · ', array_filter([
     $map->name,
     '#' . $rank . ' most played',
     number_format((int)$map->games_count) . ' games',
+    !empty($map->team_wins) && $map->team_wins['games'] >= 10
+        ? sprintf('CLA wins %d%%, RVSF %d%%', round(100 * $map->team_wins['CLA'] / $map->team_wins['games']), round(100 * $map->team_wins['RVSF'] / $map->team_wins['games']))
+        : '',
     $topLeader && !empty($topLeader->player) ? 'most points ' . number_format((int)$topLeader->val) . ' by ' . $topLeader->player->name : '',
     !empty($map->top_players) ? 'top player ' . $map->top_players[0]->player->name : '',
 ]));
@@ -81,6 +84,25 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
                     <span><i class="fa-solid fa-ranking-star mr-1"></i>#<?= $rank ?> most played</span>
                     <span><i class="fa-solid fa-gamepad mr-1"></i><?= number_format((int)$map->games_count) ?> games</span>
                 </div>
+                <?php if (!empty($map->team_wins) && $map->team_wins['games'] >= 10):
+                    // CLA / RVSF win chance on this map
+                    $tw = $map->team_wins;
+                    $pct = fn(int $n) => (int)round(100 * $n / $tw['games']);
+                    ?>
+                    <div class="mt-3 w-full max-w-md" title="From <?= number_format($tw['games']) ?> finished team games on this map">
+                        <div class="mb-1 flex items-baseline justify-between text-xs font-bold">
+                            <span class="text-red-300">CLA <?= $pct($tw['CLA']) ?>%</span>
+                            <span class="font-normal text-zinc-300">win chance<?= $tw['draw'] ? ' · ' . $pct($tw['draw']) . '% draws' : '' ?></span>
+                            <span class="text-blue-300"><?= $pct($tw['RVSF']) ?>% RVSF</span>
+                        </div>
+                        <div class="flex h-2.5 overflow-hidden rounded-full bg-zinc-700/80">
+                            <div class="bg-red-600" style="width: <?= 100 * $tw['CLA'] / $tw['games'] ?>%"></div>
+                            <div class="bg-zinc-400/60" style="width: <?= 100 * $tw['draw'] / $tw['games'] ?>%"></div>
+                            <div class="bg-blue-600" style="width: <?= 100 * $tw['RVSF'] / $tw['games'] ?>%"></div>
+                        </div>
+                        <div class="mt-1 text-[11px] text-zinc-400">from <?= number_format($tw['games']) ?> team games</div>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <div class="relative w-full sm:w-80" id="map-picker">
