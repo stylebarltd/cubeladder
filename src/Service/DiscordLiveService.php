@@ -564,8 +564,7 @@ class DiscordLiveService
             foreach ($s['last_flag']['players'] as $p) {
                 $who[] = $this->mdEscape($p['name']) . ' (' . $p['team'] . ')' . ($p['n'] > 1 ? " ×{$p['n']}" : '');
             }
-            // plain clock time (viewer's timezone), no running "x seconds ago"
-            $embed['description'] .= sprintf("\n🚩 Last flag: **%s** · <t:%d:t>", implode(', ', $who), $s['last_flag']['at']);
+            $embed['description'] .= sprintf("\n🚩 Last flag: **%s**", implode(', ', $who));
         }
         if ($this->site() && ($gameId = $this->gameId($s)) !== null) {
             $embed['description'] .= sprintf("\n📊 [this game on CubeLadder](%s/games/view/%s)", $this->site(), $gameId);
