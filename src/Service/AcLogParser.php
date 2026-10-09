@@ -188,6 +188,7 @@ class AcLogParser
 
 
         [$ts, $rest] = $this->parseTimestamp($line);
+        $rest = (string)$rest; // timestamp-only lines (blank status block lines)
 
         if ($ts) {
             $this->currentTimestamp = $ts;
