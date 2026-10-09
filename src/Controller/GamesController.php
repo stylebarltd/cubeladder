@@ -97,7 +97,8 @@ class GamesController extends AppController
         $picture = \App\Service\GameResultPicture::describe($game, $this->Games->scoreboard($game))['picture'];
 
         $dir = CACHE . 'cards' . DS;
-        $file = $dir . 'game-' . $id . '-' . md5((string)json_encode($picture)) . '.jpg';
+        // the drawing code's date too, so a new layout redraws the cached pictures
+        $file = $dir . 'game-' . $id . '-' . md5((string)json_encode($picture) . filemtime(ROOT . '/src/Service/LiveScoreboardImage.php')) . '.jpg';
         if (!is_file($file)) {
             if (!is_dir($dir)) {
                 mkdir($dir, 0775, true);

@@ -19,6 +19,37 @@ if (!$map): ?>
     <?php return; endif;
 
 $mapUrl = fn(string $name) => $this->Url->build(['controller' => 'Maps', 'action' => 'index', '?' => ['map' => $name]]);
+
+// Link previews (Discord, WhatsApp, ...): the map card picture (MapsController::preview)
+$site = rtrim((string)(\Cake\Core\Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh'), '/');
+$cleanName = $this->Layout->cleanMapName($map->name) ?: $map->name;
+$topLeader = $map->leaders['points'] ?? null;
+$ogText = implode(' · ', array_filter([
+    $map->name,
+    '#' . $rank . ' most played',
+    number_format((int)$map->games_count) . ' games',
+    $topLeader && !empty($topLeader->player) ? 'most points ' . number_format((int)$topLeader->val) . ' by ' . $topLeader->player->name : '',
+    !empty($map->top_players) ? 'top player ' . $map->top_players[0]->player->name : '',
+]));
+// a new picture URL whenever records, top players or the game count change
+$ogVersion = substr(md5((string)json_encode([
+    $rank, (int)$map->games_count,
+    array_map(fn($l) => [$l->val, $l->player->name ?? null], $map->leaders ?? []),
+    array_map(fn($p) => [$p->player->name, (int)$p->score], array_slice($map->top_players ?? [], 0, 3)),
+])), 0, 8);
+$this->assign('title', $cleanName . ' · cubeLadder maps');
+$this->start('meta'); ?>
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="cubeLadder">
+    <meta property="og:title" content="<?= h($cleanName . ' · cubeLadder maps') ?>">
+    <meta property="og:description" content="<?= h($ogText) ?>">
+    <meta property="og:url" content="<?= h($site . '/maps?map=' . rawurlencode($map->name)) ?>">
+    <meta property="og:image" content="<?= h($site . '/maps/preview?map=' . rawurlencode($map->name) . '&v=' . $ogVersion) ?>">
+    <meta property="og:image:width" content="<?= \App\Service\MapCardImage::WIDTH ?>">
+    <meta property="og:image:height" content="<?= \App\Service\MapCardImage::HEIGHT ?>">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="description" content="<?= h($ogText) ?>">
+<?php $this->end();
 $panel = 'rounded-lg border border-white/15 bg-black/60 p-3 sm:p-4 backdrop-blur-[2px]';
 $panelTitle = 'mb-3 text-[11px] font-bold uppercase tracking-wider';
 

@@ -12,22 +12,7 @@ class MapsController extends AppController
 {
     public function index()
     {
-        // Every map with counted games, most played first (dropdown + the
-        // prev / next order). Maps.times_played is a stale parse-time counter
-        // (e.g. ac_shine 3 vs 281 real games), so count the games live;
-        // stats of inaccurate games are filtered out by PlayerStatsPerGame.
-        $allMaps = $this->Maps->find()
-            ->select([
-                'Maps.id',
-                'Maps.name',
-                'games_count' => 'COUNT(DISTINCT Games.id)',
-            ])
-            ->innerJoinWith('Games.PlayerStatsPerGame')
-            ->groupBy(['Maps.id', 'Maps.name'])
-            ->orderByDesc('games_count')
-            ->orderByAsc('Maps.name')
-            ->all()
-            ->toList();
+        $allMaps = $this->allMaps();
 
         if (!$allMaps) {
             $this->set(['map' => null, 'allMaps' => [], 'rank' => 0, 'prevMap' => null, 'nextMap' => null]);
@@ -319,6 +304,102 @@ class MapsController extends AppController
                 'gameId' => $best['game_id'],
                 'playedAt' => $best['played_at'] ? new \Cake\I18n\DateTime($best['played_at']) : null,
             ] : null,
+        ];
+    }
+
+    /**
+     * Every map with counted games, most played first (dropdown + the prev /
+     * next order). Maps.times_played is a stale parse-time counter (e.g.
+     * ac_shine 3 vs 281 real games), so the games are counted live; stats of
+     * inaccurate games are filtered out by PlayerStatsPerGame.
+     *
+     * @return array<int, \Cake\ORM\Entity>
+     */
+    private function allMaps(): array
+    {
+        return $this->Maps->find()
+            ->select([
+                'Maps.id',
+                'Maps.name',
+                'games_count' => 'COUNT(DISTINCT Games.id)',
+            ])
+            ->innerJoinWith('Games.PlayerStatsPerGame')
+            ->groupBy(['Maps.id', 'Maps.name'])
+            ->orderByDesc('games_count')
+            ->orderByAsc('Maps.name')
+            ->all()
+            ->toList();
+    }
+
+    /**
+     * Link preview picture of a map page (og:image): GET /maps/preview?map=<name>.
+     * Drawn by MapCardImage, cached on disk until something on it changes.
+     */
+    public function preview()
+    {
+        $allMaps = $this->allMaps();
+        $wanted = (string)$this->request->getQuery('map', '');
+        $index = 0;
+        foreach ($allMaps as $i => $m) {
+            if ($m->name === $wanted) {
+                $index = $i;
+                break;
+            }
+        }
+        $map = $allMaps[$index] ?? null;
+        if (!$map) {
+            throw new \Cake\Http\Exception\NotFoundException();
+        }
+
+        $card = $this->mapCard($map, $index + 1);
+        $dir = CACHE . 'cards' . DS;
+        // the drawing code's date too, so a new layout redraws the cached cards
+        $file = $dir . 'map-' . $map->id . '-' . md5((string)json_encode($card) . filemtime(ROOT . '/src/Service/MapCardImage.php')) . '.jpg';
+        if (!is_file($file)) {
+            if (!is_dir($dir)) {
+                mkdir($dir, 0775, true);
+            }
+            foreach (glob($dir . 'map-' . $map->id . '-*.jpg') ?: [] as $old) {
+                @unlink($old);
+            }
+            file_put_contents($file, (new \App\Service\MapCardImage())->render($card));
+        }
+
+        return $this->response
+            ->withType('jpg')
+            ->withHeader('Cache-Control', 'public, max-age=3600')
+            ->withFile($file);
+    }
+
+    /**
+     * What the map preview picture shows (also hashed for its URL).
+     */
+    private function mapCard(\Cake\ORM\Entity $map, int $rank): array
+    {
+        $labels = [
+            'points' => 'Most points', 'ratio' => 'Best K/D', 'flags' => 'Most flags',
+            'headshot' => 'Most headshots', 'slashed' => 'Most slashes', 'gibbed' => 'Most gibs',
+        ];
+        $leaders = $this->getMapLeaders([$map->id])[$map->id] ?? [];
+        $records = [];
+        foreach ($labels as $key => $label) {
+            if (!empty($leaders[$key])) {
+                $value = $key === 'ratio' ? number_format((float)$leaders[$key]->val, 2) : number_format((int)$leaders[$key]->val);
+                $records[] = [$label, $value, (string)$leaders[$key]->player->name];
+            }
+        }
+        $top = array_map(
+            fn($p) => [(string)$p->player->name, number_format((int)$p->score)],
+            array_slice($this->getTopPlayersByMap([$map->id])[$map->id] ?? [], 0, 3)
+        );
+        $layout = new \App\View\Helper\LayoutHelper(new \Cake\View\View());
+
+        return [
+            'title' => $layout->cleanMapName($map->name) ?: $map->name,
+            'subtitle' => sprintf('%s  ·  #%d most played  ·  %s games', $map->name, $rank, number_format((int)$map->games_count)),
+            'background' => is_file(WWW_ROOT . 'img/maps/' . $map->name . '.jpg') ? WWW_ROOT . 'img/maps/' . $map->name . '.jpg' : WWW_ROOT . 'img/bullet.jpg',
+            'records' => $records,
+            'top' => $top,
         ];
     }
 }

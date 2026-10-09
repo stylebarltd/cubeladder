@@ -1061,7 +1061,8 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         ];
 
         $dir = CACHE . 'cards' . DS;
-        $file = $dir . $id . '-' . md5(json_encode($card) . filemtime($card['avatar'])) . '.jpg';
+        // avatar and drawing code dates too, so a new picture or layout redraws the card
+        $file = $dir . $id . '-' . md5(json_encode($card) . filemtime($card['avatar']) . filemtime(ROOT . '/src/Service/PlayerCardImage.php')) . '.jpg';
         if (!is_file($file)) {
             if (!is_dir($dir)) {
                 mkdir($dir, 0775, true);
