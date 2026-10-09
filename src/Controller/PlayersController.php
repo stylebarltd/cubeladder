@@ -301,9 +301,11 @@ class PlayersController extends AppController
 
         // CTF rating (bin/cake CalculateRatings) - looked up per request, as
         // it is recalculated after the import that clears the cache above
-        $ratings = $this->fetchTable('PlayerRatings')->find('list', keyField: 'player_id', valueField: 'rating')->toArray();
+        $ratings = $this->fetchTable('PlayerRatings')->find()->select(['player_id', 'rating', 'type'])
+            ->disableHydration()->all()->indexBy('player_id')->toArray();
         foreach ($players as $player) {
-            $player->rating = isset($ratings[$player->id]) ? (float)$ratings[$player->id] : null;
+            $player->rating = isset($ratings[$player->id]) ? (float)$ratings[$player->id]['rating'] : null;
+            $player->player_type = $ratings[$player->id]['type'] ?? null;
         }
         if ($sort === 'rating') {
             // unrated players (fewer than 20 CTF games) last, by points

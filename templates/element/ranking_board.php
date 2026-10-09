@@ -21,8 +21,8 @@ $shown = array_values(array_filter(
     is_array($players) ? $players : iterator_to_array($players),
     fn($p) => !empty($p->total_score) && $p->total_score > 0 && ($p->stats['kills'] ?? 0) >= 1
 ));
-// On phones only Points / Rating (where shown) / KDR (plus the sorted stat) fit
-$mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', 'kd', $sort] : ['points', 'kd', 'kills', $sort]);
+// On phones only Points / Rating (where shown) or Points / KDR / Kills (plus the sorted stat) fit
+$mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort] : ['points', 'kd', 'kills', $sort]);
 ?>
 <div class="relative min-h-[calc(100svh-4rem)] bg-zinc-900 bg-cover bg-center bg-fixed text-white"
      style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.25) 40%, rgba(0,0,0,.7)), url('/img/bullet.jpg');">
@@ -59,10 +59,10 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', 'kd',
             <table class="w-full tabular-nums">
                 <thead class="text-zinc-400">
                 <tr class="border-b border-white/10">
-                    <th class="px-2 py-2 text-right font-normal">#</th>
-                    <th class="px-2 py-2 text-left font-normal">name</th>
+                    <th class="px-1.5 py-2 sm:px-2 text-right font-normal">#</th>
+                    <th class="px-1.5 py-2 sm:px-2 text-left font-normal">name</th>
                     <?php foreach ($stats as $key => $stat): ?>
-                        <th class="px-2 py-2 text-right font-normal <?= in_array($key, $mobileStats, true) ? '' : 'hidden sm:table-cell' ?>">
+                        <th class="px-1.5 py-2 sm:px-2 text-right font-normal <?= in_array($key, $mobileStats, true) ? '' : 'hidden sm:table-cell' ?>">
                             <a href="<?= $sortUrl($key) ?>" <?= !empty($stat['title']) ? 'title="' . h($stat['title']) . '"' : '' ?>
                                class="lowercase hover:text-white <?= $sort === $key ? 'font-bold text-sky-300' : '' ?>">
                                 <?= $stat['label'] ?><?= $sort === $key ? ' ▾' : '' ?>
@@ -77,18 +77,33 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', 'kd',
                     $weapons = $this->Layout->weapon($player->stats);
                     ?>
                     <tr class="border-b border-white/5 hover:bg-white/5 <?= $rank === 1 ? 'bg-yellow-400/10' : '' ?>">
-                        <td class="px-2 py-2 text-right text-base font-extrabold <?= $rank <= 3 ? 'text-yellow-300' : 'text-zinc-500' ?>"><?= $rank ?></td>
-                        <td class="px-2 py-2">
+                        <td class="px-1.5 py-2 sm:px-2 text-right text-base font-extrabold <?= $rank <= 3 ? 'text-yellow-300' : 'text-zinc-500' ?>"><?= $rank ?></td>
+                        <td class="px-1.5 py-2 sm:px-2">
                             <div class="flex items-center gap-3 min-w-0">
                                 <img src="<?= $this->Layout->playerPicture($player) ?>" alt=""
-                                     class="h-9 w-9 shrink-0 rounded-full object-cover md:h-10 md:w-10">
+                                     class="hidden h-9 w-9 shrink-0 rounded-full object-cover sm:block md:h-10 md:w-10">
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <?= $this->Html->link(h($player->name), ['controller' => 'Players', 'action' => 'view', $player->id],
                                             ['escape' => false, 'class' => 'truncate font-semibold hover:text-blue-300']) ?>
                                         <span class="shrink-0"><?= $this->Layout->flag($player->country) ?></span>
+                                        <?php if (!empty($player->player_type)):
+                                            // CTF player type (bin/cake CalculateRatings), as on the player page
+                                            [$typeIcon, $typeColor] = match ($player->player_type) {
+                                                'All-Rounder' => ['fa-star', 'bg-yellow-400/20 text-yellow-300'],
+                                                'Flag Runner' => ['fa-person-running', 'bg-red-500/20 text-red-300'],
+                                                'Defender' => ['fa-shield-halved', 'bg-blue-500/20 text-blue-300'],
+                                                'Fragger' => ['fa-crosshairs', 'bg-orange-500/20 text-orange-300'],
+                                                'Offensive Team Player' => ['fa-angles-right', 'bg-white/10 text-zinc-300'],
+                                                default => ['fa-shield', 'bg-white/10 text-zinc-300'],
+                                            };
+                                            ?>
+                                            <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-1 py-0.5 text-[10px] sm:px-1.5 font-semibold <?= $typeColor ?>" title="<?= h($player->player_type) ?>">
+                                                <i class="fa-solid <?= $typeIcon ?>"></i><span class="hidden md:inline"><?= h($player->player_type) ?></span>
+                                            </span>
+                                        <?php endif; ?>
                                     </div>
-                                    <div class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-400">
+                                    <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-zinc-400 sm:gap-x-3">
                                         <?php if (!empty($player->last_seen)):
                                             $lastSeen = $player->last_seen instanceof \Cake\I18n\DateTime
                                                 ? $player->last_seen
@@ -123,7 +138,7 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', 'kd',
                             </div>
                         </td>
                         <?php foreach ($stats as $key => $stat): ?>
-                            <td class="px-2 py-2 text-right <?= in_array($key, $mobileStats, true) ? '' : 'hidden sm:table-cell' ?>
+                            <td class="px-1.5 py-2 sm:px-2 text-right <?= in_array($key, $mobileStats, true) ? '' : 'hidden sm:table-cell' ?>
                                 <?= $sort === $key ? 'bg-sky-400/10 font-bold text-sky-300' : ($key === 'points' ? 'font-bold' : 'text-zinc-200') ?>">
                                 <?= h($stat['value']($player)) ?>
                             </td>
