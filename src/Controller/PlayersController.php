@@ -452,6 +452,14 @@ class PlayersController extends AppController
                 'gibbed' => 'SUM(PlayerStatsPerGame.gibbed)',
                 'scored_with_the_flag' => 'SUM(PlayerStatsPerGame.scored_with_the_flag)',
                 'games' => \App\Model\Table\PlayerStatsPerGameTable::countedGamesSql(),
+                // last seen anywhere (as on the All Time Ranking), linking to that game
+                'last_seen' => '(SELECT MAX(g2.started_at) FROM player_stats_per_game ps2 '
+                    . 'INNER JOIN games g2 ON g2.id = ps2.game_id '
+                    . 'WHERE ps2.player_id = Players.id AND g2.inaccurate = 0)',
+                'last_game_id' => '(SELECT ps2.game_id FROM player_stats_per_game ps2 '
+                    . 'INNER JOIN games g2 ON g2.id = ps2.game_id '
+                    . 'WHERE ps2.player_id = Players.id AND g2.inaccurate = 0 '
+                    . 'ORDER BY g2.started_at DESC LIMIT 1)',
             ])
             ->innerJoinWith('PlayerStatsPerGame', function ($q) use ($theLast100GameIds) {
                 return $q->where([
