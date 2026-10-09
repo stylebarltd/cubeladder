@@ -226,7 +226,8 @@ $rules = [
                         the better K/D 67% &ndash; the team with more headshots only 54%, barely more than a coin flip. So headshots don&rsquo;t count extra.</p>
                 </div>
                 <ul class="space-y-2 text-sm text-zinc-200">
-                    <li class="flex gap-2"><i class="fa-solid fa-star mt-1 w-4 text-yellow-300"></i><span><b>All-Rounder</b> &ndash; wins fights <i>and</i> plays the flag (top 35% in combat and attack).</span></li>
+                    <li class="flex gap-2"><i class="fa-solid fa-star mt-1 w-4 text-yellow-300"></i><span><b>All-Rounder</b> &ndash; wins fights <i>and</i> plays the flag (top 35% in combat and attack).
+                        With their strongest side: <b>Attack</b> (flag play), <b>Defense</b> (returns) or <b>Combat</b> (K/D and frags).</span></li>
                     <li class="flex gap-2"><i class="fa-solid fa-person-running mt-1 w-4 text-red-300"></i><span><b>Flag Runner</b> &ndash; goes for the enemy flag: many scores and steals, few lost flags (top 30% in attack).</span></li>
                     <li class="flex gap-2"><i class="fa-solid fa-shield-halved mt-1 w-4 text-blue-300"></i><span><b>Defender</b> &ndash; keeps the own flag home: many returns (top 30% in defense).</span></li>
                     <li class="flex gap-2"><i class="fa-solid fa-crosshairs mt-1 w-4 text-orange-300"></i><span><b>Fragger</b> &ndash; wins fights, but is not top in flag play (top 30% in combat).</span></li>

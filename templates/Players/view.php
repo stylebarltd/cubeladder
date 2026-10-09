@@ -21,7 +21,9 @@ if ((int)$player->track === 1):
     $site = rtrim((string)(Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh'), '/');
     $ogTitle = $player->name . ' · cubeLadder';
     $ogText = !empty($rating)
-        ? sprintf('CTF rating %s · %s · #%d of %s rated players', number_format((float)$rating->rating, 1), $rating->type, (int)$rating->rank, number_format((int)$ratedPlayers))
+        ? sprintf('CTF rating %s · %s · #%d of %s rated players', number_format((float)$rating->rating, 1),
+            \App\Command\CalculateRatingsCommand::typeLabel($rating->type, (int)$rating->attack_pct, (int)$rating->defense_pct, (int)$rating->combat_pct),
+            (int)$rating->rank, number_format((int)$ratedPlayers))
         : 'AssaultCube player stats on cubeLadder';
     if (!empty($timePlayed['all'])) {
         $ogText .= ' · ' . $this->Layout->duration((int)$timePlayed['all']) . ' played';
@@ -132,7 +134,7 @@ endif;
                 <div class="min-w-0 space-y-2">
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-semibold <?= $typeColor ?>">
-                            <i class="fa-solid <?= $typeIcon ?> text-xs"></i><?= h($rating->type) ?>
+                            <i class="fa-solid <?= $typeIcon ?> text-xs"></i><?= h(\App\Command\CalculateRatingsCommand::typeLabel($rating->type, (int)$rating->attack_pct, (int)$rating->defense_pct, (int)$rating->combat_pct)) ?>
                         </span>
                         <?php if ($rating->weapon !== 'Mixed'): ?>
                             <span class="rounded-full bg-white/10 px-2 py-0.5 text-xs text-zinc-200"><?= h($rating->weapon) ?></span>

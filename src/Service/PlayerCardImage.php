@@ -100,7 +100,7 @@ class PlayerCardImage
 
             $x = $pad + 360;
             $typeColor = self::TYPE_COLORS[$r['type']] ?? [228, 228, 231];
-            $type = $r['type'] . ($r['weapon'] !== 'Mixed' ? '  ·  ' . $r['weapon'] : '');
+            $type = ($r['type_label'] ?? $r['type']) . ($r['weapon'] !== 'Mixed' ? '  ·  ' . $r['weapon'] : '');
             $this->text($type, $x, $boxY + 58, 32, $this->bold, $typeColor);
             $line = sprintf('#%d of %s rated players', (int)$r['rank'], number_format((int)$r['rated']))
                 . ($r['win_rate'] !== null ? sprintf('  ·  %d%% won', round((float)$r['win_rate'] * 100)) : '');

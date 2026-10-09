@@ -98,8 +98,8 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                                                 default => ['fa-shield', 'bg-white/10 text-zinc-300'],
                                             };
                                             ?>
-                                            <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-1 py-0.5 text-[10px] sm:px-1.5 font-semibold <?= $typeColor ?>" title="<?= h($player->player_type) ?>">
-                                                <i class="fa-solid <?= $typeIcon ?>"></i><span class="hidden md:inline"><?= h($player->player_type) ?></span>
+                                            <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-1 py-0.5 text-[10px] sm:px-1.5 font-semibold <?= $typeColor ?>" title="<?= h($player->player_type_label ?? $player->player_type) ?>">
+                                                <i class="fa-solid <?= $typeIcon ?>"></i><span class="hidden md:inline"><?= h($player->player_type_label ?? $player->player_type) ?></span>
                                             </span>
                                         <?php endif; ?>
                                     </div>

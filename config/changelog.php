@@ -6,6 +6,14 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-10-10',
+            'title' => 'All-Rounders with their strongest side',
+            'items' => [
+                'All-Rounders now show their specialization - Attack (flag play), Defense (returns) or Combat (K/D and frags) - on player pages, in the All Time Ranking and in link previews.',
+                'Every game and every map can now have two pictures: games show one or the other, new pictures for Casa, Favela, Kasa, Rapier, Syria, Village and VM Village.',
+            ],
+        ],
+        [
             'date' => '2026-10-09',
             'title' => 'New: milestones and fun facts',
             'items' => [

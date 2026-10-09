@@ -301,11 +301,16 @@ class PlayersController extends AppController
 
         // CTF rating (bin/cake CalculateRatings) - looked up per request, as
         // it is recalculated after the import that clears the cache above
-        $ratings = $this->fetchTable('PlayerRatings')->find()->select(['player_id', 'rating', 'type'])
+        $ratings = $this->fetchTable('PlayerRatings')->find()
+            ->select(['player_id', 'rating', 'type', 'attack_pct', 'defense_pct', 'combat_pct'])
             ->disableHydration()->all()->indexBy('player_id')->toArray();
         foreach ($players as $player) {
-            $player->rating = isset($ratings[$player->id]) ? (float)$ratings[$player->id]['rating'] : null;
-            $player->player_type = $ratings[$player->id]['type'] ?? null;
+            $r = $ratings[$player->id] ?? null;
+            $player->rating = $r ? (float)$r['rating'] : null;
+            $player->player_type = $r['type'] ?? null;
+            $player->player_type_label = $r
+                ? \App\Command\CalculateRatingsCommand::typeLabel($r['type'], (int)$r['attack_pct'], (int)$r['defense_pct'], (int)$r['combat_pct'])
+                : null;
         }
         if ($sort === 'rating') {
             // unrated players (fewer than 20 CTF games) last, by points
@@ -1048,6 +1053,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
                 : WWW_ROOT . 'img/acl.png',
             'rating' => $rating ? [
                 'rating' => (float)$rating->rating, 'type' => $rating->type, 'weapon' => $rating->weapon,
+                'type_label' => \App\Command\CalculateRatingsCommand::typeLabel($rating->type, (int)$rating->attack_pct, (int)$rating->defense_pct, (int)$rating->combat_pct),
                 'rank' => (int)$rating->rank, 'rated' => $PlayerRatings->find()->count(),
                 'win_rate' => $rating->win_rate !== null ? (float)$rating->win_rate : null,
                 'attack_pct' => (int)$rating->attack_pct, 'defense_pct' => (int)$rating->defense_pct, 'combat_pct' => (int)$rating->combat_pct,

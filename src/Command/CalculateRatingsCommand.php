@@ -56,6 +56,25 @@ class CalculateRatingsCommand extends Command
         return 'CalculateRatings';
     }
 
+    /**
+     * The type as shown: All-Rounders get their specialization - the
+     * strongest of attack (flag play), defense (returns) and combat, as the
+     * bars on the player page - e.g. "All-Rounder · Attack".
+     */
+    public static function typeLabel(string $type, int $attack, int $defense, int $combat): string
+    {
+        if ($type !== 'All-Rounder') {
+            return $type;
+        }
+        $spec = match (true) {
+            $attack >= $defense && $attack >= $combat => 'Attack',
+            $defense >= $combat => 'Defense',
+            default => 'Combat',
+        };
+
+        return $type . ' · ' . $spec;
+    }
+
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
         return $parser->setDescription('Calculate the CTF player ratings and player types (player_ratings)')
