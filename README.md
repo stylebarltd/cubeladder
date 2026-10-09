@@ -19,6 +19,7 @@ Nothing is entered by hand: every number comes from the game servers' own log fi
 | Joining for **less than 3 minutes** is not a "game played" and sets no best-K/D record (kills and points still count) | `MIN_MINUTES` in `PlayerStatsPerGameTable.php` |
 | Rankings: all time (this year, from 5,000 points), the last 100 games (`Ladder.maxGamesToRank`), Hall of Fame (best single game since `HOF_SINCE`) | [`src/Controller/PlayersController.php`](src/Controller/PlayersController.php), [`src/Service/LastGamesTrait.php`](src/Service/LastGamesTrait.php), [`src/Service/HallOfFameService.php`](src/Service/HallOfFameService.php) |
 | CTF rating (0–10) and player types: flag play 55%, combat 30%, team result 12%, discipline 3% – per minute, against the others in the same game, last 100 CTF games | [`src/Command/CalculateRatingsCommand.php`](src/Command/CalculateRatingsCommand.php) |
+| Milestones (tiers with the date reached) and specials, new Gold+ tiers announced in Discord | [`src/Service/MilestoneService.php`](src/Service/MilestoneService.php), [`src/Command/CalculateMilestonesCommand.php`](src/Command/CalculateMilestonesCommand.php) |
 | Weekly achievements (every Sunday) | [`src/Command/CalculateAchievementsCommand.php`](src/Command/CalculateAchievementsCommand.php) |
 | Marking a game as inaccurate by hand (logged with a reason, shown on the game page) | [`src/Command/MarkInaccurateCommand.php`](src/Command/MarkInaccurateCommand.php) |
 

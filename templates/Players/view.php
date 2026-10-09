@@ -264,6 +264,10 @@ $achievementLabels = [
         </section>
     </div>
 
+    <?php if (!empty($milestoneProgress)): ?>
+        <?= $this->element('player_milestones', compact('player', 'milestones', 'milestoneProgress', 'funFacts', 'timePlayed', 'rating', 'panel')) ?>
+    <?php endif; ?>
+
     <!-- Charts -->
 
     <div class="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">

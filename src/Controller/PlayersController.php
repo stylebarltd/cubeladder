@@ -737,7 +737,17 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $rating = $PlayerRatings->find()->where(['player_id' => $player->id])->first();
         $ratedPlayers = $rating ? $PlayerRatings->find()->count() : 0;
 
-        $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers'));
+        // Milestones (bin/cake CalculateMilestones) and fun facts
+        $milestones = $this->fetchTable('PlayerMilestones')->find()
+            ->where(['player_id' => $player->id])
+            ->orderBy(['reached_at' => 'ASC'])
+            ->all()->toList();
+        $progressRow = $this->fetchTable('PlayerMilestoneProgress')->find()->where(['player_id' => $player->id])->first();
+        $milestoneProgress = $progressRow ? (json_decode($progressRow->progress, true) ?: []) : [];
+        $funFacts = $milestoneProgress ? $this->funFacts((string)$player->id) : [];
+
+        $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
+            'milestones', 'milestoneProgress', 'funFacts'));
         $this->set(compact(
             'player',
             'totalKills',
@@ -908,4 +918,79 @@ $gamesDataGlobal = [];        // games inside lastGameIds
 
     }
 
+    /**
+     * Fun facts for the player page (inaccurate games left out), cached
+     * until the next import clears 'rankings'.
+     */
+    private function funFacts(string $playerId): array
+    {
+        return Cache::remember('fun_facts_' . $playerId, function () use ($playerId) {
+            $conn = \Cake\Datasource\ConnectionManager::get('default');
+            $min = \App\Model\Table\PlayerStatsPerGameTable::MIN_MINUTES;
+            $counted = "(p.minutes_played IS NULL OR p.minutes_played >= $min)";
+
+            $people = $conn->execute(
+                "SELECT COUNT(DISTINCT p2.player_id) AS players, COUNT(DISTINCT NULLIF(pl.country, '')) AS countries
+                 FROM player_stats_per_game p
+                 INNER JOIN games g ON g.id = p.game_id AND g.inaccurate = 0
+                 INNER JOIN player_stats_per_game p2 ON p2.game_id = p.game_id AND p2.player_id <> p.player_id
+                 INNER JOIN players pl ON pl.id = p2.player_id
+                 WHERE p.player_id = ? AND $counted",
+                [$playerId]
+            )->fetch('assoc');
+
+            $teammate = $conn->execute(
+                "SELECT pl.id, pl.name, COUNT(*) AS n
+                 FROM player_stats_per_game p
+                 INNER JOIN games g ON g.id = p.game_id AND g.inaccurate = 0
+                 INNER JOIN player_stats_per_game p2 ON p2.game_id = p.game_id AND p2.player_id <> p.player_id AND p2.team = p.team
+                 INNER JOIN players pl ON pl.id = p2.player_id AND pl.track = 1
+                 WHERE p.player_id = ? AND p.team IN ('CLA', 'RVSF') AND $counted
+                 GROUP BY pl.id, pl.name ORDER BY n DESC LIMIT 1",
+                [$playerId]
+            )->fetch('assoc') ?: null;
+
+            $server = $conn->execute(
+                "SELECT g.server_name, COUNT(*) AS n FROM player_stats_per_game p
+                 INNER JOIN games g ON g.id = p.game_id AND g.inaccurate = 0
+                 WHERE p.player_id = ? AND $counted GROUP BY g.server_name ORDER BY n DESC LIMIT 1",
+                [$playerId]
+            )->fetch('assoc') ?: null;
+
+            $weekday = $conn->execute(
+                "SELECT DAYNAME(g.started_at) AS day, COUNT(*) AS n FROM player_stats_per_game p
+                 INNER JOIN games g ON g.id = p.game_id AND g.inaccurate = 0
+                 WHERE p.player_id = ? AND $counted GROUP BY day ORDER BY n DESC LIMIT 1",
+                [$playerId]
+            )->fetch('assoc') ?: null;
+
+            $since = $conn->execute(
+                'SELECT MIN(g.started_at) FROM player_stats_per_game p
+                 INNER JOIN games g ON g.id = p.game_id AND g.inaccurate = 0 WHERE p.player_id = ?',
+                [$playerId]
+            )->fetchColumn(0);
+
+            $gg = (int)$conn->execute(
+                "SELECT COUNT(*) FROM events WHERE type = 'chat' AND actor_id = ?
+                 AND LOWER(JSON_VALUE(details, '$.msg')) REGEXP '(^|[^a-z])gg([^a-z]|$)'",
+                [$playerId]
+            )->fetchColumn(0);
+
+            $names = (int)$conn->execute('SELECT COUNT(DISTINCT alias) FROM player_aliases WHERE player_id = ?', [$playerId])->fetchColumn(0);
+
+            return [
+                'players' => (int)($people['players'] ?? 0),
+                'countries' => (int)($people['countries'] ?? 0),
+                'teammate' => $teammate,
+                'server' => $server ? [
+                    'name' => Configure::read('Ladder.servers.' . $server['server_name'] . '.name') ?: $server['server_name'],
+                    'n' => (int)$server['n'],
+                ] : null,
+                'weekday' => $weekday,
+                'since' => $since ?: null,
+                'gg' => $gg,
+                'names' => $names,
+            ];
+        }, 'rankings');
+    }
 }

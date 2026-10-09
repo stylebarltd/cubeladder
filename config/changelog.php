@@ -7,6 +7,16 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-09',
+            'title' => 'New: milestones and fun facts',
+            'items' => [
+                'Player pages have a milestone wall: hours, games, days, maps, kills, headshots, knife and grenade kills, flags scored, returned and stolen, wins, win streaks and MVPs - each from Bronze up to Legend, with the date you reached it and how far it is to the next one.',
+                'Specials: Marathon, Map addict, Tourist, Untouchable, Hat-trick and Super hat-trick.',
+                'Fun facts: how many players and countries you have met, your most played teammate, favourite server and weekday, how often you said gg and more.',
+                'Big milestones (Gold and up) are announced in our Discord #results channel.',
+            ],
+        ],
+        [
+            'date' => '2026-10-09',
             'title' => 'New: CTF rating and player types',
             'items' => [
                 'Every player with 20+ CTF games now has a CTF rating from 0 to 10 (5.0 is the average player) on their player page - how much they help their team win, not just how many points they make.',

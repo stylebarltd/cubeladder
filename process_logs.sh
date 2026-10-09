@@ -129,6 +129,12 @@ if ! "$BASE_DIR/bin/cake" CalculateRatings >> "$LOGFILE" 2>&1; then
     echo "CalculateRatings failed!" >> "$LOGFILE"
 fi
 
+echo "➡ CalculateMilestones"
+# player milestones; new Gold+ ones are announced in the Discord results channel
+if ! "$BASE_DIR/bin/cake" CalculateMilestones >> "$LOGFILE" 2>&1; then
+    echo "CalculateMilestones failed!" >> "$LOGFILE"
+fi
+
 echo "➡ DiscordResults"
 # results of the games finished by this import -> Discord results channel
 if ! "$BASE_DIR/bin/cake" discord_results >> "$LOGFILE" 2>&1; then
