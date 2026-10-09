@@ -29,3 +29,23 @@
 .scrollbar-hide::-webkit-scrollbar {
     display: none;              /* Chrome / Safari */
 }
+
+/* "On air": Live in the navigation slowly pulses green while a game runs */
+@keyframes onair-pulse {
+    0%, 100% { opacity: 1; text-shadow: 0 0 10px rgb(74 222 128 / .75); }
+    50% { opacity: .5; text-shadow: none; }
+}
+.onair-pulse { animation: onair-pulse 2.6s ease-in-out infinite; }
+
+/* Thin dark scrollbar for scrolling boxes (weekly achievements, pickers, kill feed) */
+/* Firefox only - in Chrome the standard properties would override the
+   ::-webkit-scrollbar styling below and bring back the arrow buttons */
+@supports not selector(::-webkit-scrollbar) {
+    .nice-scroll { scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / .25) transparent; }
+}
+.nice-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.nice-scroll::-webkit-scrollbar-button { display: none; }
+.nice-scroll::-webkit-scrollbar-track { background: transparent; }
+.nice-scroll::-webkit-scrollbar-thumb { background: rgb(255 255 255 / .2); border-radius: 9999px; }
+.nice-scroll:hover::-webkit-scrollbar-thumb { background: rgb(255 255 255 / .35); }
+

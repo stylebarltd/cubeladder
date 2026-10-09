@@ -1,287 +1,218 @@
 <?php
-// Only maps that actually have top players, so slide indexes line up with the dots.
-$slideMaps = [];
-foreach ($maps as $map) {
-    if (empty($map->top_players)) {
-        continue;
-    }
-    $slideMaps[] = $map;
-}
-$slideCount = count($slideMaps);
+/**
+ * One map per page, full screen like the game pages: the map in the
+ * background, records / top players / weekly winners on top with opacity,
+ * a dropdown (with thumbnails) of every played map and prev / next arrows
+ * in most-played order.
+ *
+ * @var \App\View\AppView $this
+ * @var \Cake\ORM\Entity|null $map
+ * @var array $allMaps
+ * @var int $rank
+ * @var string|null $prevMap
+ * @var string|null $nextMap
+ */
+if (!$map): ?>
+    <p class="py-20 text-center text-zinc-500">No maps to show yet.</p>
+    <?php return; endif;
+
+$mapUrl = fn(string $name) => $this->Url->build(['controller' => 'Maps', 'action' => 'index', '?' => ['map' => $name]]);
+$panel = 'rounded-lg border border-white/15 bg-black/60 p-4 backdrop-blur-[2px]';
+$panelTitle = 'mb-3 text-[11px] font-bold uppercase tracking-wider';
+
+$leaderDefs = [
+    'points'   => ['label' => 'Most Points',       'fmt' => fn($v) => number_format((int)$v)],
+    'ratio'    => ['label' => 'Best K/D Ratio',    'fmt' => fn($v) => number_format((float)$v, 2)],
+    'flags'    => ['label' => 'Most Flags Scored', 'fmt' => fn($v) => number_format((int)$v)],
+    'headshot' => ['label' => 'Most Headshots',    'fmt' => fn($v) => number_format((int)$v)],
+    'slashed'  => ['label' => 'Most Slashes',      'fmt' => fn($v) => number_format((int)$v)],
+    'gibbed'   => ['label' => 'Most Gibs',         'fmt' => fn($v) => number_format((int)$v)],
+];
+$navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white transition';
 ?>
+<h1 class="sr-only">Maps</h1>
 
-<div class="w-full max-w-7xl px-0 sm:px-6 py-10 mx-auto">
+<div class="relative overflow-hidden bg-zinc-900 text-white">
+    <img src="<?= $this->Layout->mapImage($map->name) ?>" alt="" class="absolute inset-0 h-full w-full object-cover">
+    <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/10 to-black/60"></div>
 
-    <h1 class="text-3xl font-bold mb-6 text-white text-center px-4 sm:px-0">
-        Maps
-        <small class="text-xs text-blue-500">by most played</small>
-    </h1>
+    <!-- Fills the screen below the 4rem nav bar -->
+    <div class="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-7xl flex-col gap-4 px-4 py-5 md:px-16 md:py-8">
 
-
-    <?php if ($slideCount === 0): ?>
-        <p class="text-center text-zinc-500">No maps to show yet.</p>
-    <?php else: ?>
-
-    <div id="map-slideshow"
-         class="relative select-none sm:rounded-xl border-y sm:border border-zinc-700 bg-zinc-800 overflow-hidden"
-         data-count="<?= $slideCount ?>">
-
-        <!-- Track -->
-        <div id="map-track"
-             class="flex transition-transform duration-300 ease-out"
-             style="transform: translateX(0%);">
-
-            <?php $i = 1; foreach ($slideMaps as $map): ?>
-                <?php
-                $mapImage = WWW_ROOT . 'img/maps/' . $map->name . '.jpg';
-                $mapUrl = file_exists($mapImage)
-                    ? '/img/maps/' . h($map->name) . '.jpg'
-                    : '/img/maps/placeholder.jpg';
-                ?>
-
-                <!-- Slide -->
-                <div class="map-slide w-full flex-shrink-0">
-                    <div class="flex flex-col lg:flex-row">
-
-                        <!-- Map image / hero -->
-                        <div class="relative w-full lg:w-1/2 aspect-[32/27] lg:aspect-square bg-cover bg-center"
-                             style="background-image:
-                                 linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.35), transparent),
-                                 url('<?= $mapUrl ?>');">
-
-                            <!-- Rank badge -->
-                            <div class="absolute top-3 left-3 bg-black/60 text-zinc-200 text-xs font-bold
-                                        px-2.5 py-1 rounded-full">
-                                #<?= $i ?> most played
-                                <?php if (!empty($map->games_count)): ?>
-                                    · <?= (int)$map->games_count ?> games
-                                <?php endif; ?>
-                            </div>
-
-                            <!-- Name + last 10 "best on map" winners -->
-                            <div class="absolute bottom-0 left-0 right-0 p-4 md:p-5">
-                                <div class="font-bold text-2xl md:text-3xl leading-tight text-white drop-shadow">
-                                    <?= h($map->name) ?>
-                                </div>
-
-                                <?php if (!empty($map->best_on_map) && count($map->best_on_map)): ?>
-                                    <div class="text-[10px] uppercase tracking-wide text-yellow-500/80 mt-1 drop-shadow">
-                                        Most Points
-                                    </div>
-                                    <div class="space-y-0.5">
-                                        <?php foreach ($map->best_on_map as $achievement): ?>
-                                            <?php
-                                            $weeksLabel = null;
-                                            if (!empty($achievement->week_end)) {
-                                                $weekEndStr = is_string($achievement->week_end)
-                                                    ? $achievement->week_end
-                                                    : $achievement->week_end->format('Y-m-d');
-                                                $weeks = (int) floor((time() - strtotime($weekEndStr)) / (7 * 86400));
-                                                $weeksLabel = $weeks <= 0
-                                                    ? 'this week'
-                                                    : ($weeks === 1 ? '1 week ago' : $weeks . ' weeks ago');
-                                            }
-                                            ?>
-                                            <div class="text-xs text-yellow-400 leading-tight drop-shadow truncate">
-                                                🏆
-                                                <?= $this->Html->link(
-                                                    h($achievement->player->name),
-                                                    ['controller' => 'Players', 'action' => 'view', $achievement->player->id],
-                                                    ['class' => 'hover:text-yellow-300', 'escape' => false]
-                                                ) ?>
-                                                <?= $this->Layout->flag($achievement->player->country) ?>
-                                                <span class="font-bold text-yellow-200"><?= round($achievement->count) ?></span>
-                                                <?php if ($weeksLabel): ?>
-                                                    <span class="text-yellow-200/60"><?= h($weeksLabel) ?></span>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- Top players -->
-                        <div class="w-full lg:w-1/2 p-4 md:p-6">
-
-                            <!-- Per-map leaders -->
-                            <?php
-                            $leaderDefs = [
-                                'ratio'    => ['label' => 'Best K/D Ratio',    'fmt' => fn($v) => number_format((float)$v, 2)],
-                                'headshot' => ['label' => 'Most Headshots',    'fmt' => fn($v) => number_format((int)$v)],
-                                'flags'    => ['label' => 'Most Flags Scored', 'fmt' => fn($v) => number_format((int)$v)],
-                                'slashed'  => ['label' => 'Most Slashes',      'fmt' => fn($v) => number_format((int)$v)],
-                                'gibbed'   => ['label' => 'Most Gibs',         'fmt' => fn($v) => number_format((int)$v)],
-                                'points'   => ['label' => 'Most Points',       'fmt' => fn($v) => number_format((int)$v)],
-                            ];
-                            ?>
-                            <div class="grid grid-cols-2 gap-2 mb-5">
-                                <?php foreach ($leaderDefs as $key => $def):
-                                    $leader = $map->leaders[$key] ?? null; ?>
-                                    <div class="rounded-lg bg-zinc-900/60 p-2">
-                                        <div class="text-[10px] uppercase tracking-wide text-zinc-500">
-                                            <?= $def['label'] ?>
-                                        </div>
-                                        <?php if ($leader && !empty($leader->player)): ?>
-                                            <div class="text-sm font-semibold truncate">
-                                                <?= $this->Html->link(
-                                                    h($leader->player->name),
-                                                    ['controller' => 'Players', 'action' => 'view', $leader->player->id],
-                                                    ['class' => 'hover:text-blue-400', 'escape' => false]
-                                                ) ?>
-                                                <?= $this->Layout->flag($leader->player->country) ?>
-                                            </div>
-                                            <div class="text-xs font-mono text-blue-400">
-                                                <?= $def['fmt']($leader->val) ?>
-                                            </div>
-                                            <?php if (!empty($leader->game_id)): ?>
-                                                <a href="<?= $this->Url->build([
-                                                    'controller' => 'Games',
-                                                    'action' => 'view',
-                                                    $leader->game_id
-                                                ]) ?>"
-                                                   class="text-[10px] text-zinc-500 hover:text-blue-400 hover:underline whitespace-nowrap">
-                                                    <?= !empty($leader->played_at)
-                                                        ? h($leader->played_at->format('d M Y'))
-                                                        : 'view game' ?>
-                                                </a>
-                                            <?php endif; ?>
-                                        <?php else: ?>
-                                            <div class="text-sm text-zinc-600">&mdash;</div>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-
-                            <h2 class="text-xs uppercase tracking-wide text-zinc-500 mb-3">
-                                Top Players by Total Points
-                            </h2>
-                            <ul class="space-y-2">
-                                <?php $rank = 1; foreach ($map->top_players as $player): ?>
-                                    <li class="flex items-center justify-between text-sm md:text-base">
-                                        <span class="flex items-center gap-2 min-w-0">
-                                            <span class="w-5 shrink-0 text-right font-bold text-zinc-500">
-                                                <?= $rank++ ?>
-                                            </span>
-                                            <span class="truncate">
-                                                <?= $this->Html->link(
-                                                    h($player->player->name),
-                                                    ['controller' => 'Players', 'action' => 'view', $player->player->id],
-                                                    ['class' => 'hover:text-blue-400', 'escape' => false]
-                                                ) ?>
-                                                <?= $this->Layout->flag($player->player->country) ?>
-                                            </span>
-                                        </span>
-                                        <span class="font-bold text-zinc-300 shrink-0 ml-3">
-                                            <?= (int)$player->score ?> pts
-                                        </span>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        </div>
-
-                    </div>
+        <!-- Title + map picker -->
+        <div class="flex flex-wrap items-start justify-between gap-4 pr-24 md:pr-0">
+            <div class="drop-shadow-lg">
+                <h2 class="text-3xl md:text-5xl font-extrabold tracking-wide"><?= $this->Layout->cleanMapName($map->name) ?></h2>
+                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-200">
+                    <span class="font-mono"><?= h($map->name) ?></span>
+                    <span><i class="fa-solid fa-ranking-star mr-1"></i>#<?= $rank ?> most played</span>
+                    <span><i class="fa-solid fa-gamepad mr-1"></i><?= number_format((int)$map->games_count) ?> games</span>
                 </div>
+            </div>
 
-            <?php $i++; endforeach; ?>
+            <div class="relative w-full sm:w-80" id="map-picker">
+                <button type="button" id="map-picker-btn" aria-haspopup="listbox" aria-expanded="false"
+                        class="flex w-full items-center gap-3 rounded-lg border border-white/15 bg-black/60 p-2 text-left backdrop-blur-[2px] hover:bg-black/75 transition">
+                    <img src="<?= $this->Layout->mapThumb($map->name) ?>" alt="" class="h-9 w-16 shrink-0 rounded object-cover">
+                    <span class="min-w-0 flex-1">
+                        <span class="block truncate text-sm font-semibold"><?= $this->Layout->cleanMapName($map->name) ?></span>
+                        <span class="block text-xs text-zinc-400"><?= count($allMaps) ?> maps played &ndash; jump to&hellip;</span>
+                    </span>
+                    <i class="fas fa-chevron-down text-zinc-400"></i>
+                </button>
 
+                <div id="map-picker-panel" role="listbox"
+                     class="absolute right-0 z-30 mt-2 hidden w-full overflow-hidden rounded-lg border border-white/15 bg-zinc-900/95 shadow-2xl backdrop-blur">
+                    <div class="border-b border-white/10 p-2">
+                        <input id="map-picker-search" type="search" placeholder="Search maps…" autocomplete="off"
+                               class="w-full rounded bg-zinc-800 px-3 py-1.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <ul class="nice-scroll max-h-[60vh] overflow-y-auto py-1">
+                        <?php foreach ($allMaps as $i => $m): $current = $m->id === $map->id; ?>
+                            <li data-name="<?= h(strtolower($m->name . ' ' . $this->Layout->cleanMapName($m->name))) ?>">
+                                <a href="<?= $mapUrl($m->name) ?>" role="option" aria-selected="<?= $current ? 'true' : 'false' ?>"
+                                   class="flex items-center gap-3 px-2 py-1.5 hover:bg-white/10 <?= $current ? 'bg-blue-600/30' : '' ?>">
+                                    <img src="<?= $this->Layout->mapThumb($m->name) ?>" alt="" loading="lazy" class="h-9 w-16 shrink-0 rounded object-cover bg-zinc-800">
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block truncate text-sm"><?= $this->Layout->cleanMapName($m->name) ?></span>
+                                        <span class="block truncate font-mono text-[10px] text-zinc-500"><?= h($m->name) ?></span>
+                                    </span>
+                                    <span class="shrink-0 text-xs text-zinc-400 tabular-nums"><?= number_format((int)$m->games_count) ?></span>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            </div>
         </div>
 
-        <!-- Prev / Next arrows -->
-        <button type="button" id="map-prev" aria-label="Previous map"
-                class="absolute top-1/2 left-2 -translate-y-1/2 z-20
-                       h-10 w-10 flex items-center justify-center rounded-full
-                       bg-black/50 hover:bg-black/70 text-white transition">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        <button type="button" id="map-next" aria-label="Next map"
-                class="absolute top-1/2 right-2 -translate-y-1/2 z-20
-                       h-10 w-10 flex items-center justify-center rounded-full
-                       bg-black/50 hover:bg-black/70 text-white transition">
-            <i class="fas fa-chevron-right"></i>
-        </button>
-    </div>
+        <!-- Sections -->
+        <div class="mt-auto grid gap-4 lg:grid-cols-3">
 
-    <!-- Dots + counter -->
-    <div class="flex flex-col items-center gap-2 mt-4">
-        <div id="map-dots" class="flex flex-wrap justify-center gap-2 max-w-full"></div>
-        <div class="text-xs text-zinc-500">
-            <span id="map-counter">1</span> / <?= $slideCount ?>
+            <!-- Single-game records on this map -->
+            <section class="<?= $panel ?>">
+                <h3 class="<?= $panelTitle ?> text-blue-300"><i class="fa-solid fa-medal mr-1"></i> Map records</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <?php foreach ($leaderDefs as $key => $def): $leader = $map->leaders[$key] ?? null; ?>
+                        <div class="min-w-0 rounded bg-white/5 p-2">
+                            <div class="text-[10px] uppercase tracking-wide text-zinc-400"><?= $def['label'] ?></div>
+                            <?php if ($leader && !empty($leader->player)): ?>
+                                <div class="text-lg font-extrabold leading-tight text-sky-300 tabular-nums"><?= $def['fmt']($leader->val) ?></div>
+                                <div class="truncate text-sm font-semibold">
+                                    <?= $this->Html->link(h($leader->player->name), ['controller' => 'Players', 'action' => 'view', $leader->player->id], ['class' => 'hover:text-blue-300', 'escape' => false]) ?>
+                                    <?= $this->Layout->flag($leader->player->country) ?>
+                                </div>
+                                <?php if (!empty($leader->game_id)): ?>
+                                    <?= $this->Html->link(
+                                        !empty($leader->played_at) ? h($leader->played_at->format('d M Y')) : 'view game',
+                                        ['controller' => 'Games', 'action' => 'view', $leader->game_id],
+                                        ['class' => 'text-[10px] text-zinc-400 hover:text-blue-300 hover:underline']
+                                    ) ?>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <div class="text-sm text-zinc-500">&mdash;</div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+
+            <!-- Top players by summed points -->
+            <section class="<?= $panel ?>">
+                <h3 class="<?= $panelTitle ?> text-green-300"><i class="fa-solid fa-users mr-1"></i> Top players by total points</h3>
+                <?php if ($map->top_players): ?>
+                    <ol class="space-y-1.5">
+                        <?php foreach ($map->top_players as $i => $player): ?>
+                            <li class="flex items-center gap-2 text-sm">
+                                <span class="w-5 shrink-0 text-right font-bold <?= $i === 0 ? 'text-yellow-300' : 'text-zinc-400' ?>"><?= $i + 1 ?></span>
+                                <span class="min-w-0 flex-1 truncate">
+                                    <?= $this->Html->link(h($player->player->name), ['controller' => 'Players', 'action' => 'view', $player->player->id], ['class' => 'font-semibold hover:text-blue-300', 'escape' => false]) ?>
+                                    <?= $this->Layout->flag($player->player->country) ?>
+                                </span>
+                                <span class="shrink-0 font-bold text-sky-300 tabular-nums"><?= number_format((int)$player->score) ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ol>
+                <?php else: ?>
+                    <p class="text-sm text-zinc-400">No ladder players yet.</p>
+                <?php endif; ?>
+            </section>
+
+            <!-- Weekly "best on map" achievement winners -->
+            <section class="<?= $panel ?>">
+                <h3 class="<?= $panelTitle ?> text-yellow-300"><i class="fa-solid fa-trophy mr-1"></i> Weekly Achievement Winners</h3>
+                <?php if ($map->best_on_map): ?>
+                    <ul class="space-y-1.5">
+                        <?php foreach ($map->best_on_map as $achievement):
+                            $weekEnd = is_string($achievement->week_end) ? $achievement->week_end : $achievement->week_end->format('Y-m-d');
+                            $weeks = (int)floor((time() - strtotime($weekEnd)) / (7 * 86400));
+                            $weeksLabel = $weeks <= 0 ? 'this week' : ($weeks === 1 ? '1 week ago' : $weeks . ' weeks ago');
+                            ?>
+                            <li class="flex items-center gap-2 text-sm">
+                                <span class="shrink-0">🏆</span>
+                                <span class="min-w-0 flex-1 truncate">
+                                    <?= $this->Html->link(h($achievement->player->name), ['controller' => 'Players', 'action' => 'view', $achievement->player->id], ['class' => 'font-semibold hover:text-yellow-200', 'escape' => false]) ?>
+                                    <?= $this->Layout->flag($achievement->player->country) ?>
+                                </span>
+                                <span class="shrink-0 font-bold text-yellow-200 tabular-nums"><?= number_format((float)$achievement->count) ?></span>
+                                <span class="w-20 shrink-0 text-right text-[11px] text-zinc-400"><?= h($weeksLabel) ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php else: ?>
+                    <p class="text-sm text-zinc-400">No weekly winner on this map yet.</p>
+                <?php endif; ?>
+            </section>
         </div>
     </div>
 
-    <?php endif; ?>
+    <!-- Prev / next map (most-played order) -->
+    <?= $this->Html->link('<i class="fas fa-chevron-left"></i>', $mapUrl($prevMap),
+        ['escape' => false, 'id' => 'map-prev', 'title' => 'Previous map', 'aria-label' => 'Previous map', 'class' => $navBtn . ' right-16 md:right-auto md:left-2']) ?>
+    <?= $this->Html->link('<i class="fas fa-chevron-right"></i>', $mapUrl($nextMap),
+        ['escape' => false, 'id' => 'map-next', 'title' => 'Next map', 'aria-label' => 'Next map', 'class' => $navBtn . ' right-2']) ?>
 </div>
 
 <?php $this->start('scriptBottom'); ?>
 <script>
 (function () {
-    const root = document.getElementById('map-slideshow');
-    if (!root) return;
+    const picker = document.getElementById('map-picker');
+    const btn = document.getElementById('map-picker-btn');
+    const panel = document.getElementById('map-picker-panel');
+    const search = document.getElementById('map-picker-search');
+    const items = Array.from(panel.querySelectorAll('li'));
 
-    const track   = document.getElementById('map-track');
-    const slides   = Array.from(track.children);
-    const count   = slides.length;
-    const dotsBox  = document.getElementById('map-dots');
-    const counter  = document.getElementById('map-counter');
-    let index = 0;
-
-    // Build dots
-    const dots = slides.map((_, i) => {
-        const dot = document.createElement('button');
-        dot.type = 'button';
-        dot.setAttribute('aria-label', 'Go to map ' + (i + 1));
-        dot.className = 'h-2.5 w-2.5 rounded-full bg-zinc-600 hover:bg-zinc-400 transition';
-        dot.addEventListener('click', () => go(i));
-        dotsBox.appendChild(dot);
-        return dot;
-    });
-
-    function render() {
-        track.style.transform = 'translateX(' + (-index * 100) + '%)';
-        counter.textContent = index + 1;
-        dots.forEach((d, i) => {
-            d.classList.toggle('bg-blue-500', i === index);
-            d.classList.toggle('bg-zinc-600', i !== index);
-        });
-    }
-
-    function go(i) {
-        index = (i + count) % count; // wrap around
-        render();
-    }
-    const next = () => go(index + 1);
-    const prev = () => go(index - 1);
-
-    document.getElementById('map-next').addEventListener('click', next);
-    document.getElementById('map-prev').addEventListener('click', prev);
-
-    // Keyboard
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight') next();
-        else if (e.key === 'ArrowLeft') prev();
-    });
-
-    // Touch swipe (mobile)
-    let startX = 0, startY = 0, tracking = false;
-    root.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        tracking = true;
-    }, { passive: true });
-
-    root.addEventListener('touchend', (e) => {
-        if (!tracking) return;
-        tracking = false;
-        const dx = e.changedTouches[0].clientX - startX;
-        const dy = e.changedTouches[0].clientY - startY;
-        // Only treat as swipe if mostly horizontal and past threshold
-        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-            dx < 0 ? next() : prev();
+    function open(show) {
+        panel.classList.toggle('hidden', !show);
+        btn.setAttribute('aria-expanded', show ? 'true' : 'false');
+        if (show) {
+            search.value = '';
+            filter();
+            search.focus();
+            panel.querySelector('[aria-selected="true"]')?.scrollIntoView({block: 'center'});
         }
-    }, { passive: true });
+    }
+    function filter() {
+        const q = search.value.trim().toLowerCase();
+        items.forEach(li => li.classList.toggle('hidden', q !== '' && !li.dataset.name.includes(q)));
+    }
 
-    render();
+    btn.addEventListener('click', () => open(panel.classList.contains('hidden')));
+    search.addEventListener('input', filter);
+    search.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const first = items.find(li => !li.classList.contains('hidden'));
+            if (first) location.href = first.querySelector('a').href;
+        }
+    });
+    document.addEventListener('click', (e) => { if (!picker.contains(e.target)) open(false); });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') return open(false);
+        if (e.target.closest('input, textarea, select')) return;
+        const a = document.getElementById(e.key === 'ArrowLeft' ? 'map-prev' : e.key === 'ArrowRight' ? 'map-next' : '');
+        if (a) location.href = a.href;
+    });
 })();
 </script>
 <?php $this->end(); ?>

@@ -1,218 +1,208 @@
 <?php
 /**
- * Live page: our servers as a full-width bar on top, the selected server's
- * running game (shared live_match element) at full width below it, the
- * Elsewhere / Clan lists at the bottom. Selection is kept in the URL hash
- * (/live#acka-assault).
+ * Live page: a server picker (like the /maps dropdown: map thumbnail, name,
+ * map · mode, players) on top, the selected server's running game (shared
+ * live_match element) below - on the live map as page background.
+ * Selection is kept in the URL hash (/live#acka-assault).
  *
  * @var \App\View\AppView $this
  * @var array $servers  Ladder.servers minus hidden ones
  */
 ?>
-<div class="w-full px-4 sm:px-6 py-10 mx-auto">
-
-<h1 class="text-4xl font-bold text-white mb-2 text-center">Live</h1>
-<p class="text-center text-zinc-500 text-sm mb-8">
-    Who is playing right now &middot; <span id="live-updated">loading&hellip;</span>
-</p>
+<div data-live-bg class="relative min-h-[calc(100svh-4rem)] bg-zinc-900 bg-cover bg-center bg-fixed text-white"
+     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.3) 40%, rgba(0,0,0,.75)), url('/img/bullet.jpg');">
+<div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-8">
 
 <?php if (empty($servers)): ?>
-    <p class="text-center text-zinc-500">No servers configured (Ladder.servers).</p>
+    <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide">Live</h1>
+    <p class="mt-4 text-zinc-400">No servers configured (Ladder.servers).</p>
 <?php else: ?>
 
-<style>
-.live-layout { display: flex; flex-direction: column; gap: 1.5rem; }
-#live-sidebar { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .75rem; }
-#live-sidebar [data-server] { border: 1px solid rgb(63 63 70); border-radius: .75rem; background: rgb(39 39 42); }
-#live-sidebar [data-server]:hover { background: rgb(63 63 70 / .6); }
-#live-sidebar [data-server].sel { background: rgb(63 63 70); border-color: rgb(113 113 122); }
-#live-clan [data-server]:hover, #live-elsewhere [data-server]:hover { background: rgb(63 63 70 / .6); }
-#live-clan [data-server].sel, #live-elsewhere [data-server].sel { background: rgb(63 63 70); }
-.live-extra { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: start; }
-@media (min-width: 1024px) { .live-extra { grid-template-columns: 1fr 1fr; } }
-</style>
-<div class="live-layout">
+<!-- Title + server picker -->
+<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div class="drop-shadow-lg">
+        <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide">Live</h1>
+        <p class="mt-2 text-sm text-zinc-300">Who is playing right now &middot; <span id="live-updated">loading&hellip;</span></p>
+        <p id="live-elsewhere-sub" class="mt-1 text-xs text-zinc-400"></p>
+    </div>
 
-    <!-- Our servers: full-width bar on top -->
-    <div id="live-sidebar">
-        <?php foreach ($servers as $key => $cfg): ?>
-        <button type="button" data-server="<?= h($key) ?>"
-                class="text-left p-3 transition flex items-center gap-3">
-            <span class="js-dot w-2.5 h-2.5 rounded-full bg-zinc-600 shrink-0"></span>
-            <span class="flex-1 min-w-0">
-                <span class="block font-semibold text-white truncate"><?= h($cfg['name'] ?? $key) ?></span>
-                <span class="js-sub block text-xs text-zinc-500 truncate"><?= h($cfg['host']) ?>:<?= (int)$cfg['port'] ?></span>
+    <div class="relative w-full sm:w-96" id="srv-picker">
+        <button type="button" id="srv-btn" aria-haspopup="listbox" aria-expanded="false"
+                class="flex w-full items-center gap-3 rounded-lg border border-white/15 bg-black/60 p-2 text-left backdrop-blur-[2px] hover:bg-black/75 transition">
+            <span class="relative h-10 w-[72px] shrink-0">
+                <img id="srv-btn-thumb" src="/img/bullet-thumb.jpg" alt="" class="h-10 w-[72px] rounded object-cover">
+                <span id="srv-btn-dot" class="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-zinc-600 ring-2 ring-black"></span>
             </span>
-            <span class="js-count text-xs font-mono text-zinc-400"></span>
+            <span class="min-w-0 flex-1">
+                <span id="srv-btn-name" class="block truncate text-sm font-semibold">&nbsp;</span>
+                <span id="srv-btn-sub" class="block truncate text-xs text-zinc-400">choose a server&hellip;</span>
+            </span>
+            <span id="srv-btn-count" class="shrink-0 font-mono text-xs text-zinc-300"></span>
+            <i class="fas fa-chevron-down text-zinc-400"></i>
         </button>
-        <?php endforeach; ?>
-    </div>
 
-    <!-- Selected server's running game: full width -->
-    <div class="live-main">
-        <?= $this->element('live_match') ?>
-    </div>
-
-    <!-- Elsewhere + Clan / Inter below the game -->
-    <div class="live-extra">
-        <div id="live-elsewhere-wrap" hidden>
-            <h2 class="text-sm font-bold text-zinc-400 mb-1 px-1">Elsewhere in AssaultCube</h2>
-            <p id="live-elsewhere-sub" class="text-xs text-zinc-600 mb-2 px-1"></p>
-            <div id="live-elsewhere" class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden divide-y divide-zinc-700/60"></div>
-        </div>
-
-        <div id="live-clan-wrap" hidden>
-            <h2 class="text-sm font-bold text-zinc-400 mb-2 px-1">Clan Match / Inter Clan Servers</h2>
-            <div id="live-clan" class="rounded-xl border border-zinc-700 bg-zinc-800 overflow-hidden divide-y divide-zinc-700/60"></div>
+        <div id="srv-panel" role="listbox"
+             class="absolute right-0 z-30 mt-2 hidden w-full overflow-hidden rounded-lg border border-white/15 bg-zinc-900/95 shadow-2xl backdrop-blur">
+            <div class="border-b border-white/10 p-2">
+                <input id="srv-search" type="search" placeholder="Search servers or maps…" autocomplete="off"
+                       class="w-full rounded bg-zinc-800 px-3 py-1.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div id="srv-list" class="nice-scroll max-h-[65vh] overflow-y-auto py-1"></div>
         </div>
     </div>
-
 </div>
 
+<!-- Selected server's running game -->
+<?= $this->element('live_match') ?>
+
 <?php endif; ?>
+</div>
 </div>
 
 <?php $this->start('scriptBottom'); ?>
 <script>
 (function () {
-    const sidebar = document.getElementById('live-sidebar');
-    if (!sidebar) return;
-
+    const picker = document.getElementById('srv-picker');
+    if (!picker) return;
+    const btn = document.getElementById('srv-btn');
+    const panel = document.getElementById('srv-panel');
+    const list = document.getElementById('srv-list');
+    const search = document.getElementById('srv-search');
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    // clan/inter servers are added to the selectable set once polled
-    const keys = new Set([...sidebar.querySelectorAll('[data-server]')].map(b => b.dataset.server));
 
-    // countdown to the next sidebar refresh
-    const POLL_MS = 10000;
+    // own servers are known up front (offline ones too); clan / elsewhere once polled
+    const own = <?= json_encode(array_map(fn($k, $c) => [
+        'key' => $k, 'name' => $c['name'] ?? $k, 'online' => null, 'numplayers' => 0,
+        'host' => $c['host'], 'port' => (int)$c['port'],
+    ], array_keys($servers), $servers)) ?>;
+    let groups = [{title: 'Our servers', servers: own}];
+    const byKey = () => new Map(groups.flatMap(g => g.servers).map(s => [s.key, s]));
+
+    // countdown to the next refresh
+    const POLL_MS = 5000;
     let nextPollAt = Date.now() + POLL_MS;
     setInterval(() => {
         const sec = Math.max(0, Math.ceil((nextPollAt - Date.now()) / 1000));
         document.getElementById('live-updated').textContent = 'next update in ' + sec + ' sec';
     }, 250);
 
-    // --- selection --------------------------------------------------
-    let current = null;
-    let match = null;
+    // --- rendering ---------------------------------------------------
+    const dotClass = (s) => s.online === false ? 'bg-red-500' : (s.numplayers > 0 ? 'bg-green-500 lg-pulse' : 'bg-zinc-600');
+    const subText = (s) => s.online === false ? 'offline'
+        : (s.numplayers > 0 ? (s.map || '—') + ' · ' + (s.mode_name || '?') : (s.online ? 'empty' : s.host + ':' + s.port));
+    const countText = (s) => s.online ? s.numplayers + '/' + (s.maxclients ?? '?') : '';
+    const thumb = (s) => (s.numplayers > 0 && s.map_thumb) ? s.map_thumb : '/img/bullet-thumb.jpg';
 
-    function markSelected() {
-        document.querySelectorAll('#live-sidebar [data-server], #live-clan [data-server], #live-elsewhere [data-server]').forEach(b => {
-            b.classList.toggle('sel', b.dataset.server === current);
-        });
+    function renderButton() {
+        const s = byKey().get(current);
+        if (!s) return;
+        document.getElementById('srv-btn-thumb').src = thumb(s);
+        document.getElementById('srv-btn-dot').className = 'absolute -right-1 -top-1 h-3 w-3 rounded-full ring-2 ring-black ' + dotClass(s);
+        document.getElementById('srv-btn-name').textContent = s.name;
+        document.getElementById('srv-btn-sub').textContent = subText(s);
+        document.getElementById('srv-btn-count').textContent = countText(s);
     }
 
-    function select(key, pushHash = true) {
-        if (!keys.has(key) || key === current) return;
-        current = key;
-        markSelected();
-        if (pushHash && location.hash !== '#' + key) {
-            history.replaceState(null, '', '#' + key);
+    function renderList() {
+        list.innerHTML = groups.filter(g => g.servers.length).map(g =>
+            '<div class="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">' + esc(g.title) + '</div>' +
+            g.servers.map(s =>
+                '<button type="button" role="option" data-server="' + esc(s.key) + '" data-q="' + esc((s.name + ' ' + (s.map || '')).toLowerCase()) + '"' +
+                    ' aria-selected="' + (s.key === current) + '"' +
+                    ' class="flex w-full items-center gap-3 px-2 py-1.5 text-left hover:bg-white/10 ' + (s.key === current ? 'bg-blue-600/30' : '') + '">' +
+                    '<span class="relative h-9 w-16 shrink-0">' +
+                        '<img src="' + esc(thumb(s)) + '" alt="" loading="lazy" class="h-9 w-16 rounded object-cover bg-zinc-800">' +
+                        '<span class="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full ring-2 ring-zinc-900 ' + dotClass(s) + '"></span>' +
+                    '</span>' +
+                    '<span class="min-w-0 flex-1">' +
+                        '<span class="block truncate text-sm">' + esc(s.name) + '</span>' +
+                        '<span class="block truncate text-[11px] text-zinc-500">' + esc(subText(s)) + '</span>' +
+                    '</span>' +
+                    '<span class="shrink-0 font-mono text-xs text-zinc-400">' + esc(countText(s)) + '</span>' +
+                '</button>'
+            ).join('')
+        ).join('');
+        filter();
+    }
+
+    function filter() {
+        const q = search.value.trim().toLowerCase();
+        list.querySelectorAll('[data-server]').forEach(b => b.classList.toggle('hidden', q !== '' && !b.dataset.q.includes(q)));
+    }
+
+    // --- picker open / close -----------------------------------------
+    function open(show) {
+        panel.classList.toggle('hidden', !show);
+        btn.setAttribute('aria-expanded', show ? 'true' : 'false');
+        if (show) {
+            search.value = '';
+            filter();
+            search.focus();
+            list.querySelector('[aria-selected="true"]')?.scrollIntoView({block: 'nearest'});
         }
+    }
+    btn.addEventListener('click', () => open(panel.classList.contains('hidden')));
+    search.addEventListener('input', filter);
+    search.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') list.querySelector('[data-server]:not(.hidden)')?.click();
+    });
+    document.addEventListener('click', (e) => { if (!picker.contains(e.target)) open(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') open(false); });
+    list.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-server]');
+        if (b) { select(b.dataset.server); open(false); }
+    });
+
+    // --- selection -----------------------------------------------------
+    let current = null;
+    let match = null;
+    function select(key, pushHash = true) {
+        if (!byKey().has(key) || key === current) return;
+        current = key;
+        if (pushHash && location.hash !== '#' + key) history.replaceState(null, '', '#' + key);
+        renderButton();
+        renderList();
         if (match) match.setKey(key);
         else match = window.initLiveMatch(document.querySelector('[data-live-match]'), key);
     }
+    window.addEventListener('hashchange', () => select(decodeURIComponent(location.hash.slice(1)), false));
 
-    const onServerClick = (e) => {
-        const btn = e.target.closest('[data-server]');
-        if (btn) select(btn.dataset.server);
-    };
-    sidebar.addEventListener('click', onServerClick);
-    document.getElementById('live-clan').addEventListener('click', onServerClick);
-    document.getElementById('live-elsewhere').addEventListener('click', onServerClick);
-    window.addEventListener('hashchange', () => {
-        const key = decodeURIComponent(location.hash.slice(1));
-        if (keys.has(key)) select(key, false);
-    });
-
-    // --- sidebar status polling ------------------------------------
-    function fillSidebar(data) {
-        nextPollAt = Date.now() + POLL_MS;
-
-        data.servers.forEach(srv => {
-            const btn = sidebar.querySelector('[data-server="' + CSS.escape(srv.key) + '"]');
-            if (!btn) return;
-            const dot = btn.querySelector('.js-dot');
-            const sub = btn.querySelector('.js-sub');
-            const count = btn.querySelector('.js-count');
-            if (!srv.online) {
-                dot.className = 'js-dot w-2.5 h-2.5 rounded-full bg-red-500 shrink-0';
-                sub.textContent = 'offline';
-                count.textContent = '';
-            } else {
-                dot.className = 'js-dot w-2.5 h-2.5 rounded-full shrink-0 ' + (srv.numplayers > 0 ? 'bg-green-500 lg-pulse' : 'bg-zinc-600');
-                sub.textContent = srv.numplayers > 0
-                    ? (srv.map || '—') + ' · ' + srv.mode_name
-                    : 'empty';
-                count.textContent = srv.numplayers + '/' + (srv.maxclients ?? '?');
-            }
-        });
-
-        // clan match / inter servers: like elsewhere, but fixed list and no /connect
-        const clanWrap = document.getElementById('live-clan-wrap');
-        const clanList = document.getElementById('live-clan');
-        const clan = ((data.clan && data.clan.servers) || []).filter(srv => srv.online);
-        clanWrap.hidden = clan.length === 0;
-        clanList.innerHTML = clan.map(srv => {
-            keys.add(srv.key);
-            const dot = srv.numplayers > 0 ? 'bg-green-500 lg-pulse' : 'bg-zinc-600';
-            const sub = srv.numplayers > 0 ? (srv.map || '—') + ' · ' + srv.mode_name : 'empty';
-            return '<button type="button" data-server="' + esc(srv.key) + '" class="w-full text-left p-3 transition flex items-center gap-3">' +
-                '<span class="w-2.5 h-2.5 rounded-full shrink-0 ' + dot + '"></span>' +
-                '<span class="flex-1 min-w-0">' +
-                    '<span class="block text-sm font-semibold text-white truncate">' + esc(srv.name) + '</span>' +
-                    '<span class="block text-xs text-zinc-500 truncate">' + esc(sub) + '</span>' +
-                '</span>' +
-                '<span class="text-xs font-mono text-zinc-400">' + srv.numplayers + '/' + (srv.maxclients ?? '?') + '</span>' +
-            '</button>';
-        }).join('');
-        markSelected();
-
-        const wrap = document.getElementById('live-elsewhere-wrap');
-        const listEl = document.getElementById('live-elsewhere');
-        const ew = data.elsewhere;
-        if (!ew || !ew.polled) { wrap.hidden = true; return; }
-        wrap.hidden = false;
-        document.getElementById('live-elsewhere-sub').textContent =
-            ew.players + ' player' + (ew.players === 1 ? '' : 's') + ' on ' + ew.online + ' other public server' + (ew.online === 1 ? '' : 's');
-        listEl.innerHTML = ew.servers.map(srv => {
-            keys.add(srv.key);
-            return '<button type="button" data-server="' + esc(srv.key) + '" class="block w-full text-left p-3 transition">' +
-                '<span class="flex items-center gap-3">' +
-                    '<span class="w-2.5 h-2.5 rounded-full bg-green-500 lg-pulse shrink-0"></span>' +
-                    '<span class="flex-1 min-w-0">' +
-                        '<span class="block text-sm font-semibold text-white truncate">' + esc(srv.name) + '</span>' +
-                        '<span class="block text-xs text-zinc-500 truncate">' + esc(srv.map || '—') + ' · ' + esc(srv.mode_name) + '</span>' +
-                    '</span>' +
-                    '<span class="text-xs font-mono text-zinc-400">' + srv.numplayers + '</span>' +
-                '</span>' +
-                '<span class="block text-[11px] text-zinc-600 mt-1 ml-5">/connect ' + esc(srv.host) + ' ' + esc(srv.port) + '</span>' +
-            '</button>';
-        }).join('') || '<p class="p-3 text-xs text-zinc-500">all quiet</p>';
-        markSelected();
-
-        return data;
-    }
-
+    // --- status polling -----------------------------------------------
     async function poll() {
         try {
             const res = await fetch('/live/status', { headers: { Accept: 'application/json' }, cache: 'no-store' });
             if (!res.ok) return null;
-            return fillSidebar(await res.json());
+            const data = await res.json();
+            nextPollAt = Date.now() + POLL_MS;
+            const ownPolled = new Map(data.servers.map(s => [s.key, s]));
+            groups = [
+                {title: 'Our servers', servers: own.map(s => ({...s, ...(ownPolled.get(s.key) || {})}))},
+                {title: 'Clan match / inter', servers: ((data.clan && data.clan.servers) || []).filter(s => s.online)},
+                {title: 'Elsewhere in AssaultCube', servers: (data.elsewhere && data.elsewhere.servers) || []},
+            ];
+            const ew = data.elsewhere;
+            document.getElementById('live-elsewhere-sub').textContent = ew && ew.polled
+                ? ew.players + ' player' + (ew.players === 1 ? '' : 's') + ' on ' + ew.online + ' other public server' + (ew.online === 1 ? '' : 's')
+                : '';
+            renderButton();
+            renderList();
+            return data;
         } catch (e) { return null; }
     }
 
-    // --- boot: hash > busiest server > first -----------------------
+    // --- boot: hash > busiest server > first ---------------------------
     (async () => {
         const hashKey = decodeURIComponent(location.hash.slice(1));
         const data = await poll();
-        let key = keys.has(hashKey) ? hashKey : null;
+        const all = byKey();
+        let key = all.has(hashKey) ? hashKey : null;
         if (!key && data) {
             // busiest server anywhere - own list first, so it wins ties
-            const busiest = [...data.servers, ...((data.clan && data.clan.servers) || []), ...data.elsewhere.servers]
-                .filter(s => s.online && keys.has(s.key))
-                .sort((a, b) => b.numplayers - a.numplayers)[0];
+            const busiest = [...all.values()].filter(s => s.online).sort((a, b) => b.numplayers - a.numplayers)[0];
             if (busiest && busiest.numplayers > 0) key = busiest.key;
         }
-        select(key || keys.values().next().value, !!hashKey);
+        select(key || own[0].key, !!hashKey);
+        renderList();
         setInterval(poll, POLL_MS);
     })();
 })();

@@ -10,11 +10,10 @@
  */
 ?>
 <style>
-.lg-wrap { position: relative; border-radius: 0.75rem; overflow: hidden; border: 1px solid rgb(63 63 70); min-height: 11rem; }
-.lg-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(.4) saturate(.9); }
-.lg-in { position: relative; padding: 1.5rem; display: flex; flex-direction: column; gap: .35rem; min-height: 11rem; justify-content: flex-end;
-  background: linear-gradient(180deg, rgba(9,9,11,.15), rgba(9,9,11,.75)); }
-.lg-team { border-radius: 0.75rem; overflow: hidden; border: 1px solid rgb(63 63 70); background: rgb(24 24 27 / .92); }
+.lg-wrap { position: relative; border-radius: 0.75rem; overflow: hidden; border: 1px solid rgb(255 255 255 / .15);
+  background: rgb(0 0 0 / .6); backdrop-filter: blur(2px); }
+.lg-in { position: relative; padding: 1.5rem; display: flex; flex-direction: column; gap: .35rem; }
+.lg-team { border-radius: 0.75rem; overflow: hidden; border: 1px solid rgb(255 255 255 / .15); background: rgb(0 0 0 / .6); backdrop-filter: blur(2px); }
 .lg-team-bar { display: flex; align-items: center; justify-content: space-between; padding: .7rem 1rem; }
 .lg-team-bar .score { font-size: 2.4rem; font-weight: 800; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
 .lg-cla  .lg-team-bar { background: linear-gradient(90deg, #7f1d1d, #b91c1c); }
@@ -22,12 +21,13 @@
 .lg-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .lg-table th { font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: rgb(161 161 170); text-align: right; padding: .5rem .75rem; }
 .lg-table td { padding: .45rem .75rem; text-align: right; color: rgb(212 212 216); border-top: 1px solid rgb(63 63 70 / .5); }
-.lg-table th:first-child, .lg-table td:first-child { width: 2.2rem; text-align: center; }
-.lg-table th:nth-child(2), .lg-table td:nth-child(2) { width: 2rem; text-align: left; }
-.lg-table td:nth-child(2) { color: rgb(113 113 122); }
-.lg-table th:nth-child(3), .lg-table td:nth-child(3) { text-align: left; }
+/* columns: 1 # | 2 player | 3 ping | 4+ flags frags deaths tk damage acc */
+.lg-table th:first-child, .lg-table td:first-child { width: 2rem; text-align: left; }
+.lg-table td:first-child { color: rgb(113 113 122); }
+.lg-table th:nth-child(2), .lg-table td:nth-child(2) { text-align: left; min-width: 9rem; }
+.lg-table th:nth-child(3), .lg-table td:nth-child(3) { width: 2.6rem; text-align: center; }
 .lg-table tr.top td { background: rgb(255 255 255 / .04); }
-.lg-table th:nth-child(n+4), .lg-table td:nth-child(n+4) { width: 3.4rem; }
+.lg-table th:nth-child(n+4), .lg-table td:nth-child(n+4) { width: 2.9rem; }
 .lg-decider { font-weight: 800; color: #fff; }
 .lg-cla  .lg-decider-h { color: #fca5a5; } .lg-rvsf .lg-decider-h { color: #93c5fd; }
 .lg-dead { opacity: .55; }
@@ -43,14 +43,36 @@
 .lg-chat .empty { color: rgb(113 113 122); font-style: italic; }
 .lg-teams { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
 @media (min-width: 1100px) { .lg-teams { grid-template-columns: 1fr 1fr; } }
+.lg-table td:nth-child(2) a, .lg-table td:nth-child(2) { word-break: break-word; }
+.js-connect { word-break: break-all; }
+/* Phones: keep ping / player / flags / frags / deaths / acc, drop # / TK / damage */
+@media (max-width: 640px) {
+  .lg-in { padding: 1rem; }
+  .lg-teams { gap: 1rem; }
+  .lg-team-bar { padding: .55rem .8rem; }
+  .lg-team-bar .score { font-size: 1.8rem; }
+  .lg-table { font-size: .8rem; table-layout: fixed; }
+  .lg-table th, .lg-table td { padding: .4rem .3rem; }
+  .lg-table th { font-size: .6rem; letter-spacing: .03em; }
+  .lg-table th:first-child, .lg-table td:first-child,
+  .lg-table th:nth-child(7), .lg-table td:nth-child(7),
+  .lg-table th:nth-child(8), .lg-table td:nth-child(8) { display: none; }
+  .lg-table th:nth-child(2), .lg-table td:nth-child(2) { min-width: 0; padding-left: .55rem; }
+  .lg-table td:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: normal; }
+  .lg-table td:nth-child(2) img { width: 1.25rem; height: 1.25rem; margin-right: .3rem; }
+  .lg-table th:nth-child(3), .lg-table td:nth-child(3) { width: 1.4rem; }
+  .lg-table th:nth-child(3) { font-size: 0; } /* the ping ball explains itself */
+  .lg-table th:nth-child(n+4), .lg-table td:nth-child(n+4) { width: 2.1rem; }
+  .lg-table th:last-child, .lg-table td:last-child { width: 2.5rem; padding-right: .45rem; }
+  .lg-chat { max-height: 7rem; font-size: .75rem; }
+}
 </style>
 
 <div data-live-match>
     <div class="lg-wrap mb-6">
-        <div class="lg-bg js-mapbg"></div>
         <div class="lg-in">
             <div class="flex items-center justify-between gap-3 flex-wrap">
-                <h1 class="text-3xl font-bold text-white js-title">&nbsp;</h1>
+                <h1 class="text-2xl md:text-3xl font-bold text-white js-title">&nbsp;</h1>
                 <span class="js-status lg-pulse text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">connecting&hellip;</span>
             </div>
             <div class="js-game text-zinc-300 text-sm"></div>
@@ -59,7 +81,7 @@
                 <span class="js-gamelink"></span>
             </div>
 
-            <div class="lg-team lg-chat js-chatbox" hidden>
+            <div class="lg-team lg-chat nice-scroll js-chatbox" hidden>
                 <div class="empty">waiting for action&hellip;</div>
             </div>
         </div>
@@ -74,7 +96,7 @@
             </div>
             <table class="lg-table">
                 <thead><tr>
-                    <th>Ping</th><th>#</th><th>Player</th><th class="js-h-flags">Flags</th>
+                    <th>#</th><th>Player</th><th>Ping</th><th class="js-h-flags">Flags</th>
                     <th class="js-h-frags">Frags</th><th>Deaths</th><th>TK</th><th>Damage</th><th>Acc</th>
                 </tr></thead>
                 <tbody class="js-rows"></tbody>
@@ -86,20 +108,27 @@
     <div class="lg-team js-ffa" hidden>
         <table class="lg-table">
             <thead><tr>
-                <th>Ping</th><th>#</th><th>Player</th><th class="js-h-flags">Flags</th>
+                <th>#</th><th>Player</th><th>Ping</th><th class="js-h-flags">Flags</th>
                 <th class="js-h-frags">Frags</th><th>Deaths</th><th>TK</th><th>Damage</th><th>Acc</th>
             </tr></thead>
             <tbody class="js-rows"></tbody>
         </table>
     </div>
 
-    <p class="js-specs text-sm text-zinc-500 mt-4" hidden></p>
+    <p class="js-specs text-sm text-zinc-300 mt-4 drop-shadow" hidden></p>
 
-    <p class="text-xs text-zinc-600 mt-6 text-center">updates every 5 seconds &middot; <span class="js-updated"></span></p>
+    <p class="text-xs text-zinc-400 mt-6 text-center drop-shadow">updates every 5 seconds &middot; <span class="js-updated"></span></p>
 </div>
 
 <script>
 window.initLiveMatch = function (root, key) {
+    // Page background ([data-live-bg] wrapper): live map or the bullet
+    const pageBg = document.querySelector('[data-live-bg]');
+    const setPageBg = (url) => {
+        if (!pageBg) return;
+        pageBg.style.backgroundImage = 'linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.3) 40%, rgba(0,0,0,.75)), url(' + JSON.stringify(url || '/img/bullet.jpg') + ')';
+    };
+
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const flag = (iso) => {
         if (!iso || iso.length !== 2) return '';
@@ -191,10 +220,10 @@ window.initLiveMatch = function (root, key) {
             : esc(p.name);
         const pic = '<img src="' + esc(p.picture || '/img/acl.png') + '" class="w-6 h-6 rounded-full object-cover inline-block mr-2 align-middle" alt="">';
         return '<tr class="' + (i === 0 ? 'top' : '') + (p.state_name === 'dead' ? ' lg-dead' : '') + '">' +
-            '<td>' + pingBall(p.ping) + '</td>' +
             '<td>' + (i + 1) + '</td>' +
             '<td>' + pic + name + ' ' + flag(p.country) +
                 (p.is_admin ? ' <span class="text-[10px] px-1 rounded bg-yellow-500/20 text-yellow-300">admin</span>' : '') + '</td>' +
+            '<td>' + pingBall(p.ping) + '</td>' +
             '<td class="' + (byFlags ? 'lg-decider' : '') + '">' + p.flags + '</td>' +
             '<td class="' + (!byFlags ? 'lg-decider' : '') + '">' + p.frags + '</td>' +
             '<td>' + p.deaths + '</td>' +
@@ -216,7 +245,7 @@ window.initLiveMatch = function (root, key) {
             st.textContent = 'offline';
             st.className = 'js-status text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300';
             $('.js-game').textContent = s.error || 'no reply';
-            $('.js-mapbg').style.backgroundImage = '';
+            setPageBg(null);
             $('.js-gamelink').innerHTML = '';
             $('.js-teams').hidden = true;
             $('.js-ffa').hidden = true;
@@ -228,7 +257,8 @@ window.initLiveMatch = function (root, key) {
         st.textContent = s.numplayers + ' / ' + (s.maxclients ?? '?');
         st.className = 'js-status text-xs px-2 py-0.5 rounded-full ' + (s.numplayers > 0 ? 'bg-green-500/20 text-green-300' : 'bg-zinc-700 text-zinc-300');
 
-        $('.js-mapbg').style.backgroundImage = 'url(' + esc(s.map_image) + ')';
+        // the live map as page background while a game runs, else the bullet
+        setPageBg(s.numplayers > 0 ? s.map_image : null);
         $('.js-game').innerHTML =
             '<b class="text-white">' + esc(s.map || '—') + '</b> · ' + esc(s.mode_name || '?') +
             (s.minremain != null ? ' · ' + esc(s.minremain) + ' min left' : '');
@@ -256,7 +286,7 @@ window.initLiveMatch = function (root, key) {
                 panel.querySelector('.js-h-flags').classList.toggle('lg-decider-h', s.by_flags);
                 panel.querySelector('.js-rows').innerHTML =
                     members.map((p, i) => rowHtml(p, i, s.by_flags)).join('') ||
-                    '<tr><td></td><td></td><td class="text-zinc-500" colspan="7">nobody</td></tr>';
+                    '<tr><td></td><td class="text-zinc-500" colspan="8">nobody</td></tr>';
             });
         } else {
             $('.js-teams').hidden = true;
@@ -266,7 +296,7 @@ window.initLiveMatch = function (root, key) {
             ffa.querySelector('.js-h-flags').classList.toggle('lg-decider-h', s.by_flags);
             players.sort(sort);
             ffa.querySelector('.js-rows').innerHTML = players.map((p, i) => rowHtml(p, i, s.by_flags)).join('') ||
-                '<tr><td></td><td></td><td class="text-zinc-500" colspan="7">nobody playing</td></tr>';
+                '<tr><td></td><td class="text-zinc-500" colspan="8">nobody playing</td></tr>';
         }
     }
 

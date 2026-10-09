@@ -1,8 +1,6 @@
-<div class="w-full max-w-7xl px-0 sm:px-6 py-10 mx-auto">
+<div class="w-full">
 
-<h1 class="text-4xl font-bold text-white mb-8 text-center px-4 sm:px-0">
-    Hall of Fame
-</h1>
+<h1 class="sr-only">Hall of Fame</h1>
 
 <?php
 $genres = [
@@ -54,7 +52,7 @@ $achievementLabels = [
     'headshot' => 'Most Headshots last week',
 ];
 
-// Only categories that actually have players, so slide indexes line up with dots.
+// Only categories that actually have players.
 $slides = array_values(array_filter($genres, fn($g) => !empty($g['data'])));
 $slideCount = count($slides);
 
@@ -68,7 +66,7 @@ shuffle($playerImages);
 <?php else: ?>
 
 <div id="hof-slideshow"
-     class="relative select-none sm:rounded-xl border-y sm:border border-zinc-700 bg-zinc-800 overflow-hidden"
+     class="relative select-none overflow-hidden bg-zinc-900 text-white"
      data-count="<?= $slideCount ?>">
 
     <!-- Track -->
@@ -83,28 +81,25 @@ shuffle($playerImages);
                 : '/img/bullet-full.jpg';
             $slideIdx++;
             ?>
-            <!-- Slide -->
-            <div class="hof-slide w-full flex-shrink-0 flex">
-                <div class="flex flex-col lg:flex-row w-full">
+            <!-- Slide: full screen, player photo as background -->
+            <div class="hof-slide relative w-full flex-shrink-0 bg-cover bg-center"
+                 style="background-image: linear-gradient(to right, rgba(0,0,0,.75), rgba(0,0,0,.35) 55%, rgba(0,0,0,.6)), url('<?= h($bgImg) ?>');">
+                <div class="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-16 md:py-10 lg:flex-row lg:items-center lg:justify-between">
 
-                    <!-- Left: random player photo + category title -->
-                    <div class="relative w-full lg:w-[65%] aspect-video lg:aspect-auto"
-                         style="background-image:
-                             linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.4), rgba(0,0,0,0.15)),
-                             url('<?= h($bgImg) ?>');
-                             background-size: cover;
-                             background-position: center;
-                             background-repeat: no-repeat;">
-                        <div class="absolute inset-0 flex items-center justify-center p-5 md:p-8">
-                            <h3 class="text-5xl md:text-7xl font-bold drop-shadow text-center leading-tight <?= $genre['color'] ?>">
-                                <?= $genre['title'] ?>
-                            </h3>
+                    <!-- Category -->
+                    <div class="drop-shadow-lg lg:max-w-[45%] pr-24 md:pr-0">
+                        <div class="text-xs md:text-sm uppercase tracking-[0.3em] text-zinc-300">
+                            Hall of Fame &middot; <?= $slideIdx ?>/<?= $slideCount ?>
                         </div>
+                        <h2 class="mt-2 text-5xl md:text-7xl font-extrabold leading-tight <?= $genre['color'] ?>">
+                            <?= $genre['title'] ?>
+                        </h2>
+                        <div class="mt-3 text-sm text-zinc-300">Best single game since <?= date('M Y', strtotime(\App\Controller\PlayersController::HOF_SINCE)) ?></div>
                     </div>
 
-                    <!-- Right: players -->
-                    <div class="w-full lg:w-[35%] p-4 md:p-6">
-                        <div class="divide-y divide-zinc-700/60">
+                    <!-- Players -->
+                    <div class="w-full lg:w-[460px] shrink-0 rounded-lg border border-white/15 bg-black/60 p-4 md:p-5 backdrop-blur-[2px]">
+                        <div class="divide-y divide-white/10">
                             <?php $rank = 1; foreach ($genre['data'] as $player): ?>
                                 <?php
                                 // Weapons used in the record-setting game
@@ -201,25 +196,15 @@ shuffle($playerImages);
 
     <!-- Prev / Next arrows -->
     <button type="button" id="hof-prev" aria-label="Previous category"
-            class="absolute top-1/2 left-2 -translate-y-1/2 z-20
-                   h-10 w-10 flex items-center justify-center rounded-full
+            class="absolute top-4 right-16 md:right-auto md:top-1/2 md:left-2 md:-translate-y-1/2 z-20 h-11 w-11 flex items-center justify-center rounded-full
                    bg-black/50 hover:bg-black/70 text-white transition">
         <i class="fas fa-chevron-left"></i>
     </button>
     <button type="button" id="hof-next" aria-label="Next category"
-            class="absolute top-1/2 right-2 -translate-y-1/2 z-20
-                   h-10 w-10 flex items-center justify-center rounded-full
+            class="absolute top-4 right-2 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex items-center justify-center rounded-full
                    bg-black/50 hover:bg-black/70 text-white transition">
         <i class="fas fa-chevron-right"></i>
     </button>
-</div>
-
-<!-- Dots + counter -->
-<div class="flex flex-col items-center gap-2 mt-4">
-    <div id="hof-dots" class="flex flex-wrap justify-center gap-2 max-w-full"></div>
-    <div class="text-xs text-zinc-500">
-        <span id="hof-counter">1</span> / <?= $slideCount ?>
-    </div>
 </div>
 
 <?php endif; ?>
@@ -234,27 +219,10 @@ shuffle($playerImages);
     const track   = document.getElementById('hof-track');
     const slides   = Array.from(track.children);
     const count   = slides.length;
-    const dotsBox  = document.getElementById('hof-dots');
-    const counter  = document.getElementById('hof-counter');
     let index = 0;
-
-    const dots = slides.map((_, i) => {
-        const dot = document.createElement('button');
-        dot.type = 'button';
-        dot.setAttribute('aria-label', 'Go to category ' + (i + 1));
-        dot.className = 'h-2.5 w-2.5 rounded-full bg-zinc-600 hover:bg-zinc-400 transition';
-        dot.addEventListener('click', () => go(i));
-        dotsBox.appendChild(dot);
-        return dot;
-    });
 
     function render() {
         track.style.transform = 'translateX(' + (-index * 100) + '%)';
-        counter.textContent = index + 1;
-        dots.forEach((d, i) => {
-            d.classList.toggle('bg-blue-500', i === index);
-            d.classList.toggle('bg-zinc-600', i !== index);
-        });
     }
 
     function go(i) {

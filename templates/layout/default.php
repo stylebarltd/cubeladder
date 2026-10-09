@@ -9,7 +9,7 @@
     <?= $this->Html->meta('csrfToken', $this->request->getAttribute('csrfToken')) ?>
 
     <!-- Tailwind CSS -->
-    <?= $this->Html->css('tailwind.css?ver=1.7') ?>
+    <?= $this->Html->css('tailwind.css?ver=1.36') ?>
 
     <!-- Optional: favicon -->
     <?= $this->Html->meta('icon', '/favicon.ico') ?>
@@ -38,29 +38,36 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
-                    <a href="/" class="text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder<small class="text-xs hidden md:inline">v1.7</small></a>
+                    <a href="/" class="text-2xl md:text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder<small class="text-xs hidden md:inline">v2</small></a>
                 </div>
-                <div class="hidden md:flex items-center space-x-8">
+                <div class="hidden md:flex items-center whitespace-nowrap md:space-x-4 md:text-sm lg:space-x-8 lg:text-base">
 
                     <a href="/players" class="hover:text-zinc-500 transition">All Time Ranking</a>
                     <a href="/players/hall_of_fame" class="hover:text-zinc-500 transition">Hall of Fame</a>
                     <a href="/games/index" class="hover:text-zinc-500 transition">Games</a>
-                    <a href="/live" class="hover:text-zinc-500 transition">Live</a>
+                    <?php $onAir = !empty($liveNow['live']); ?>
+                    <!-- "On air": green Live + pulsing dot while a game runs (refreshed from /live/onair) -->
+                    <a href="/live" class="js-onair-link transition <?= $onAir ? 'onair-pulse font-bold text-green-400 hover:text-green-300' : 'hover:text-zinc-500' ?>"
+                       title="<?= $onAir ? h('On air: ' . $liveNow['server'] . ' · ' . $liveNow['players'] . ' playing') : 'Live servers' ?>">Live</a>
                     <a href="/maps" class="hover:text-zinc-500 transition">Maps</a>
-                    <a href="/players/thelast100" class="hover:text-zinc-500 transition">The last 100</a>
 
 
                 </div>
                 <div class="flex items-center gap-4">
 
                     <!-- Search -->
-                    <button class="p-2 hover:text-zinc-500 transition hidden md:inline" id="search-btn">
+                    <button class="p-2 hover:text-zinc-500 transition" id="search-btn" aria-label="Search players">
                         <i class="fas fa-search"></i>
                     </button>
 
-                    <!-- Inbox only if single authenticated player -->
+                    <!-- About / rules -->
+                    <a href="/about" class="hidden md:inline-block p-2 hover:text-zinc-500 transition" title="About, rules &amp; what's new" aria-label="About">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </a>
+
+                    <!-- Inbox only if single authenticated player (desktop; in the menu on phones) -->
                     <?php if (!empty($authPlayer)): ?>
-                        <a class="relative p-2 hover:text-zinc-500 transition"
+                        <a class="relative p-2 hover:text-zinc-500 transition hidden md:inline-block"
                            href="<?= $this->Url->build(['controller' => 'Messages', 'action' => 'inbox']) ?>">
                             <i class="fa fa-inbox text-lg"></i>
 
@@ -75,8 +82,8 @@
                         <div class="font-semibold hover:text-blue-400 transition">
                             <?= $this->Html->link(
                                 h($authPlayer->name),
-                                ['controller' => 'Players', 'action' => 'profile'],
-                                ['escape' => false]
+                                ['controller' => 'Players', 'action' => 'view', $authPlayer->id],
+                                ['escape' => false, 'title' => 'Your player page']
                             ) ?>
                         </div>
                     <?php endif; ?>
@@ -116,8 +123,12 @@
 
                 </div>
 
-                <button class="md:hidden p-2" id="mobile-menu-btn">
+                <button class="md:hidden p-2 relative" id="mobile-menu-btn">
                     <i class="fas fa-bars"></i>
+                    <span class="js-onair absolute top-0.5 right-0.5 flex h-2.5 w-2.5 <?= $onAir ? '' : 'hidden' ?>">
+                        <span class="js-onair-dot absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500"></span>
+                    </span>
                 </button>
             </div>
         </div>
@@ -128,9 +139,22 @@
                 <a href="/players" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">All Time Ranking</a>
                 <a href="/players/hall_of_fame" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Hall of Fame</a>
                 <a href="/games/index" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Games</a>
-                <a href="/live" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Live</a>
+                <a href="/live" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md">
+                    <span class="js-onair-link <?= $onAir ? 'onair-pulse font-bold text-green-400' : '' ?>">Live</span>
+                    <span class="js-onair js-onair-text text-xs font-bold uppercase tracking-wide text-green-400 <?= $onAir ? '' : 'hidden' ?>">
+                        on air<?= $onAir ? h(' · ' . $liveNow['players'] . ' playing') : '' ?>
+                    </span>
+                </a>
                 <a href="/maps" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Maps</a>
-                <a href="/players/thelast100" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">The last 100</a>
+                <a href="/about" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-circle-question"></i> About, rules &amp; what's new</a>
+                <?php if (!empty($authPlayer)): ?>
+                    <a href="<?= $this->Url->build(['controller' => 'Messages', 'action' => 'inbox']) ?>" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md">
+                        <i class="fa fa-inbox"></i> Inbox
+                        <?php if ($inboxUnread > 0): ?>
+                            <span class="bg-blue-500 text-white text-xs rounded-full h-5 min-w-5 px-1 flex items-center justify-center"><?= $inboxUnread ?></span>
+                        <?php endif; ?>
+                    </a>
+                <?php endif; ?>
 
 
             </div>
@@ -157,11 +181,7 @@
 <!-- Page content -->
 <?= $this->fetch('content') ?>
     <!-- Footer -->
-    <footer class="text-center py-6 text-zinc-600 text-sm">
-       <a href="/about" class="hover:text-zinc-300 transition">about</a> . <a href="/players/map" class="hover:text-zinc-300 transition">map</a> <br>
-        ©<?= date('Y') ?> by |ZZ
 
-    </footer>
 
 </div>
 
@@ -211,6 +231,28 @@
 
 
     // DOM elements
+
+    // "On air" dot on Live: refresh every 30 s (cheap, cached server side)
+    (function () {
+        const links = document.querySelectorAll('.js-onair-link');
+        async function refresh() {
+            try {
+                const res = await fetch('/live/onair', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+                if (!res.ok) return;
+                const s = await res.json();
+                document.querySelectorAll('.js-onair').forEach(el => el.classList.toggle('hidden', !s.live));
+                document.querySelectorAll('.js-onair-text').forEach(el => {
+                    el.textContent = s.live ? 'on air · ' + s.players + ' playing' : '';
+                });
+                links.forEach(link => {
+                    ['onair-pulse', 'text-green-400', 'font-bold'].forEach(c => link.classList.toggle(c, s.live));
+                    link.title = s.live ? 'On air: ' + s.server + ' · ' + s.players + ' playing' : 'Live servers';
+                });
+            } catch (e) {}
+        }
+        refresh();
+        setInterval(refresh, 30000);
+    })();
 
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const mobileMenu = document.getElementById('mobile-menu');

@@ -1,109 +1,84 @@
-<div class="max-w-7xl px-6 py-10 mx-auto">
+<?php
+/**
+ * About: rules, points, credits and the changelog on the bullet artwork.
+ *
+ * @var \App\View\AppView $this
+ * @var array $changelog config/changelog.php, newest first
+ */
+$check = '<span class="text-green-400">✔</span>';
+$rules = [
+    'Games must <b>start with at least 4 players</b> and be <b>finished</b> to count.',
+    'Players are recognised by their <b>AssaultCube login (pubkey)</b> &ndash; name changes keep your stats. The default name <b>unarmed</b> is not tracked.',
+    'Joining a game for <b>less than 3 minutes</b> does not count as a game played. Your kills and points still count.',
+    'Games with <b>inaccurate data</b> (e.g. flags scored against an empty team after everyone left) do not count anywhere &ndash; they are marked &ldquo;not counted&rdquo;.',
+    '<b>All Time Ranking</b>: points of this year, from <b>5,000 points</b> on.',
+    '<b>the last 100</b>: ranking over the last 100 games played on our servers.',
+    '<b>Hall of Fame</b>: best single game per category since <b>' . date('M Y', strtotime(\App\Controller\PlayersController::HOF_SINCE)) . '</b>.',
+    '<b>Weekly achievements</b> are awarded every <b>Sunday</b>.',
+    'Teams, minutes played and final scores come from the server logs, the live view straight from the game servers (every 5 seconds).',
+];
+?>
+<!-- About on the bullet artwork -->
+<div class="relative min-h-[calc(100svh-4rem)] bg-zinc-900 bg-cover bg-center bg-fixed text-white"
+     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.4) 40%, rgba(0,0,0,.8)), url('/img/bullet.jpg');">
+<div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-10">
 
-    <h1 class="text-3xl font-bold mb-6 text-white text-center">
-        about <span class="text-blue-500">cube</span>Ladder
+    <h1 class="mb-8 text-3xl md:text-5xl font-extrabold tracking-wide drop-shadow-lg">
+        about <span class="text-blue-500">cube</span>Ladder <span class="rounded-lg bg-blue-600 px-2 text-2xl md:text-3xl align-middle">v2</span>
     </h1>
 
-    <p class="text-sm mb-6 text-center">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    </p>
+        <!-- Rules & info -->
+        <section class="rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-2">
+            <h2 class="mb-4 text-lg font-bold"><i class="fa-solid fa-scale-balanced mr-2 text-blue-400"></i>Rules &amp; Info</h2>
+            <ul class="space-y-2 text-sm text-zinc-200">
+                <?php foreach ($rules as $rule): ?>
+                    <li class="flex gap-2"><?= $check ?><span><?= $rule ?></span></li>
+                <?php endforeach; ?>
+                <li class="flex gap-2">
+                    <span class="text-yellow-400">⚠</span>
+                    <span>Don&rsquo;t want to be tracked? Open your player page &rarr; <b>Edit profile</b> &rarr; <b>Don&rsquo;t track me</b>
+                        (from the connection you play from), or
+                        <?= $this->Html->link('write us a message', ['controller' => 'Messages', 'action' => 'sendToAdmin'], ['class' => 'underline hover:text-blue-300']) ?>.</span>
+                </li>
+                <li class="flex gap-2">
+                    <span class="text-blue-400">?</span>
+                    <span>Questions or ideas? <?= $this->Html->link('Write us a message', ['controller' => 'Messages', 'action' => 'sendToAdmin'], ['class' => 'underline hover:text-blue-300']) ?>
+                        or join our <a href="https://discord.gg/tVX7FKCtK3" target="_blank" rel="noopener" class="underline hover:text-blue-300">Discord</a>.</span>
+                </li>
+                <li class="flex gap-2">
+                    <span class="text-pink-400">♥</span>
+                    <span>The world would be better if we were all
+                        <a href="https://zz.ketar.eu/in-loving-memory-of-elias-armed/" class="underline italic hover:text-blue-300" target="_blank" rel="noopener">Armed</a>.</span>
+                </li>
+            </ul>
+        </section>
 
+        <!-- Player map -->
+        <a href="/players/map" class="group flex flex-col rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] hover:border-white/30 transition">
+            <h2 class="mb-3 text-lg font-bold"><i class="fa-solid fa-earth-europe mr-2 text-green-400"></i>Player map</h2>
+            <p class="text-sm text-zinc-300">Where in the world cubeLadder players come from &ndash; every country on one map.</p>
+            <div class="flex flex-1 items-center justify-center py-6">
+                <i class="fa-solid fa-earth-europe text-8xl text-white/15 group-hover:text-green-400/40 transition"></i>
+            </div>
+            <span class="mt-4 self-start rounded-lg bg-blue-600/80 px-4 py-2 text-sm font-semibold group-hover:bg-blue-700 transition">Open the map &rarr;</span>
+        </a>
 
-
-
-<div class="text-white">
-
-    <div class="bg-zinc-800 rounded-xl shadow-lg p-4 text-white">
-        <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
-            Rules & Info
-        </h3>
-
-        <ul class="space-y-2 text-sm text-zinc-300">
-<!--            <li class="flex gap-2">-->
-<!--                <span class="text-green-400">✔</span>-->
-<!--                <span>-->
-<!--                Only the <b>last 100 games</b> are counted.-->
-<!--            </span>-->
-<!--            </li>-->
-            <li class="flex gap-2">
-                <span class="text-green-400">✔</span>
-                <span>
-                Games must start with a minimum of <b>4 players</b>.
-            </span>
-            </li>
-            <li class="flex gap-2">
-                <span class="text-green-400">✔</span>
-                <span>
-                Player <b>unarmed</b> is not being tracked.
-            </span>
-            </li>
-            <li class="flex gap-2">
-                <span class="text-green-400">✔</span>
-                <span>
-                Games must be <b>finished</b>.
-            </span>
-            </li>
-
-            <li class="flex gap-2">
-                <span class="text-green-400">✔</span>
-                <span>
-                Write us a message if you have <b>
-                <?= $this->Html->link(
-                    'questions',
-                    ['controller' => 'Messages', 'action' => 'sendToAdmin']
-                ) ?></b>?
-            </span>
-            </li>
-
-            <li class="flex gap-2">
-                <span class="text-green-400">✔</span>
-                <span>
-                <b>Weekly achievements</b> are awarded every <b>Sunday</b>.
-            </span>
-            </li>
-
-            <li class="flex gap-2">
-                <span class="text-yellow-400">⚠</span>
-                <span>
-                Write us a message if you <b><?= $this->Html->link(
-                            'do not want to be tracked',
-                            ['controller' => 'Messages', 'action' => 'sendToAdmin']
-                        ) ?></b>.
-            </span>
-            </li>
-
-            <li class="flex gap-2">
-                <span class="text-pink-400">♥</span>
-                <span>
-                The world would be better if we were all
-                <a
-                    href="https://zz.ketar.eu/in-loving-memory-of-elias-armed/"
-                    class="underline italic hover:text-blue-400"
-                    target="_blank"
-                >
-                    <u>Armed</u></a>.
-            </span>
-            </li>
-        </ul>
-    </div>
-
-    <div class="overflow-x-auto bg-zinc-800 rounded-xl shadow-lg p-4 mt-2">
-
-        <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
-            Points
-        </h3>
-
-        <table class="min-w-full text-sm text-white border border-zinc-700 rounded-lg">
-            <thead class="bg-zinc-900 text-zinc-300">
+        <!-- Points -->
+        <section class="rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-2 overflow-x-auto">
+            <h2 class="mb-4 text-lg font-bold"><i class="fa-solid fa-calculator mr-2 text-yellow-300"></i>Points</h2>
+            <table class="min-w-full text-sm text-white">
+            <thead class="border-b border-white/10 text-zinc-400">
             <tr>
                 <th class="px-3 py-2 text-left">Event</th>
                 <th class="px-3 py-2 text-center">Points</th>
                 <th class="px-3 py-2 text-left">Description</th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-700">
+            <tbody class="divide-y divide-white/10">
             <!-- Standard kills -->
-            <tr class="bg-zinc-800/80">
+            <tr class="bg-white/5">
                 <td class="px-3 py-2 font-mono">kills</td>
                 <td class="px-3 py-2 text-center font-bold text-green-400">+1</td>
                 <td class="px-3 py-2">Any kill</td>
@@ -147,7 +122,7 @@
             </tr>
 
             <!-- Skill kills -->
-            <tr class="bg-zinc-800/80">
+            <tr class="bg-white/5">
                 <td class="px-3 py-2 font-mono">headshot</td>
                 <td class="px-3 py-2 text-center font-bold text-blue-400">+2</td>
                 <td class="px-3 py-2">Precision headshot</td>
@@ -164,7 +139,7 @@
             </tr>
 
             <!-- Objective play -->
-            <tr class="bg-zinc-800/80">
+            <tr class="bg-white/5">
                 <td class="px-3 py-2 font-mono">stole_the_flag</td>
                 <td class="px-3 py-2 text-center font-bold text-emerald-400">+2</td>
                 <td class="px-3 py-2">Flag stolen</td>
@@ -186,7 +161,7 @@
             </tr>
 
             <!-- Penalties -->
-            <tr class="bg-zinc-800/80">
+            <tr class="bg-white/5">
                 <td class="px-3 py-2 font-mono">teamkills</td>
                 <td class="px-3 py-2 text-center font-bold text-red-400">-1</td>
                 <td class="px-3 py-2">Team kill penalty</td>
@@ -198,41 +173,47 @@
             </tr>
             </tbody>
         </table>
+        </section>
+
+        <div class="flex flex-col gap-6">
+            <!-- Credits -->
+            <section class="rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px]">
+                <h2 class="mb-4 text-lg font-bold"><i class="fa-solid fa-handshake mr-2 text-orange-300"></i>Credits</h2>
+                <ul class="space-y-2 text-sm text-zinc-200">
+                    <li class="flex gap-2"><?= $check ?><span>ZZ|Perros for adding the [aCKa] servers to the ladder</span></li>
+                    <li class="flex gap-2"><?= $check ?><span>ZZ|Ketar* for sponsoring the .ovh domain</span></li>
+                    <li class="flex gap-2"><?= $check ?><span>Chobbz for adding the Banana &amp; POTATO servers to the ladder</span></li>
+                </ul>
+            </section>
+
+            <!-- Copyright -->
+            <section class="rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] text-center">
+                <div class="text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder</div>
+                <div class="mt-2 text-sm text-zinc-300">&copy;<?= date('Y') ?> by <b class="text-white">pola|ZZ</b></div>
+            </section>
+        </div>
+
+        <?php if (!empty($changelog)): ?>
+        <!-- What's new (config/changelog.php) -->
+        <section class="rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-3">
+            <h2 class="mb-4 text-lg font-bold"><i class="fa-solid fa-bullhorn mr-2 text-pink-300"></i>What&rsquo;s new</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <?php foreach ($changelog as $entry): ?>
+                    <div>
+                        <div class="flex flex-wrap items-baseline gap-x-3">
+                            <span class="font-semibold text-white"><?= h($entry['title']) ?></span>
+                            <span class="text-xs text-blue-400"><?= date('d M Y', strtotime($entry['date'])) ?></span>
+                        </div>
+                        <ul class="mt-1 list-disc space-y-0.5 pl-5 text-sm text-zinc-300">
+                            <?php foreach ($entry['items'] as $item): ?>
+                                <li><?= h($item) ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php endif; ?>
     </div>
-
-    <div class="bg-zinc-800 rounded-xl shadow-lg p-4 text-white mt-2">
-        <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
-            Credits
-        </h3>
-
-        <ul class="space-y-2 text-sm text-zinc-300">
-            <li class="flex gap-2">
-                <span class="text-green-400">✔</span>
-                <span>
-                ZZ|Perros for adding [aCKa] Servers to ladder
-            </span>
-            </li>
-            <li class="flex gap-2">
-                <span class="text-green-400">✔</span>
-                <span>
-                ZZ|Ketar* for sponsoring .ovh domain
-            </span>
-            </li>
-            <li class="flex gap-2">
-                <span class="text-green-400">✔</span>
-                <span>
-                Chobbz for adding Banana & POTATO Servers to ladder
-            </span>
-            </li>
-            <li class="flex gap-2 border-t-2 border-zinc-400 pt-2">
-                <span class="text-green-400">✔</span>
-                <span>
-                cubeLadder by pola|ZZ
-            </span>
-            </li>
-        </ul>
-    </div>
-
 </div>
 </div>
-

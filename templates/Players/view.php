@@ -3,473 +3,256 @@
 use Cake\Core\Configure;
 
 ?>
-<div class="max-w-7xl px-6 py-10 mx-auto">
+<?php
+$bgMap = !empty($favoriteMap['name']) && is_file(WWW_ROOT . 'img/maps/' . $favoriteMap['name'] . '.jpg')
+    ? '/img/maps/' . rawurlencode($favoriteMap['name']) . '.jpg'
+    : '/img/bullet.jpg';
+$panel = 'rounded-xl border border-white/15 bg-black/60 backdrop-blur-[2px]';
+$achievementLabels = [
+    'total_score' => 'Most Points', 'kills' => 'Most Kills', 'teamkills' => 'Most Teamkills',
+    'kd_ratio' => 'Best KD Ratio', 'gibbed' => 'Most Gibs', 'suicided' => 'Most Suicided',
+    'slashed' => 'Most Slashes', 'scored_with_the_flag' => 'Most Flags scored',
+    'headshot' => 'Most Headshots', 'best_on_map' => 'Best on Map', 'games' => 'Most Games Played',
+];
+?>
+<!-- Player page on their most played map (or the bullet) -->
+<div class="relative min-h-[calc(100svh-4rem)] bg-zinc-900 bg-cover bg-center bg-fixed text-white"
+     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.35) 35%, rgba(0,0,0,.8)), url('<?= $bgMap ?>');">
+<div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-8">
 
-    <!-- Player Header -->
-    <div class="grid grid-cols-1 gap-6 mb-10">
-
-            <a href="/img/players/<?= $player->picture ?>">
-                <img
-                    src="<?= $this->Layout->playerPicture($player) ?>"
-                    alt="<?= h($player->name) ?>"
-                    class="w-32 h-32 rounded-full object-cover"
-                >
-            </a>
-
-
-
-        <div>
-            <h1 class="text-3xl font-bold text-white">
-                <b><?= $player->rankAllTime ?>.</b>
-                <?= h($player->name) ?>
-                <?= $this->Layout->flag($player->country) ?>
+    <!-- Header -->
+    <div class="mb-6 flex flex-wrap items-center gap-5 drop-shadow-lg">
+        <a href="<?= $this->Layout->playerPicture($player) ?>">
+            <img src="<?= $this->Layout->playerPicture($player) ?>" alt="<?= h($player->name) ?>"
+                 class="h-24 w-24 md:h-32 md:w-32 rounded-full object-cover ring-2 ring-white/30">
+        </a>
+        <div class="min-w-0">
+            <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide">
+                <?= h($player->name) ?> <?= $this->Layout->flag($player->country) ?>
             </h1>
-            <p class="text-sm text-zinc-400">
-                <?= h($player->country) ?>
-            </p>
-
-            <?php if ($authPlayer && $authPlayer->id != $player->id) : ?>
-                <?= $this->Html->link(
-                    'Send Message',
-                    ['controller' => 'Messages', 'action' => 'send',  $player->id],
-                    ['class' => 'inline-flex items-center px-3 py-1.5 cursor-pointer mt-5
-                     rounded-lg text-sm font-medium
-                     text-blue-400 border border-blue-500/40
-                     hover:bg-blue-500/10 hover:text-blue-300
-                     transition']
-                ) ?>
-
-            <?php endif; ?>
-
-        </div>
-    </div>
-
-
-    <?php if(!empty($player->achievements)):
-    $achievementLabels = [
-        'total_score' => 'Most Points',
-        'kills' => 'Most Kills',
-        'teamkills' => 'Most Teamkills',
-        'kd_ratio' => 'Best KD Ratio',
-        'gibbed' => 'Most Gibs',
-        'suicided' => 'Most Suicided',
-        'slashed' => 'Most Slashes',
-        'scored_with_the_flag' => 'Most Flags scored',
-        'headshot' => 'Most Headshots',
-        'best_on_map' => 'Best on Map',
-    ];
-
-        ?>
-        <h2 class="text-2xl font-bold text-white mb-4">Achievements</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-10">
-            <?php foreach ($player->achievements as $achievement): ?>
-                <?php if($achievement->event_type == 'best_on_map') continue; ?>
-                <div class="bg-zinc-900 rounded-lg p-4 text-center hover:bg-zinc-800 transition">
-                    <div class="text-xl mb-1 text-zinc-300">
-                        <img
-                            src="/img/achievements/<?= $achievement->event_type ?>.svg"
-                            alt="<?= h($achievementLabels[$achievement->event_type]) ?>"
-                            title="<?= h($achievementLabels[$achievement->event_type]) ?>"
-                            class="w-6 h-6 block mx-auto"
-                        >
-                    </div>
-                    <div class="text-xs uppercase tracking-wide text-zinc-400">
-                        <?= h($achievementLabels[$achievement->event_type]) ?><br>
-                        <?= date("D, dS M Y",strtotime($achievement->week_end)); ?><br>
-
-                    </div>
-                    <div class="text-2xl font-bold text-white">
-                        <?php if($achievement->event_type == 'kd_ratio'): ?>
-                            <?= h($achievement->count) ?>
-                        <?php else: ?>
-                            <?= h(round($achievement->count)) ?>
-                        <?php endif ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-
-            <div class="bg-zinc-900 rounded-lg p-4 text-center hover:bg-zinc-800 transition">
-                <div class="text-xl mb-1 text-zinc-300">
-                    <img
-                        src="/img/achievements/best_on_map.svg"
-                        alt="<?= h($achievementLabels['best_on_map']) ?>"
-                        title="<?= h($achievementLabels['best_on_map']) ?>"
-                        class="w-6 h-6 block mx-auto"
-                    >
-                </div>
-                <div class="text-xs uppercase tracking-wide text-zinc-400">
-                    Best on Map
-                </div>
-                <div class="text-2xl font-bold text-white">
-                    <?php
-                    $mapCount = 0;
-                    foreach ($player->achievements as $achievement): ?>
-                        <?php $mapCount++; ?>
-                    <?php endforeach; ?>
-                    <?= $mapCount; ?> times
-                </div>
-
-<!--                --><?php //foreach ($player->achievements as $achievement): ?>
-<!--                    --><?php //if($achievement->event_type != 'best_on_map') continue; ?>
-<!---->
-<!--                    <div class="text-xs uppercase tracking-wide text-zinc-400">-->
-<!--                        --><?php //= date("dS M Y",strtotime($achievement->week_end)); ?>
-<!---->
-<!--                        --><?php //if(!empty($achievement->map->name)): ?>
-<!---->
-<!--                            --><?php //= h($achievement->map->name) ?>
-<!--                        --><?php //endif ?>
-<!--                        --><?php //= h(round($achievement->count)) ?><!-- pts <br>-->
-<!---->
-<!--                    </div>-->
-<!---->
-<!--                --><?php //endforeach; ?>
-            </div>
-        </div>
-    <?php endif ?>
-
-
-    <!--the last 100-->
-    <?php if($player->rankTheLast100 > 0): ?>
-    <div class="relative bg-[url('/img/bullet.jpg')] bg-cover bg-center bg-no-repeat rounded-xl p-8">
-
-        <div class="absolute inset-0 bg-black/60 rounded-xl"></div>
-
-        <div class="relative z-10">
-
-            <h2 class="text-4xl font-bold text-white mb-4 font-rubik">
-                the last 100
-            </h2>
-
-            <p class="text-sm mb-8 max-w-2xl text-zinc-300">
-                <?= $lastGameDateRange['start'] ?> until <?= $lastGameDateRange['end'] ?>
-            </p>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 text-sm">
-
-                <div class="bg-zinc-900/40 hover:bg-zinc-800/20 backdrop-blur rounded-lg p-4 text-center">
-                    <div class="text-zinc-400">Rank</div>
-                    <div class="text-4xl font-extrabold text-white"><?= $player->rankTheLast100 ?>.</div>
-                </div>
-
-                <div class="bg-zinc-900/40 hover:bg-zinc-800/20 backdrop-blur rounded-lg p-4 text-center">
-                    <div class="text-zinc-400">Total Score</div>
-                    <div class="text-2xl font-bold text-white"><?= $totalScore ?></div>
-                </div>
-
-                <div class="bg-zinc-900/40 hover:bg-zinc-800/20 backdrop-blur rounded-lg p-4 text-center">
-                    <div class="text-zinc-400">K/D Ratio</div>
-                    <div class="text-2xl font-bold text-white"><?= number_format($kdRatio, 2) ?></div>
-                </div>
-
-            </div>
-
-            <?php
-            $statIcons = [
-                'kills' => 'fa-skull',
-                'headshot' => 'fa-crosshairs',
-                'slashed' => 'fa-knife',
-                'gibbed' => 'fa-bomb',
-                'teamkills' => 'fa-skull-crossbones',
-                'stole_the_flag' => 'fa-flag',
-                'returned_the_flag' => 'fa-rotate-left',
-                'scored_with_the_flag' => 'fa-trophy',
-                'suicided' => 'fa-face-dizzy',
-            ];
-            ?>
-
-            <?php if(!empty($statSums)): ?>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-                    <div class="bg-zinc-900/40 backdrop-blur rounded-lg p-4 text-center hover:bg-zinc-800/20 transition">
-
-                        <?php
-                        $kills = ['headshot','busted','shredded','sprayed','punctured','splattered','slashed','gibbed','teamkills','picked_off',];
-                        $killCount=0;
-                        foreach ($kills as $value): ?>
-                            <?php $killCount+=$statSums[$value]; ?>
-                        <?php endforeach; ?>
-                        <div class="text-xl mb-1 text-zinc-300">
-                            <i class="fa-solid <?= $statIcons['kills'] ?? 'fa-circle-dot' ?>"></i>
-                        </div>
-                        <div class="text-xs uppercase tracking-wide text-zinc-400">
-                            Kills
-                        </div>
-                        <div class="text-2xl font-bold text-white">
-                            <?= $killCount ?>
-                        </div>
-                        <div class="text-xs uppercase tracking-wide text-zinc-400">
-                            <?php
-                            foreach ($statSums as $field => $value): ?>
-                                <?php if (!in_array($field, $kills) || $value === 0) continue; ?>
-                                <?= h(str_replace('_', ' ', $field)) ?>
-                                <?= $value ?><br>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-
-                    <div class="bg-zinc-900/40 backdrop-blur rounded-lg p-4 text-center hover:bg-zinc-800/20 transition">
-                        <?php
-                        $flags = ['stole_the_flag','lost_the_flag','returned_the_flag','scored_with_the_flag',];
-                        $flagCount=0;
-                        foreach ($flags as $value): ?>
-                            <?php $flagCount+=$statSums[$value]; ?>
-                        <?php endforeach; ?>
-
-                        <div class="text-xl mb-1 text-zinc-300">
-                            <i class="fa-solid <?= $statIcons['scored_with_the_flag'] ?? 'fa-circle-dot' ?>"></i>
-                        </div>
-                        <div class="text-xs uppercase tracking-wide text-zinc-400">
-                            Flags / Objectives
-                        </div>
-                        <div class="text-2xl font-bold text-white">
-                            <?= $flagCount ?>
-                        </div>
-                        <div class="text-xs uppercase tracking-wide text-zinc-400">
-                            <?php
-                            $flags = ['stole_the_flag','lost_the_flag','returned_the_flag','scored_with_the_flag',];
-                            foreach ($statSums as $field => $value): ?>
-                                <?php if (!in_array($field, $flags) || $value === 0) continue; ?>
-                                <?= h(str_replace('_', ' ', $field)) ?>
-                                <?= $value ?><br>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <div class="bg-zinc-900/40 backdrop-blur rounded-lg p-4 text-center hover:bg-zinc-800/20 transition">
-                        <div class="text-xl mb-1 text-zinc-300">
-                            <i class="fa-solid <?= $statIcons['deaths'] ?? 'fa-circle-dot' ?>"></i>
-                        </div>
-                        <div class="text-xs uppercase tracking-wide text-zinc-400">
-                            <?= h(str_replace('_', ' ', 'deaths')) ?>
-                        </div>
-                        <div class="text-2xl font-bold text-white">
-                            <?= $statSums['deaths'] ?>
-                        </div>
-                        <div class="text-xs uppercase tracking-wide text-zinc-400">
-                            <?php
-                            $kills = ['suicided',];
-                            foreach ($statSums as $field => $value): ?>
-                                <?php if (!in_array($field, $kills) || $value === 0) continue; ?>
-                                <?= h(str_replace('_', ' ', $field)) ?>
-                                <?= $value ?><br>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-
-                </div>
-            <?php endif; ?>
-
-        </div>
-    </div>
-    <?php endif; ?>
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <?php if (!empty($records)): ?>
-    <!-- Personal records (Hall of Fame categories) -->
-    <?php
-    $recordStyle = [
-        'kills'                => ['icon' => 'fa-skull',       'color' => 'text-green-400'],
-        'headshot'             => ['icon' => 'fa-crosshairs',  'color' => 'text-red-400'],
-        'scored_with_the_flag' => ['icon' => 'fa-trophy',      'color' => 'text-red-400'],
-        'longest_streak'       => ['icon' => 'fa-fire',        'color' => 'text-orange-400'],
-        'slashed'              => ['icon' => 'fa-knife',       'color' => 'text-purple-400'],
-        'gibbed'               => ['icon' => 'fa-bomb',        'color' => 'text-yellow-400'],
-        'flag_helper'          => ['icon' => 'fa-flag',        'color' => 'text-blue-400'],
-    ];
-    $rankBadge = fn(int $rank) => match (true) {
-        $rank === 1 => 'bg-yellow-400 text-black',
-        $rank === 2 => 'bg-zinc-300 text-black',
-        $rank === 3 => 'bg-amber-700 text-white',
-        $rank <= 10 => 'bg-zinc-700 text-white',
-        default     => 'bg-zinc-800 text-zinc-400',
-    };
-    ?>
-    <div class="bg-zinc-900 rounded-xl p-6 mb-8">
-        <div class="flex items-baseline justify-between flex-wrap gap-2 mb-4">
-            <div>
-                <h3 class="text-xl font-bold text-white">🏆 Personal records</h3>
-                <div class="text-xs text-zinc-500">best single game per Hall of Fame category · rank among all players</div>
-            </div>
-            <a href="/players/hall_of_fame" class="text-xs text-zinc-400 hover:text-blue-400 transition">Hall of Fame &rarr;</a>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            <?php foreach ($records as $key => $rec): $st = $recordStyle[$key] ?? ['icon' => 'fa-circle-dot', 'color' => 'text-white']; ?>
-            <a href="<?= $rec['game_id'] ? '/games/view/' . h($rec['game_id']) : '#' ?>"
-               class="relative block bg-zinc-800 rounded-lg p-4 hover:bg-zinc-700 transition">
-                <span class="absolute top-2 right-2 text-[11px] font-bold px-2 py-0.5 rounded-full <?= $rankBadge((int)$rec['rank']) ?>"
-                      title="rank <?= (int)$rec['rank'] ?> of <?= (int)$rec['players'] ?> players">
-                    #<?= (int)$rec['rank'] ?>
-                </span>
-                <div class="text-lg mb-1 <?= $st['color'] ?>"><i class="fa-solid <?= $st['icon'] ?>"></i></div>
-                <div class="text-xs uppercase tracking-wide text-zinc-400"><?= h($rec['title']) ?></div>
-                <div class="text-3xl font-extrabold text-white"><?= number_format($rec['value']) ?></div>
-                <?php if ($rec['map_name']): ?>
-                <div class="text-xs text-zinc-500 truncate mt-1">
-                    <?= h($rec['map_name']) ?>
-                    <?php if ($rec['played_at']): ?> · <?= h($rec['played_at']->format('D, jS M Y')) ?><?php endif; ?>
-                </div>
+            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-200">
+                <?php if ($player->rankAllTime > 0): ?>
+                    <span><i class="fa-solid fa-ranking-star mr-1"></i>#<?= (int)$player->rankAllTime ?> all time</span>
                 <?php endif; ?>
-            </a>
-            <?php endforeach; ?>
+                <?php if ($player->rankTheLast100 > 0): ?>
+                    <span><i class="fa-solid fa-bolt mr-1"></i>#<?= (int)$player->rankTheLast100 ?> in the last 100</span>
+                <?php endif; ?>
+                <?php if (!empty($favoriteMap['name'])): ?>
+                    <span><i class="fa-solid fa-map mr-1"></i>
+                        <?= $this->Html->link(h($favoriteMap['name']), ['controller' => 'Maps', 'action' => 'index', '?' => ['map' => $favoriteMap['name']]], ['class' => 'hover:text-blue-300', 'escape' => false]) ?>
+                        (<?= (int)$favoriteMap['n'] ?> games)</span>
+                <?php endif; ?>
+                <?php if (!empty($timePlayed['all'])): ?>
+                    <span title="time on a team, all counted games"><i class="fa-solid fa-clock mr-1"></i><?= $this->Layout->duration($timePlayed['all']) ?> played</span>
+                <?php endif; ?>
+                <?php if ($player->country): ?><span><?= h($player->country) ?></span><?php endif; ?>
+            </div>
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+                <?php if (!empty($canEdit)): ?>
+                    <?= $this->Html->link('<i class="fa-solid fa-pen mr-1"></i> Edit profile',
+                        ['controller' => 'Players', 'action' => 'profile'],
+                        ['escape' => false, 'class' => 'rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition']) ?>
+                    <?php if ((int)$player->track === 0): ?>
+                        <span class="rounded bg-amber-500/20 px-2 py-1 text-xs text-amber-300">
+                            <i class="fa-solid fa-eye-slash mr-1"></i> Not tracked &ndash; only you can see this page
+                        </span>
+                    <?php endif; ?>
+                <?php endif; ?>
+                <?php if ($authPlayer && $authPlayer->id != $player->id): ?>
+                    <?= $this->Html->link('<i class="fa-solid fa-envelope mr-1"></i> Send Message',
+                        ['controller' => 'Messages', 'action' => 'send', $player->id],
+                        ['escape' => false, 'class' => 'rounded-lg border border-blue-400/50 bg-black/40 px-4 py-2 text-sm font-semibold text-blue-300 hover:bg-blue-500/20 transition']) ?>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
-    <?php endif; ?>
 
-    <?php if (!empty($nemeses) || !empty($victims) || !empty($quotes)): ?>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Row 1: personal records / nemesis / prey -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <?php
+        $recordStyle = [
+            'kills' => ['icon' => 'fa-skull', 'color' => 'text-green-400'],
+            'headshot' => ['icon' => 'fa-crosshairs', 'color' => 'text-red-400'],
+            'scored_with_the_flag' => ['icon' => 'fa-trophy', 'color' => 'text-red-400'],
+            'longest_streak' => ['icon' => 'fa-fire', 'color' => 'text-orange-400'],
+            'slashed' => ['icon' => 'fa-knife', 'color' => 'text-purple-400'],
+            'gibbed' => ['icon' => 'fa-bomb', 'color' => 'text-yellow-400'],
+            'flag_helper' => ['icon' => 'fa-flag', 'color' => 'text-blue-400'],
+        ];
+        $rankBadge = fn(int $rank) => match (true) {
+            $rank === 1 => 'bg-yellow-400 text-black',
+            $rank === 2 => 'bg-zinc-300 text-black',
+            $rank === 3 => 'bg-amber-700 text-white',
+            $rank <= 10 => 'bg-white/15 text-white',
+            default => 'bg-white/5 text-zinc-400',
+        };
+        ?>
+        <section class="<?= $panel ?> p-5">
+            <div class="mb-3">
+                <h3 class="text-lg font-bold">🏆 Personal records</h3>
+                <a href="/players/hall_of_fame" class="text-xs text-zinc-400 hover:text-blue-300">Hall of Fame &rarr;</a>
+            </div>
+            <?php if (!empty($records)): ?>
+                <div class="space-y-1.5">
+                    <?php foreach ($records as $key => $rec): $st = $recordStyle[$key] ?? ['icon' => 'fa-circle-dot', 'color' => 'text-white']; ?>
+                        <a href="<?= $rec['game_id'] ? '/games/view/' . h($rec['game_id']) : '#' ?>"
+                           class="flex items-center gap-3 rounded-lg bg-white/5 px-2 py-1.5 hover:bg-white/10 transition">
+                            <i class="fa-solid <?= $st['icon'] ?> <?= $st['color'] ?> w-5 text-center"></i>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-[10px] uppercase tracking-wide text-zinc-400"><?= h($rec['title']) ?></div>
+                                <div class="truncate text-[11px] text-zinc-500"><?= h((string)$rec['map_name']) ?><?php if ($rec['played_at']): ?> &middot; <?= h($rec['played_at']->format('d M Y')) ?><?php endif; ?></div>
+                            </div>
+                            <div class="font-mono text-xl font-extrabold"><?= number_format($rec['value']) ?></div>
+                            <span class="w-10 rounded-full px-1.5 py-0.5 text-center text-[11px] font-bold <?= $rankBadge((int)$rec['rank']) ?>"
+                                  title="rank <?= (int)$rec['rank'] ?> of <?= (int)$rec['players'] ?> players">#<?= (int)$rec['rank'] ?></span>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <p class="text-sm text-zinc-400">No records since <?= date('M Y', strtotime(\App\Controller\PlayersController::HOF_SINCE)) ?> yet.</p>
+            <?php endif; ?>
+        </section>
+
         <?php
         $duelCards = [
-            ['title' => '💀 Nemesis', 'sub' => 'kills ' . h($player->name) . ' the most', 'rows' => $nemeses ?? [], 'color' => 'text-red-400'],
-            ['title' => '🎯 Favorite victims', 'sub' => h($player->name) . ' kills them the most', 'rows' => $victims ?? [], 'color' => 'text-green-400'],
+            ['title' => '💀 Nemesis', 'sub' => 'they kill ' . h($player->name) . ' the most', 'rows' => $nemeses ?? [], 'color' => 'text-red-400'],
+            ['title' => '🎯 Prey', 'sub' => h($player->name) . ' kills them the most', 'rows' => $victims ?? [], 'color' => 'text-green-400'],
         ];
-        foreach ($duelCards as $card): if (empty($card['rows'])) continue; ?>
-        <div class="bg-zinc-900 rounded-xl p-6">
-            <h3 class="text-xl font-bold text-white mb-1"><?= $card['title'] ?></h3>
-            <div class="text-xs text-zinc-500 mb-4"><?= $card['sub'] ?> <span class="text-zinc-600">· since Sep 2026</span></div>
-            <div class="space-y-2">
-                <?php foreach ($card['rows'] as $r): ?>
-                <a href="/players/view/<?= h($r['id']) ?>" class="flex items-center gap-3 p-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition">
-                    <img src="<?= !empty($r['picture']) ? '/img/players/' . h($r['picture']) : '/img/acl.png' ?>" class="w-8 h-8 rounded-full object-cover" alt="">
-                    <div class="flex-1 font-semibold text-white truncate"><?= h($r['name']) ?> <?= $this->Layout->flag($r['country']) ?></div>
-                    <div class="<?= $card['color'] ?> font-mono text-lg"><?= (int)$r['n'] ?></div>
-                </a>
-                <?php endforeach; ?>
-            </div>
-        </div>
+        foreach ($duelCards as $card): ?>
+            <section class="<?= $panel ?> p-5">
+                <h3 class="text-lg font-bold"><?= $card['title'] ?></h3>
+                <div class="mb-3 text-xs text-zinc-400"><?= $card['sub'] ?></div>
+                <?php if ($card['rows']): ?>
+                    <div class="space-y-1.5">
+                        <?php foreach ($card['rows'] as $i => $r): ?>
+                            <a href="/players/view/<?= h($r['id']) ?>" class="flex items-center gap-3 rounded-lg bg-white/5 px-2 py-1.5 hover:bg-white/10 transition">
+                                <span class="w-5 text-right text-sm font-bold text-zinc-400"><?= $i + 1 ?></span>
+                                <img src="<?= !empty($r['picture']) ? '/img/players/' . h($r['picture']) : '/img/acl.png' ?>" class="h-7 w-7 rounded-full object-cover" alt="">
+                                <div class="min-w-0 flex-1 truncate font-semibold"><?= h($r['name']) ?> <?= $this->Layout->flag($r['country']) ?></div>
+                                <div class="<?= $card['color'] ?> font-mono text-lg font-bold"><?= (int)$r['n'] ?></div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <p class="text-sm text-zinc-400">Nothing yet.</p>
+                <?php endif; ?>
+            </section>
         <?php endforeach; ?>
-
-        <?php // hidden for now - flip to true to show the in-game chat quotes ?>
-        <?php if (false && !empty($quotes)): ?>
-        <div class="bg-zinc-900 rounded-xl p-6">
-            <h3 class="text-xl font-bold text-white mb-1">💬 Latest words</h3>
-            <div class="text-xs text-zinc-500 mb-4">in-game chat · since Sep 2026</div>
-            <div class="space-y-2">
-                <?php foreach ($quotes as $q): if ($q['msg'] === '') continue; ?>
-                <div class="p-2 bg-zinc-800 rounded-lg text-sm text-zinc-300">
-                    &ldquo;<?= h($q['msg']) ?>&rdquo;
-                    <?php if (!empty($q['at'])): ?><span class="text-xs text-zinc-600">· <?= h(date('M j', strtotime($q['at']))) ?></span><?php endif; ?>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endif; ?>
     </div>
-    <?php endif; ?>
 
-    <!-- Recent Games Table -->
-    <h2 class="text-2xl font-bold text-white mb-4 mt-6"><?= h($player->name) ?> recent games</h2>
+    <!-- Row 2: weekly achievements / the last 100 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <section class="<?= $panel ?> p-5">
+            <?php
+            $achievements = collection($player->achievements ?? [])->sortBy('week_end', SORT_DESC)->toList();
+            $weekly = array_values(array_filter($achievements, fn($a) => $a->event_type !== 'best_on_map'));
+            $bestOnMap = count($achievements) - count($weekly);
+            ?>
+            <div class="mb-3 flex items-baseline justify-between gap-2">
+                <h3 class="text-lg font-bold">🥇 Weekly achievements</h3>
+                <?php if ($bestOnMap): ?>
+                    <span class="flex items-center gap-1 text-xs text-zinc-300">
+                        <img src="/img/achievements/best_on_map.svg" class="h-4 w-4" alt=""> Best on map <?= $bestOnMap ?>&times;
+                    </span>
+                <?php endif; ?>
+            </div>
+            <?php if ($weekly): ?>
+                <div class="nice-scroll max-h-96 space-y-1.5 overflow-y-auto pr-2">
+                    <?php foreach ($weekly as $a): ?>
+                        <div class="flex items-center gap-3 rounded-lg bg-white/5 px-2 py-1.5">
+                            <img src="/img/achievements/<?= h($a->event_type) ?>.svg" class="h-6 w-6 shrink-0" alt="">
+                            <div class="min-w-0 flex-1">
+                                <div class="text-sm font-semibold"><?= h($achievementLabels[$a->event_type] ?? $a->event_type) ?></div>
+                                <div class="text-[11px] text-zinc-400">week ending <?= date('d M Y', strtotime((string)$a->week_end)) ?></div>
+                            </div>
+                            <div class="font-mono text-lg font-bold text-orange-300">
+                                <?= $a->event_type === 'kd_ratio' ? h($a->count) : number_format(round((float)$a->count)) ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <p class="text-sm text-zinc-400">No weekly achievement yet.</p>
+            <?php endif; ?>
+        </section>
 
-    <div class="overflow-x-auto">
-        <table class="min-w-full border border-zinc-700 rounded-xl overflow-hidden">
-
-            <thead class="bg-zinc-900 text-zinc-300 text-sm">
-            <tr>
-                <th class="px-3 py-2 text-left hidden md:table-cell">Date</th>
-                <th class="px-3 py-2"></th>
-                <th class="px-3 py-2 text-left">Map</th>
-                <th class="px-3 py-2 text-right">PTS</th>
-                <th title="Kills" class="hover:underline cursor-help hidden md:table-cell">K</th>
-                <th title="Death" class="hover:underline cursor-help hidden md:table-cell">D</th>
-                <th title="Kill / Death Ratio" class="hover:underline cursor-help hidden md:table-cell">K/D</th>
-                <th title="Headshots" class="hover:underline cursor-help hidden md:table-cell">HS</th>
-                <th title="Slashes" class="hover:underline cursor-help hidden md:table-cell">SL</th>
-                <th title="Gibbs" class="hover:underline cursor-help hidden md:table-cell">GB</th>
-                <th title="Flags scored / stolen / returned" class="hover:underline cursor-help hidden md:table-cell">OBJ</th>
-                <th title="Teamkills & suicides" class="hover:underline cursor-help hidden md:table-cell">⚠</th>
-                <th class="px-3 py-2 text-left">Result</th>
-            </tr>
-            </thead>
-            <tbody class="divide-y divide-zinc-700 bg-zinc-800 text-white text-sm">
-            <?php foreach ($player->player_stats_per_game as $stat): ?>
-                <?php
-                $kd = $stat->kd_ratio;
-                $kdClass = $kd >= 1.5 ? 'text-green-400'
-                    : ($kd >= 1 ? 'text-blue-400' : 'text-red-400');
-
-                $objectives = $stat->scored_with_the_flag + $stat->returned_the_flag + $stat->stole_the_flag;
-                $penalties = $stat->teamkills + $stat->suicided;
-
-                $badge = $kd >= 2 ? '🔥 Carry'
-                    : ($kd >= 1.2 ? '👍 Solid'
-                        : ($kd >= 0.8 ? '😐 Avg' : '💀 Rough'));
-                $isPartOfTheLast100 = '<td></td>';
-                if(isset($gamesDataGlobal[$stat->game_id])){
-                    //$isPartOfTheLast100 = 'bg-blue-900 text-white';
-                    $isPartOfTheLast100 = '<td class="px-3 py-2 md:table-cell text-center">
-                        <p class="text-xs font-rubik">the last<br> '.Configure::read('Ladder.maxGamesToRank').'</p>
-                    </td>';
-                }
-
+        <section class="<?= $panel ?> p-5">
+            <div class="mb-3 flex items-baseline justify-between gap-2">
+                <h3 class="text-3xl font-rubik">the last 100</h3>
+                <a href="/players/thelast100" class="text-xs text-zinc-400 hover:text-blue-300">ranking &rarr;</a>
+            </div>
+            <p class="mb-4 text-xs text-zinc-400"><?= $lastGameDateRange['start'] ?> &ndash; <?= $lastGameDateRange['end'] ?></p>
+            <?php if ($player->rankTheLast100 > 0):
+                $sum = fn(array $fields) => array_sum(array_map(fn($f) => (int)($statSums[$f] ?? 0), $fields));
+                $tiles = [
+                    ['Rank', '#' . (int)$player->rankTheLast100, 'text-yellow-300'],
+                    ['Time played', $this->Layout->duration((int)($timePlayed['last100'] ?? 0)), 'text-white'],
+                    ['Points', number_format((float)$totalScore), 'text-sky-300'],
+                    ['K/D', number_format($kdRatio, 2), 'text-white'],
+                    ['Kills', number_format($totalKills), 'text-white'],
+                    ['Deaths', number_format($totalDeaths), 'text-white'],
+                    ['Headshots', number_format($sum(['headshot'])), 'text-white'],
+                    ['Flags scored', number_format($sum(['scored_with_the_flag'])), 'text-white'],
+                    ['Flags stolen', number_format($sum(['stole_the_flag'])), 'text-white'],
+                    ['Returned', number_format($sum(['returned_the_flag'])), 'text-white'],
+                ];
                 ?>
-
-                <tr class="hover:bg-zinc-700 transition">
-
-                    <td class="px-3 py-2 hidden md:table-cell">
-
-                        <?= $this->Html->link(
-                            $stat->game->started_at->format('Y-m-d'),
-                            ['controller' => 'games', 'action' => 'view', $stat->game->id],
-                            ['class' => 'font-semibold hover:text-blue-400']
-                        ) ?>
-
-                    </td>
-
-                    <?=$isPartOfTheLast100?>
-
-
-
-                    <td class="px-3 py-2 flex items-center gap-2">
-                        <img
-                            src="<?= file_exists(WWW_ROOT . 'img/maps/' . $stat->game->map->name . '.jpg')
-                                ? '/img/maps/' . $stat->game->map->name . '.jpg'
-                                : '/img/maps/placeholder.jpg' ?>"
-                            class="w-8 h-8 rounded object-cover border border-zinc-700 hidden md:table-cell"
-                        >
-                        <?= h($stat->game->map->name) ?>
-                    </td>
-
-                    <td class="px-3 py-2 text-right font-bold text-blue-400"><?= $stat->total_score ?></td>
-                    <td class="px-3 py-2 text-right hidden md:table-cell"><?= $stat->kills ?></td>
-                    <td class="px-3 py-2 text-right hidden md:table-cell"><?= $stat->deaths ?></td>
-
-                    <td class="px-3 py-2 text-right font-bold <?= $kdClass ?> hidden md:table-cell">
-                        <?= number_format($kd, 2) ?>
-                    </td>
-
-                    <td class="px-3 py-2 text-right hidden md:table-cell"><?= $stat->headshot ?></td>
-                    <td class="px-3 py-2 text-right hidden md:table-cell"><?= $stat->slashed ?></td>
-                    <td class="px-3 py-2 text-right hidden md:table-cell"><?= $stat->gibbed ?></td>
-                    <td class="px-3 py-2 text-right hidden md:table-cell"><?= $objectives ?: '–' ?></td>
-                    <td class="px-3 py-2 text-right hidden md:table-cell"><?= $penalties ?: '–' ?></td>
-                    <td class="px-3 py-2 font-semibold"><?= $badge ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <?php foreach ($tiles as [$label, $value, $color]): ?>
+                        <div class="rounded-lg bg-white/5 p-2.5 text-center">
+                            <div class="text-[10px] uppercase tracking-wide text-zinc-400"><?= $label ?></div>
+                            <div class="font-mono text-lg font-extrabold leading-tight <?= $color ?>"><?= $value ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <p class="text-sm text-zinc-400">Not part of the last 100 games &ndash; go play!</p>
+            <?php endif; ?>
+        </section>
     </div>
 
     <!-- Charts -->
 
-    <div class="mt-8">
-        <h2 class="text-2xl font-bold mb-4">Kill / Death Ratio</h2>
-        <canvas id="kdChart" class="rounded-xl p-2 border border-blue-500"></canvas>
+    <div class="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section class="rounded-xl border border-white/15 bg-black/60 p-5 backdrop-blur-[2px]">
+            <h2 class="text-lg font-bold mb-3">Kill / Death Ratio</h2>
+            <canvas id="kdChart"></canvas>
+        </section>
+        <section class="rounded-xl border border-white/15 bg-black/60 p-5 backdrop-blur-[2px]">
+            <h2 class="text-lg font-bold mb-3">Points</h2>
+            <canvas id="scoreChart"></canvas>
+        </section>
     </div>
 
-    <div class="mt-8">
-        <h2 class="text-2xl font-bold mb-4">Points</h2>
-        <canvas id="scoreChart" class="rounded-xl p-2 border border-blue-500"></canvas>
-    </div>
 
+    <!-- Recent games: one game at a time, like the game pages -->
+    <?php
+    $recent = [];
+    foreach ($player->player_stats_per_game as $stat) {
+        $recent[] = ['id' => $stat->game->id, 'map' => $stat->game->map->name, 'date' => $stat->game->started_at->format('D, d M Y H:i')];
+    }
+    ?>
+    <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="text-2xl font-bold drop-shadow"><?= h($player->name) ?> recent games</h2>
+        <span id="pg-info" class="text-sm text-zinc-300"></span>
+    </div>
+    <?php if ($recent): ?>
+        <div id="pg-box" class="relative overflow-hidden rounded-xl border border-white/15 bg-black/40 select-none">
+            <div id="pg-card" class="min-h-[560px]"></div>
+            <button type="button" id="pg-prev" aria-label="Previous game" title="Previous (newer) game"
+                    class="absolute top-4 right-16 md:right-auto md:top-1/2 md:left-2 md:-translate-y-1/2 z-20 h-11 w-11 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white transition disabled:opacity-30">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button type="button" id="pg-next" aria-label="Next game" title="Next (older) game"
+                    class="absolute top-4 right-2 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white transition disabled:opacity-30">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    <?php else: ?>
+        <p class="rounded-xl border border-white/15 bg-black/60 p-5 text-zinc-400">No games yet.</p>
+    <?php endif; ?>
+
+</div>
 </div>
 
 <!-- Chart.js -->
@@ -522,3 +305,57 @@ use Cake\Core\Configure;
 
 
 </script>
+
+<?php if (!empty($recent)): ?>
+<script>
+(function () {
+    const games = <?= json_encode($recent) ?>; // newest first
+    const playerId = <?= json_encode((string)$player->id) ?>;
+    const box = document.getElementById('pg-box');
+    const card = document.getElementById('pg-card');
+    const info = document.getElementById('pg-info');
+    // list is newest first: right / next = the next game in the list (older)
+    const prevBtn = document.getElementById('pg-prev'); // back towards the newest
+    const nextBtn = document.getElementById('pg-next'); // next in the list
+    const cache = new Map();
+    let index = 0;
+
+    const load = (i) => {
+        const g = games[i];
+        if (!g) return Promise.resolve('');
+        if (!cache.has(g.id)) {
+            cache.set(g.id, fetch('/games/card/' + encodeURIComponent(g.id) + '?player=' + encodeURIComponent(playerId))
+                .then(r => r.ok ? r.text() : '<p class="p-6 text-zinc-400">Could not load this game.</p>'));
+        }
+        return cache.get(g.id);
+    };
+
+    async function show(i) {
+        index = Math.max(0, Math.min(games.length - 1, i));
+        const g = games[index];
+        info.textContent = 'game ' + (index + 1) + ' / ' + games.length + ' · ' + g.date;
+        prevBtn.disabled = index <= 0;
+        nextBtn.disabled = index >= games.length - 1;
+        const html = await load(index);
+        if (games[index] === g) card.innerHTML = html;
+        load(index + 1); load(index - 1); // preload neighbours
+    }
+
+    prevBtn.addEventListener('click', () => show(index - 1));
+    nextBtn.addEventListener('click', () => show(index + 1));
+    document.addEventListener('keydown', (e) => {
+        if (e.target.closest('input, textarea, select')) return;
+        if (e.key === 'ArrowLeft') show(index - 1);
+        else if (e.key === 'ArrowRight') show(index + 1);
+    });
+    let sx = 0, sy = 0;
+    box.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, {passive: true});
+    box.addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) show(index + (dx < 0 ? 1 : -1)); // swipe left = next
+    }, {passive: true});
+
+    show(0);
+})();
+</script>
+<?php endif; ?>
