@@ -150,14 +150,6 @@ shuffle($playerImages);
                                         </div>
 
                                         <div class="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-zinc-400">
-                                            <a href="<?= $this->Url->build([
-                                                'controller' => 'Games',
-                                                'action' => 'view',
-                                                $player->game_id
-                                            ]) ?>"
-                                               class="truncate hover:underline text-blue-500">
-                                                <?= h($player->map_name) ?>
-                                            </a>
                                             <?php if ($pr = $playerRatings[(string)$player->player_id] ?? null): ?>
                                                 <!-- the player's CTF rating, rank among rated players and type -->
                                                 <span class="whitespace-nowrap" title="CTF rating · rank among <?= h('rated players') ?>">
@@ -166,6 +158,15 @@ shuffle($playerImages);
                                                 </span>
                                                 <?= $this->element('player_type_badge', ['type' => $pr['type'], 'label' => $pr['label']]) ?>
                                             <?php endif; ?>
+                                            <!-- the record game's map, after the player's rating and type -->
+                                            <a href="<?= $this->Url->build([
+                                                'controller' => 'Games',
+                                                'action' => 'view',
+                                                $player->game_id
+                                            ]) ?>"
+                                               class="truncate hover:underline text-blue-500">
+                                                <?= h($player->map_name) ?>
+                                            </a>
                                         </div>
 
                                         <!-- Achievements -->
