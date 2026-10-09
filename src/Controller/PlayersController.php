@@ -721,7 +721,12 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             'last100' => $theLast100GameIds ? $minutes(['PlayerStatsPerGame.game_id IN' => $theLast100GameIds]) : 0,
         ];
 
-        $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed'));
+        // CTF rating and player type (bin/cake CalculateRatings)
+        $PlayerRatings = $this->fetchTable('PlayerRatings');
+        $rating = $PlayerRatings->find()->where(['player_id' => $player->id])->first();
+        $ratedPlayers = $rating ? $PlayerRatings->find()->count() : 0;
+
+        $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers'));
         $this->set(compact(
             'player',
             'totalKills',

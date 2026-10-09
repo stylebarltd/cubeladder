@@ -7,6 +7,16 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-09',
+            'title' => 'New: CTF rating and player types',
+            'items' => [
+                'Every player with 20+ CTF games now has a CTF rating from 0 to 10 (5.0 is the average player) on their player page - how much they help their team win, not just how many points they make.',
+                'It counts flag play most, then K/D, the team result and discipline - per minute and against the others in the same game. Headshots barely decide CTF games, so they do not count extra.',
+                'Your player type: All-Rounder, Flag Runner, Defender, Fragger, or Offensive / Defensive Team Player - plus your favourite weapon.',
+                'How it works: About page, "CTF rating & player types".',
+            ],
+        ],
+        [
+            'date' => '2026-10-09',
             'title' => 'New inbox',
             'items' => [
                 'Weekly achievements arrive as cards: the week, your score in big numbers, and the map in the background for map champions.',

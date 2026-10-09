@@ -21,12 +21,12 @@ $achievementLabels = [
 <div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-8">
 
     <!-- Header -->
-    <div class="mb-6 flex flex-wrap items-center gap-5 drop-shadow-lg">
+    <div class="mb-6 flex flex-wrap items-center gap-5 drop-shadow-lg lg:flex-nowrap">
         <a href="<?= $this->Layout->playerPicture($player) ?>">
             <img src="<?= $this->Layout->playerPicture($player) ?>" alt="<?= h($player->name) ?>"
                  class="h-24 w-24 md:h-32 md:w-32 rounded-full object-cover ring-2 ring-white/30">
         </a>
-        <div class="min-w-0">
+        <div class="min-w-0 lg:flex-1">
             <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide">
                 <?= h($player->name) ?> <?= $this->Layout->flag($player->country) ?>
             </h1>
@@ -65,6 +65,58 @@ $achievementLabels = [
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php if (!empty($rating)):
+            $ratingValue = (float)$rating->rating;
+            $ratingColor = match (true) {
+                $ratingValue >= 8.0 => 'text-sky-300',
+                $ratingValue >= 7.0 => 'text-green-400',
+                $ratingValue >= 6.0 => 'text-lime-300',
+                $ratingValue >= 5.0 => 'text-yellow-300',
+                $ratingValue >= 4.0 => 'text-orange-400',
+                default => 'text-red-400',
+            };
+            [$typeIcon, $typeColor] = match ($rating->type) {
+                'All-Rounder' => ['fa-star', 'bg-yellow-400/20 text-yellow-300'],
+                'Flag Runner' => ['fa-person-running', 'bg-red-500/20 text-red-300'],
+                'Defender' => ['fa-shield-halved', 'bg-blue-500/20 text-blue-300'],
+                'Fragger' => ['fa-crosshairs', 'bg-orange-500/20 text-orange-300'],
+                'Offensive Team Player' => ['fa-angles-right', 'bg-white/10 text-zinc-200'],
+                default => ['fa-shield', 'bg-white/10 text-zinc-200'],
+            };
+            ?>
+            <!-- CTF rating and player type (bin/cake CalculateRatings) -->
+            <a href="/about#rating" title="How the rating works"
+               class="<?= $panel ?> flex w-full shrink-0 items-center gap-5 p-4 hover:border-white/30 transition sm:ml-auto sm:w-auto">
+                <div class="shrink-0 text-center">
+                    <div class="font-mono text-5xl font-extrabold tabular-nums leading-none <?= $ratingColor ?>"><?= number_format($ratingValue, 1) ?></div>
+                    <div class="mt-1 text-[10px] uppercase tracking-wider text-zinc-400">CTF rating</div>
+                </div>
+                <div class="min-w-0 space-y-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-semibold <?= $typeColor ?>">
+                            <i class="fa-solid <?= $typeIcon ?> text-xs"></i><?= h($rating->type) ?>
+                        </span>
+                        <?php if ($rating->weapon !== 'Mixed'): ?>
+                            <span class="rounded-full bg-white/10 px-2 py-0.5 text-xs text-zinc-200"><?= h($rating->weapon) ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="text-xs text-zinc-300">
+                        #<?= (int)$rating->rank ?> of <?= number_format((int)$ratedPlayers) ?>
+                        <?php if ($rating->win_rate !== null): ?> · <?= round((float)$rating->win_rate * 100) ?>% won<?php endif; ?>
+                        · last <?= (int)$rating->games ?> CTF games
+                    </div>
+                    <div class="grid grid-cols-[4.5rem_1fr] items-center gap-x-2 gap-y-1 text-[10px] uppercase tracking-wide text-zinc-400">
+                        <?php foreach (['Attack' => [$rating->attack_pct, 'bg-red-400'], 'Defense' => [$rating->defense_pct, 'bg-blue-400'], 'Combat' => [$rating->combat_pct, 'bg-orange-400']] as $label => [$value, $bar]): ?>
+                            <span><?= $label ?></span>
+                            <span class="h-1.5 w-24 overflow-hidden rounded-full bg-white/10 sm:w-32" title="better than <?= (int)$value ?>% of rated players">
+                                <span class="block h-full rounded-full <?= $bar ?>" style="width: <?= max(2, (int)$value) ?>%"></span>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </a>
+        <?php endif; ?>
     </div>
 
     <!-- Row 1: personal records / nemesis / prey -->

@@ -203,6 +203,39 @@ $rules = [
             </section>
         </div>
 
+        <!-- CTF rating & player types (bin/cake CalculateRatings) -->
+        <section id="rating" class="scroll-mt-20 rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-3">
+            <h2 class="mb-4 text-lg font-bold"><i class="fa-solid fa-star-half-stroke mr-2 text-lime-300"></i>CTF rating &amp; player types</h2>
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div class="space-y-3 text-sm text-zinc-200">
+                    <p>Points show how <b>much</b> you did. The rating shows how much you helped your team <b>win</b> &ndash;
+                        on a scale from 0 to 10 like a football match rating: <b>5.0</b> is the average player, <b>7+</b> is very good, <b>8+</b> is top.</p>
+                    <p>Every CTF game you play for 3+ minutes (with 4+ players) gets a score. Everything is counted
+                        <b>per minute</b> and <b>against the other players in the same game</b>, so short games, late joins and full servers are fair.
+                        Your rating is the average of your <b>last 100 CTF games</b> (from 20 games on), updated after every import.</p>
+                    <table class="w-full text-sm">
+                        <tbody class="divide-y divide-white/10">
+                            <tr><td class="py-1.5 pr-3 font-bold text-lime-300">55%</td><td class="py-1.5"><b>Flag play</b> &ndash; flags scored &times;5, steals +1, lost flags &minus;1, returns +1</td></tr>
+                            <tr><td class="py-1.5 pr-3 font-bold text-lime-300">30%</td><td class="py-1.5"><b>Combat</b> &ndash; K/D (most) and frags per minute</td></tr>
+                            <tr><td class="py-1.5 pr-3 font-bold text-lime-300">12%</td><td class="py-1.5"><b>Team result</b> &ndash; win, draw or loss</td></tr>
+                            <tr><td class="py-1.5 pr-3 font-bold text-lime-300">3%</td><td class="py-1.5"><b>Discipline</b> &ndash; teamkills and suicides count against you</td></tr>
+                        </tbody>
+                    </table>
+                    <p class="text-xs text-zinc-400">Why these weights? In our games the team with more flags scored wins 84% of the time,
+                        the better K/D 67% &ndash; the team with more headshots only 54%, barely more than a coin flip. So headshots don&rsquo;t count extra.</p>
+                </div>
+                <ul class="space-y-2 text-sm text-zinc-200">
+                    <li class="flex gap-2"><i class="fa-solid fa-star mt-1 w-4 text-yellow-300"></i><span><b>All-Rounder</b> &ndash; wins fights <i>and</i> plays the flag (top 35% in combat and attack).</span></li>
+                    <li class="flex gap-2"><i class="fa-solid fa-person-running mt-1 w-4 text-red-300"></i><span><b>Flag Runner</b> &ndash; goes for the enemy flag: many scores and steals, few lost flags (top 30% in attack).</span></li>
+                    <li class="flex gap-2"><i class="fa-solid fa-shield-halved mt-1 w-4 text-blue-300"></i><span><b>Defender</b> &ndash; keeps the own flag home: many returns (top 30% in defense).</span></li>
+                    <li class="flex gap-2"><i class="fa-solid fa-crosshairs mt-1 w-4 text-orange-300"></i><span><b>Fragger</b> &ndash; wins fights, but is not top in flag play (top 30% in combat).</span></li>
+                    <li class="flex gap-2"><i class="fa-solid fa-angles-right mt-1 w-4 text-zinc-300"></i><span><b>Offensive Team Player</b> &ndash; nothing extreme, leans to attack.</span></li>
+                    <li class="flex gap-2"><i class="fa-solid fa-shield mt-1 w-4 text-zinc-300"></i><span><b>Defensive Team Player</b> &ndash; nothing extreme, leans to defense.</span></li>
+                    <li class="flex gap-2"><i class="fa-solid fa-gun mt-1 w-4 text-zinc-300"></i><span><b>Weapon</b> &ndash; shown when one weapon makes 40%+ of your kills.</span></li>
+                </ul>
+            </div>
+        </section>
+
         <?php if (!empty($changelog)): ?>
         <!-- What's new (config/changelog.php) -->
         <section class="rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-3">
