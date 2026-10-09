@@ -25,7 +25,16 @@ class HallOfFameService
      */
     public function topLists(): array
     {
-        return Cache::remember('hall_of_fame', fn() => [
+        return Cache::remember('hall_of_fame', fn() => $this->freshTopLists(), 'rankings');
+    }
+
+    /**
+     * The same lists, not cached (DiscordHofCommand compares them after
+     * every import).
+     */
+    public function freshTopLists(): array
+    {
+        return [
             'kills' => $this->topPlayers('kills'),
             'headshot' => $this->topPlayers('headshot'),
             'flags' => $this->topPlayers('scored_with_the_flag'),
@@ -33,7 +42,7 @@ class HallOfFameService
             'slashed' => $this->topPlayers('slashed'),
             'gibbed' => $this->topPlayers('gibbed'),
             'helper' => $this->topPlayers(['stole_the_flag', 'returned_the_flag']),
-        ], 'rankings');
+        ];
     }
 
     private function topPlayers(string|array $fields, int $limit = 10): array

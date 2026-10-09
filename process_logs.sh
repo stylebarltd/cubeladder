@@ -135,6 +135,12 @@ if ! "$BASE_DIR/bin/cake" CalculateMilestones >> "$LOGFILE" 2>&1; then
     echo "CalculateMilestones failed!" >> "$LOGFILE"
 fi
 
+echo "➡ DiscordHof"
+# Hall of Fame changes (top 10 per category) -> Discord achievements channel
+if ! "$BASE_DIR/bin/cake" discord_hof >> "$LOGFILE" 2>&1; then
+    echo "DiscordHof failed!" >> "$LOGFILE"
+fi
+
 echo "➡ DiscordResults"
 # results of the games finished by this import -> Discord results channel
 if ! "$BASE_DIR/bin/cake" discord_results >> "$LOGFILE" 2>&1; then
