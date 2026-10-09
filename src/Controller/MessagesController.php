@@ -56,15 +56,12 @@ class MessagesController extends AppController
             ->find()
             ->where(['receiver_id' => $player->id])
             ->contain(['Senders'])
-            ->order(['Messages.created' => 'DESC']);
-        //dd($messages->toArray());
+            ->order(['Messages.created' => 'DESC'])
+            ->all()
+            ->toList();
 
-        foreach ($messages as $message) {
-
-            $message->is_read = 1;
-            $this->Messages->save($message);
-
-        }
+        // shown as "new" this time, read from now on
+        $this->Messages->updateAll(['is_read' => 1], ['receiver_id' => $player->id, 'is_read' => 0]);
 
         $this->set(compact('messages'));
     }

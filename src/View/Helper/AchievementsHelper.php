@@ -82,6 +82,38 @@ class AchievementsHelper extends Helper
         return $def['label'];
     }
 
+    /**
+     * The achievement behind a weekly achievement message (see
+     * CalculateAchievementsCommand), or null for an ordinary message.
+     *
+     * @return array{event_type: string, label: string, map: ?string, value: string, title: string}|null
+     */
+    public function fromMessage(string $body): ?array
+    {
+        if (preg_match('/top player on (\S+)\*\* this week with a score of \*\*([\d.]+)\*\*/', $body, $m)) {
+            return [
+                'event_type' => 'best_on_map',
+                'label' => sprintf($this->definitions['best_on_map']['label'], $m[1]),
+                'map' => $m[1],
+                'value' => $this->format('best_on_map', $m[2]),
+                'title' => 'Map Champion!',
+            ];
+        }
+        if (preg_match('/You ranked #1 for \*\*(.+?)\*\* this week with a value of \*\*([\d.]+)\*\*/', $body, $m)) {
+            $eventType = str_replace(' ', '_', $m[1]);
+
+            return [
+                'event_type' => $eventType,
+                'label' => $this->definitions[$eventType]['label'] ?? ucfirst($m[1]),
+                'map' => null,
+                'value' => $this->format($eventType, $m[2]),
+                'title' => 'Weekly Achievement Unlocked!',
+            ];
+        }
+
+        return null;
+    }
+
     public function iconClass(string $eventType): string
     {
         return $this->definitions[$eventType]['icon'] ?? 'fa-solid fa-question';

@@ -130,7 +130,7 @@ class CalculateAchievementsCommand extends Command
                 $row['player_id'],
                 'Weekly Achievement Unlocked!',
                 sprintf(
-                    'You ranked #1 for **%s** this week with a value of **%s**.\n\nGreat job! 🏆',
+                    "You ranked #1 for **%s** this week with a value of **%s**.\n\nGreat job! 🏆",
                     str_replace('_', ' ', $eventType),
                     $row['value']
                 )
@@ -221,7 +221,7 @@ class CalculateAchievementsCommand extends Command
                 $row['player_id'],
                 'Map Champion!',
                 sprintf(
-                    'You were the **top player on %s** this week with a score of **%s**.\n\nDominating! 💥',
+                    "You were the **top player on %s** this week with a score of **%s**.\n\nDominating! 💥",
                     $map['name'],
                     $row['value']
                 )

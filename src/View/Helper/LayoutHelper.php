@@ -36,6 +36,16 @@ class LayoutHelper extends Helper
     }
 
     /**
+     * Message text as HTML: escaped, **bold** as <strong>, line breaks kept.
+     */
+    public function messageBody(string $body): string
+    {
+        $html = preg_replace('/\*\*(.+?)\*\*/s', '<strong>$1</strong>', h($body));
+
+        return nl2br($html);
+    }
+
+    /**
      * Minutes as "12 h 34 min" / "45 min".
      */
     public function duration(int $minutes): string
