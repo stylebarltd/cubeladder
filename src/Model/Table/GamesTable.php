@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Entity\Game;
 use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -33,6 +34,8 @@ use Cake\Validation\Validator;
  */
 class GamesTable extends Table
 {
+    public const TEAM_MODES = ['ctf', 'tdm', 'htf', 'tktf', 'tosok', 'tlss', 'tsurv', 'tpf'];
+    public const FLAG_MODES = ['ctf', 'htf', 'tktf'];
     /**
      * Initialize method
      *
@@ -129,5 +132,58 @@ class GamesTable extends Table
         $rules->add($rules->existsIn(['map_id'], 'Maps'), ['errorField' => 'map_id']);
 
         return $rules;
+    }
+
+    /**
+     * Scoreboard of a game (needs player_stats_per_game with player
+     * contained): tracked players by points, and for team games with known
+     * final scores the CLA / RVSF split like the in-game scoreboard.
+     *
+     * @return array{rows: array, teams: ?array, winner: ?string, flagMode: bool, unassigned: array}
+     */
+    public function scoreboard(Game $game): array
+    {
+        $stats = collection($game->player_stats_per_game ?? [])
+            ->filter(fn($s) => $s->player && (int)$s->player->track === 1)
+            ->sortBy('total_score', SORT_DESC)
+            ->toList();
+
+        $rows = [];
+        foreach ($stats as $i => $stat) {
+            $rows[] = [
+                'player' => $stat->player,
+                'team' => $stat->team,
+                'is_mvp' => $i === 0,
+                'flags' => (int)$stat->scored_with_the_flag,
+                'kills' => (int)$stat->kills,
+                'deaths' => (int)$stat->deaths,
+                'kd_ratio' => (float)$stat->kd_ratio,
+                'score' => (int)$stat->total_score,
+                'minutes' => $stat->minutes_played,
+            ];
+        }
+
+        $flagMode = in_array($game->mode, self::FLAG_MODES, true);
+        $board = ['rows' => $rows, 'teams' => null, 'winner' => null, 'flagMode' => $flagMode, 'unassigned' => []];
+
+        $teamScores = $game->team_scores ? json_decode($game->team_scores, true) : null;
+        if (!$teamScores || !in_array($game->mode, self::TEAM_MODES, true)) {
+            return $board;
+        }
+
+        foreach (['CLA', 'RVSF'] as $team) {
+            $teamRows = array_values(array_filter($rows, fn($r) => $r['team'] === $team));
+            $board['teams'][$team] = [
+                'score' => ($teamScores[$team] ?? []) + ['players' => 0, 'frags' => 0, 'flags' => null],
+                'deaths' => array_sum(array_column($teamRows, 'deaths')),
+                'rows' => $teamRows,
+            ];
+        }
+        $points = fn($t) => [$flagMode ? (int)$t['score']['flags'] : 0, (int)$t['score']['frags']];
+        $cmp = $points($board['teams']['CLA']) <=> $points($board['teams']['RVSF']);
+        $board['winner'] = $cmp > 0 ? 'CLA' : ($cmp < 0 ? 'RVSF' : null);
+        $board['unassigned'] = array_values(array_filter($rows, fn($r) => !in_array($r['team'], ['CLA', 'RVSF'], true)));
+
+        return $board;
     }
 }

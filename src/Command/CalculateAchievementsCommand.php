@@ -67,6 +67,18 @@ class CalculateAchievementsCommand extends Command
                 $value = $PlayerStats->find()->func()->avg($field);
             }
 
+            $where = [
+                'game_id IN' => $theLast100GameIds,
+                'Players.name IS NOT' => "unarmed",
+            ];
+            if ($eventType == 'kd_ratio') {
+                // average K/D: games under 3 minutes would skew it
+                $where[] = ['OR' => [
+                    'PlayerStatsPerGame.minutes_played IS' => null,
+                    'PlayerStatsPerGame.minutes_played >=' => \App\Model\Table\PlayerStatsPerGameTable::MIN_MINUTES,
+                ]];
+            }
+
             $row = $PlayerStats->find()
                 ->select([
                     'player_id',
@@ -75,10 +87,7 @@ class CalculateAchievementsCommand extends Command
 //                    'total_kills',
                     'Players.name'
                 ])
-                ->where([
-                    'game_id IN' => $theLast100GameIds,
-                    'Players.name IS NOT' => "unarmed"
-                ])
+                ->where($where)
                 ->group('player_id')
                 ->contain(['Players'])
                 ->orderDesc('value')

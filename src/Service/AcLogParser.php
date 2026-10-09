@@ -82,6 +82,18 @@ class AcLogParser
     protected $skipCurrentGame = false;
     protected array $currentGamePlayers = [];   // name => player_id
 
+    // Players per team from the latest "Game status" block (CLA/RVSF => n)
+    // and flags scored while the other team was empty. A game with too many
+    // such free flags (everyone else left) is marked inaccurate at its end.
+    protected array $teamPlayers = [];
+    protected int $freeFlags = 0;
+
+    // Game whose "game finished" line was just seen: the final status block
+    // (team totals) follows it and is saved to its team_scores.
+    protected $finishedGame = null;
+    protected array $finalTeamScores = [];
+    public const MAX_FREE_FLAGS = 4;
+
     // Compiled regexes
     protected string $ignoreRegex;
     protected string $killRegex;
@@ -199,6 +211,10 @@ class AcLogParser
             $mapName = trim($m[2]);
             $players = (int)$m[3];
             $duration = (int)$m[4];
+
+            $this->teamPlayers = [];
+            $this->freeFlags = 0;
+            $this->finishedGame = null;
 
             // skip tiny games
             if ($players < Configure::read('Ladder.minPlayersToRankGame')) {
@@ -483,6 +499,13 @@ class AcLogParser
 
             if (!isset($map[$verb])) return;
             $statCol = $map[$verb];
+            if ($statCol === 'scored_with_the_flag') {
+                $team = strtoupper($m[4] ?? '');
+                $opponent = ['CLA' => 'RVSF', 'RVSF' => 'CLA'][$team] ?? null;
+                if ($opponent && ($this->teamPlayers[$opponent] ?? null) === 0) {
+                    $this->freeFlags++;
+                }
+            }
             if($statCol=='suicided'){
                 $this->incrementStatBuffered($playerId, 'deaths', 1);
                 $this->incrementStatBuffered($playerId, 'kills', -1);
@@ -503,6 +526,11 @@ class AcLogParser
             }
             if ($this->currentGame) {
                 $this->currentGame->ended_at = $ts;
+                if ($this->freeFlags > self::MAX_FREE_FLAGS) {
+                    $this->currentGame->inaccurate = true;
+                    $this->currentGame->inaccurate_reason =
+                        "{$this->freeFlags} flags scored against an empty team";
+                }
                 $this->Games->save($this->currentGame);
                 $this->eventsParsed++;
 
@@ -511,10 +539,54 @@ class AcLogParser
                 $this->flushKills();
                 $this->flushChats();
 
+                $this->finishedGame = $this->currentGame;
+                $this->finalTeamScores = [];
+
                 // reset in-memory game
                 $this->currentGame = null;
                 $this->currentGamePlayers = [];
                 $this->streakBuffer = [];
+            }
+            return;
+        }
+
+        // status block team summary: "Team  CLA:  2 players,    6 frags,    2 flags"
+        // (no flags part in non-flag modes)
+        if (preg_match('~^Team\s+(CLA|RVSF):\s+(\d+) players,\s+(-?\d+) frags(?:,\s+(-?\d+) flags)?~', $rest, $m)) {
+            $this->teamPlayers[$m[1]] = (int)$m[2];
+            if ($this->finishedGame && !$this->currentGame) {
+                $this->finalTeamScores[$m[1]] = [
+                    'players' => (int)$m[2],
+                    'frags' => (int)$m[3],
+                    'flags' => isset($m[4]) && $m[4] !== '' ? (int)$m[4] : null,
+                ];
+                if (count($this->finalTeamScores) === 2) {
+                    $this->finishedGame->team_scores = json_encode($this->finalTeamScores);
+                    $this->Games->save($this->finishedGame);
+                    $this->finishedGame = null;
+                }
+            }
+            return;
+        }
+
+        // status block player row (once a minute):
+        //   team modes " 0 ZZ|Nieukerk      RVSF    6   16     5  0   15 normal  1.2.3.4"
+        //   other modes " 0 pacman            25    36   96 normal  1.2.3.4"
+        // remembers the player's (last) team and counts a minute played -
+        // spectators (SPEC / CSPC / RSPC) are listed but not playing
+        if ($this->currentGame && (
+            preg_match('~^\d+\s+(\S+)\s+(CLA|RVSF|SPEC|CSPC|RSPC)\s+-?\d+~', $rest, $m)
+            || preg_match('~^\d+\s+(\S+)\s+-?\d+\s+-?\d+\s+\d+\s+[a-z]+\s~i', $rest, $m)
+        )) {
+            $playerId = $this->getPlayerIdByNameCached($m[1]);
+            $team = $m[2] ?? null;
+            if ($playerId && !$this->skipCurrentGame && !in_array($team, ['SPEC', 'CSPC', 'RSPC'], true)) {
+                $this->ensurePlayerStatsBuffered($playerId);
+                $key = $this->currentGame->id . ':' . $playerId;
+                if ($team !== null) {
+                    $this->statsBuffer[$key]['team'] = $team;
+                }
+                $this->statsBuffer[$key]['minutes_played'] = (int)($this->statsBuffer[$key]['minutes_played'] ?? 0) + 1;
             }
             return;
         }
@@ -600,6 +672,7 @@ class AcLogParser
         if (!isset($this->statsBuffer[$key])) {
             // try to load existing DB row first (so we preserve previous values if parser runs multiple times)
             $existing = $this->PlayerStatsPerGame->find()
+                ->applyOptions(['includeInaccurate' => true])
                 ->where(['game_id' => $this->currentGame->id, 'player_id' => $playerId])
                 ->first();
 
@@ -617,6 +690,7 @@ class AcLogParser
                     'splattered' => 0, 'slashed' => 0, 'gibbed' => 0, 'picked_off' => 0,
                     'suicided' => 0, 'stole_the_flag' => 0, 'lost_the_flag' => 0,
                     'returned_the_flag' => 0, 'scored_with_the_flag' => 0, 'longest_streak' => 0,
+                    'team' => null, 'minutes_played' => 0,
                     'total_score' => 0, 'kd_ratio' => 0
                 ];
             }
@@ -702,8 +776,9 @@ class AcLogParser
             'game_id','player_id','kills','teamkills','deaths','headshot','busted','shredded',
             'sprayed','punctured','splattered','peppered','slashed','gibbed','picked_off','suicided',
             'stole_the_flag','lost_the_flag','returned_the_flag','scored_with_the_flag',
-            'longest_streak','total_score','kd_ratio'
+            'longest_streak','total_score','kd_ratio','team','minutes_played'
         ];
+        $value = fn(array $row, string $col) => $col === 'team' ? ($row['team'] ?? null) : ($row[$col] ?? 0);
 
         $placeholders = [];
         $bindings = [];
@@ -712,7 +787,7 @@ class AcLogParser
             $place = [];
             foreach ($columns as $col) {
                 $place[] = '?';
-                $bindings[] = $row[$col] ?? 0;
+                $bindings[] = $value($row, $col);
             }
             $placeholders[] = '(' . implode(',', $place) . ')';
         }
@@ -729,7 +804,7 @@ class AcLogParser
                 try {
                     $singleSql = 'INSERT INTO player_stats_per_game (' . implode(',', $columns) . ') VALUES (' . implode(',', array_fill(0, count($columns), '?')) . ')'
                         . ' ON DUPLICATE KEY UPDATE ' . implode(',', array_map(function ($c) { return "$c=VALUES($c)"; }, $columns));
-                    $conn->execute($singleSql, array_map(fn($c) => $row[$c] ?? 0, $columns));
+                    $conn->execute($singleSql, array_map(fn($c) => $value($row, $c), $columns));
                 } catch (\Exception $ex) {
                     // ignore single failure
                 }

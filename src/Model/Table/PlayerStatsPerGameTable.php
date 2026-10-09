@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use ArrayObject;
+use Cake\Event\EventInterface;
 use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -30,6 +32,18 @@ use Cake\Validation\Validator;
  */
 class PlayerStatsPerGameTable extends Table
 {
+    /** Played less than this (minutes on a team) = not counted as a game played */
+    public const MIN_MINUTES = 3;
+
+    /**
+     * SQL counting a player's games played: short appearances (under
+     * MIN_MINUTES) are left out; they still count for every other total.
+     */
+    public static function countedGamesSql(string $alias = 'PlayerStatsPerGame'): string
+    {
+        return "COUNT(CASE WHEN $alias.minutes_played IS NULL OR $alias.minutes_played >= " . self::MIN_MINUTES . ' THEN 1 END)';
+    }
+
     /**
      * Initialize method
      *
@@ -171,5 +185,20 @@ class PlayerStatsPerGameTable extends Table
         $rules->add($rules->existsIn(['player_id'], 'Players'), ['errorField' => 'player_id']);
 
         return $rules;
+    }
+
+    /**
+     * Stats of games marked inaccurate (games.inaccurate) never count:
+     * every find - direct, contained or joined - drops them. Pass
+     * applyOptions(['includeInaccurate' => true]) to see them anyway.
+     */
+    public function beforeFind(EventInterface $event, SelectQuery $query, ArrayObject $options, bool $primary): void
+    {
+        if (!empty($options['includeInaccurate'])) {
+            return;
+        }
+        $query->where([
+            $this->aliasField('game_id') . ' NOT IN (SELECT id FROM games WHERE inaccurate = 1)',
+        ]);
     }
 }

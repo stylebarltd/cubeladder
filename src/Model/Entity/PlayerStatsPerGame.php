@@ -49,6 +49,8 @@ class PlayerStatsPerGame extends Entity
     protected array $_accessible = [
         'game_id' => true,
         'player_id' => true,
+        'team' => true,
+        'minutes_played' => true,
         'kills' => true,
         'teamkills' => true,
         'deaths' => true,

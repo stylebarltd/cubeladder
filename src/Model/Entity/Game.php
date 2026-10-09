@@ -16,6 +16,9 @@ use Cake\ORM\Entity;
  * @property \Cake\I18n\DateTime|null $ended_at
  * @property int|null $duration_minutes
  * @property string|null $server_name
+ * @property bool $inaccurate
+ * @property string|null $inaccurate_reason
+ * @property string|null $team_scores
  * @property string|null $raw
  * @property \Cake\I18n\DateTime|null $created
  * @property \Cake\I18n\DateTime|null $modified
@@ -43,6 +46,9 @@ class Game extends Entity
         'ended_at' => true,
         'duration_minutes' => true,
         'server_name' => true,
+        'inaccurate' => true,
+        'inaccurate_reason' => true,
+        'team_scores' => true,
         'raw' => true,
         'created' => true,
         'modified' => true,

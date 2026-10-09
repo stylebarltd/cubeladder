@@ -16,6 +16,7 @@ trait LastGamesTrait
         $gameIds = $Games
             ->find()
             ->select(['id'])
+            ->where(['inaccurate' => false])
             ->orderByDesc('ended_at')
             ->limit($limit)
             ->enableHydration(false)
@@ -34,6 +35,7 @@ trait LastGamesTrait
         $gameIds = $Games
             ->find()
             ->select(['id'])
+            ->where(['inaccurate' => false])
             ->orderByDesc('ended_at')
             ->where(['started_at >=' => '2026-03-01'])
             //->limit($limit)
@@ -53,6 +55,7 @@ trait LastGamesTrait
         $gameIds = $Games
             ->find()
             ->select(['id'])
+            ->where(['inaccurate' => false])
             ->orderByDesc('ended_at')
             ->where(['started_at >' => date('Y')])
             //->limit($limit)
@@ -72,6 +75,7 @@ trait LastGamesTrait
 
         $games = $Games->find()
             ->select(['started_at', 'ended_at'])
+            ->where(['inaccurate' => false])
             ->orderByDesc('ended_at')
             ->limit($limit)
             ->enableHydration(false)
