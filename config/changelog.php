@@ -24,7 +24,7 @@ return [
                 'Team games show CLA (red) and RVSF (blue) side by side with the final team score and the winner.',
                 'Arrows (or the arrow keys) jump to the previous / next game.',
                 'Search is now in the header on phones too.',
-                '"Live" in the menu slowly pulses green while a game is on air; the Live page shows the running map full-screen behind the scoreboard.',
+                'Live is now an icon next to search that slowly pulses green while a game is on air (on phones it stays in the menu); the Live page shows the running map full-screen behind the scoreboard.',
                 'Maps: full-screen map pages with records, top players and weekly winners, plus a map picker with thumbnails to jump to any of the maps played.',
                 'Maps: recognised players see their own stats on each map - place, points, games and time, K/D, flags, headshots and best game.',
                 'All Time Ranking in the same scoreboard style - click a column to sort by it.',

@@ -9,7 +9,7 @@
     <?= $this->Html->meta('csrfToken', $this->request->getAttribute('csrfToken')) ?>
 
     <!-- Tailwind CSS -->
-    <?= $this->Html->css('tailwind.css?ver=1.42') ?>
+    <?= $this->Html->css('tailwind.css?ver=1.44') ?>
 
     <!-- cubeLadder icon (webroot/img/brand) -->
     <?= $this->Html->meta('icon', '/favicon.ico') ?>
@@ -51,15 +51,18 @@
                     <a href="/players" class="hover:text-zinc-500 transition">All Time Ranking</a>
                     <a href="/players/hall_of_fame" class="hover:text-zinc-500 transition">Hall of Fame</a>
                     <a href="/games/index" class="hover:text-zinc-500 transition">Games</a>
-                    <?php $onAir = !empty($liveNow['live']); ?>
-                    <!-- "On air": green Live + pulsing dot while a game runs (refreshed from /live/onair) -->
-                    <a href="/live" class="js-onair-link transition <?= $onAir ? 'onair-pulse font-bold text-green-400 hover:text-green-300' : 'hover:text-zinc-500' ?>"
-                       title="<?= $onAir ? h('On air: ' . $liveNow['server'] . ' · ' . $liveNow['players'] . ' playing') : 'Live servers' ?>">Live</a>
                     <a href="/maps" class="hover:text-zinc-500 transition">Maps</a>
 
 
                 </div>
                 <div class="flex items-center gap-4">
+                    <?php $onAir = !empty($liveNow['live']); ?>
+
+                    <!-- Live (desktop; in the menu on phones): slowly pulses green while a game is on air (refreshed from /live/onair) -->
+                    <a href="/live" class="js-onair-link hidden md:inline-block p-2 transition <?= $onAir ? 'onair-pulse text-green-400 hover:text-green-300' : 'hover:text-zinc-500' ?>"
+                       title="<?= $onAir ? h('On air: ' . $liveNow['server'] . ' · ' . $liveNow['players'] . ' playing') : 'Live servers' ?>" aria-label="Live servers">
+                        <i class="fa-solid fa-tower-broadcast"></i>
+                    </a>
 
                     <!-- Search -->
                     <button class="p-2 hover:text-zinc-500 transition" id="search-btn" aria-label="Search players">
