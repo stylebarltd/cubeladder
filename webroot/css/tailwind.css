@@ -1851,6 +1851,15 @@
   .underline {
     text-decoration-line: underline;
   }
+  .decoration-zinc-500 {
+    text-decoration-color: var(--color-zinc-500);
+  }
+  .decoration-dotted {
+    text-decoration-style: dotted;
+  }
+  .underline-offset-2 {
+    text-underline-offset: 2px;
+  }
   .placeholder-gray-400 {
     &::placeholder {
       color: var(--color-gray-400);

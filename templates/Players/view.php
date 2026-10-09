@@ -102,7 +102,8 @@ $achievementLabels = [
                         <?php endif; ?>
                     </div>
                     <div class="text-xs text-zinc-300">
-                        #<?= (int)$rating->rank ?> of <?= number_format((int)$ratedPlayers) ?>
+                        <span class="underline decoration-dotted decoration-zinc-500 underline-offset-2"
+                              title="Place among all <?= number_format((int)$ratedPlayers) ?> players with a CTF rating: 20+ CTF games of 3+ minutes (players who chose &quot;Don't track me&quot; are not rated)">#<?= (int)$rating->rank ?> of <?= number_format((int)$ratedPlayers) ?> rated players</span>
                         <?php if ($rating->win_rate !== null): ?> · <?= round((float)$rating->win_rate * 100) ?>% won<?php endif; ?>
                         · last <?= (int)$rating->games ?> CTF games
                     </div>
