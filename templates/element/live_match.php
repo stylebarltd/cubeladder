@@ -28,6 +28,8 @@
 .lg-table th:nth-child(3), .lg-table td:nth-child(3) { width: 2.6rem; text-align: center; }
 .lg-table tr.top td { background: rgb(255 255 255 / .04); }
 .lg-table th:nth-child(n+4), .lg-table td:nth-child(n+4) { width: 2.9rem; }
+.lg-s { display: none; }
+@media (max-width: 640px) { .lg-s { display: inline; text-transform: none; } .lg-l { display: none; } }
 .lg-decider { font-weight: 800; color: #fff; }
 .lg-cla  .lg-decider-h { color: #fca5a5; } .lg-rvsf .lg-decider-h { color: #93c5fd; }
 .lg-dead { opacity: .55; }
@@ -51,18 +53,18 @@
   .lg-teams { gap: 1rem; }
   .lg-team-bar { padding: .55rem .8rem; }
   .lg-team-bar .score { font-size: 1.8rem; }
-  .lg-table { font-size: .8rem; table-layout: fixed; }
+  .lg-table { font-size: .8rem; }
   .lg-table th, .lg-table td { padding: .4rem .3rem; }
   .lg-table th { font-size: .6rem; letter-spacing: .03em; }
   .lg-table th:first-child, .lg-table td:first-child,
   .lg-table th:nth-child(7), .lg-table td:nth-child(7),
   .lg-table th:nth-child(8), .lg-table td:nth-child(8) { display: none; }
-  .lg-table th:nth-child(2), .lg-table td:nth-child(2) { min-width: 0; padding-left: .55rem; }
-  .lg-table td:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: normal; }
+  .lg-table th:nth-child(2), .lg-table td:nth-child(2) { min-width: 0; width: 100%; padding-left: .55rem; }
+  .lg-table td:nth-child(2) { white-space: nowrap; word-break: normal; }
   .lg-table td:nth-child(2) img { width: 1.25rem; height: 1.25rem; margin-right: .3rem; }
-  .lg-table th:nth-child(3), .lg-table td:nth-child(3) { width: 1.4rem; }
+  .lg-table th:nth-child(3), .lg-table td:nth-child(3) { width: 1.4rem; padding-left: .15rem; padding-right: .15rem; }
   .lg-table th:nth-child(3) { font-size: 0; } /* the ping ball explains itself */
-  .lg-table th:nth-child(n+4), .lg-table td:nth-child(n+4) { width: 2.1rem; }
+  .lg-table th:nth-child(n+4), .lg-table td:nth-child(n+4) { width: auto; padding-left: .25rem; padding-right: .25rem; }
   .lg-table th:last-child, .lg-table td:last-child { width: 2.5rem; padding-right: .45rem; }
   .lg-chat { max-height: 7rem; font-size: .75rem; }
 }
@@ -96,8 +98,8 @@
             </div>
             <table class="lg-table">
                 <thead><tr>
-                    <th>#</th><th>Player</th><th>Ping</th><th class="js-h-flags">Flags</th>
-                    <th class="js-h-frags">Frags</th><th>Deaths</th><th>TK</th><th>Damage</th><th>Acc</th>
+                    <th>#</th><th>Player</th><th>Ping</th><th class="js-h-flags"><span class="lg-s">fl</span><span class="lg-l">Flags</span></th>
+                    <th class="js-h-frags"><span class="lg-s">k</span><span class="lg-l">Frags</span></th><th><span class="lg-s">d</span><span class="lg-l">Deaths</span></th><th>TK</th><th>Damage</th><th>Acc</th>
                 </tr></thead>
                 <tbody class="js-rows"></tbody>
             </table>
@@ -108,8 +110,8 @@
     <div class="lg-team js-ffa" hidden>
         <table class="lg-table">
             <thead><tr>
-                <th>#</th><th>Player</th><th>Ping</th><th class="js-h-flags">Flags</th>
-                <th class="js-h-frags">Frags</th><th>Deaths</th><th>TK</th><th>Damage</th><th>Acc</th>
+                <th>#</th><th>Player</th><th>Ping</th><th class="js-h-flags"><span class="lg-s">fl</span><span class="lg-l">Flags</span></th>
+                <th class="js-h-frags"><span class="lg-s">k</span><span class="lg-l">Frags</span></th><th><span class="lg-s">d</span><span class="lg-l">Deaths</span></th><th>TK</th><th>Damage</th><th>Acc</th>
             </tr></thead>
             <tbody class="js-rows"></tbody>
         </table>

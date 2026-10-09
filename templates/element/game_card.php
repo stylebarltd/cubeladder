@@ -39,7 +39,7 @@ $playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight) {
                     ['controller' => 'Players', 'action' => 'view', $row['player']->id],
                     ['class' => 'sm:truncate hover:text-blue-300', 'escape' => false]
                 ) ?>
-                <span class="hidden shrink-0 sm:inline"><?= $this->Layout->flag($row['player']->country) ?></span>
+                <span class="shrink-0"><?= $this->Layout->flag($row['player']->country) ?></span>
                 <?= $row['is_mvp'] ? '<span class="shrink-0" title="Most points">🏆</span>' : '' ?>
             </div>
         </td>
