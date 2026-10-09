@@ -54,8 +54,11 @@ $features = [
             <div class="mb-5 inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-black/50 px-3 sm:px-4 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.12em] sm:tracking-[0.3em] text-zinc-200 backdrop-blur-[2px]">
                 <span class="h-2 w-2 rounded-full bg-blue-500"></span> AssaultCube ranking &amp; live stats
             </div>
-            <h1 class="flex items-end justify-center lg:justify-start text-5xl sm:text-8xl xl:text-9xl font-bold tracking-tight leading-none drop-shadow-[0_6px_30px_rgba(0,0,0,.9)]">
-                <span class="bg-gradient-to-b from-sky-300 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(59,130,246,.55)]">cube</span><span class="text-white">Ladder</span>
+            <h1 class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-2 sm:gap-4 text-5xl sm:text-7xl md:text-8xl font-bold tracking-tight leading-none drop-shadow-[0_6px_30px_rgba(0,0,0,.9)]">
+                <img src="/img/brand/cubeladder-mark-hero.webp" alt="" class="h-32 sm:h-28 md:h-36 xl:h-44 w-auto shrink-0">
+                <span class="flex items-end">
+                    <span class="bg-gradient-to-b from-sky-300 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(59,130,246,.55)]">cube</span><span class="text-white">Ladder</span>
+                </span>
             </h1>
             <p class="mx-auto lg:mx-0 mt-6 max-w-2xl text-lg md:text-2xl font-semibold text-white drop-shadow">
                 Every frag. Every flag. Every streak.

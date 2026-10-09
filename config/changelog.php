@@ -20,6 +20,7 @@ return [
             'date' => '2026-10-09',
             'title' => 'cubeLadder - a new look',
             'items' => [
+                'New logo: a hand-drawn cube in a blue splash, with a ladder leaning on it.',
                 'Games look like the in-game scoreboard: full-screen map with the stats on top.',
                 'Team games show CLA (red) and RVSF (blue) side by side with the final team score and the winner.',
                 'Arrows (or the arrow keys) jump to the previous / next game.',

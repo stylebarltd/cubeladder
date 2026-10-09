@@ -1,4 +1,6 @@
-# cubeLadder
+<p align="center">
+  <a href="https://cubeladder.ovh"><img src="webroot/img/brand/cubeladder-logo-1200x400.png" alt="cubeLadder – AssaultCube ranking &amp; live stats" width="720"></a>
+</p>
 
 Rankings, Hall of Fame, maps and live games for [AssaultCube](https://assault.cubers.net/) –
 live at **[cubeladder.ovh](https://cubeladder.ovh)**.
