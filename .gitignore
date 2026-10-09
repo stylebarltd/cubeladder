@@ -75,3 +75,8 @@ __pycache__/
 /config/Migrations/schema-dump-default.lock
 /webroot/img/maps_hq/
 /webroot/img/maps_hq1/
+# kept out of the public repository (license / size) - live on the server only
+/config/GeoLite2-*.mmdb
+/webroot/img/players/
+/webroot/img/maps/
+/webroot/img/world-war-bullet-*.png
