@@ -30,7 +30,7 @@
 </a>
 <?php endif; ?>
 
-<!-- Hero: cubeLadder v2 branding + live on-air card + what's new in v2 -->
+<!-- Hero: cubeLadder branding + live on-air card + what's new -->
 <?php
 $onAir = !empty($liveNow['live']);
 $features = [
@@ -56,7 +56,6 @@ $features = [
             </div>
             <h1 class="flex items-end justify-center lg:justify-start text-6xl sm:text-8xl xl:text-9xl font-bold tracking-tight leading-none drop-shadow-[0_6px_30px_rgba(0,0,0,.9)]">
                 <span class="bg-gradient-to-b from-sky-300 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(59,130,246,.55)]">cube</span><span class="text-white">Ladder</span>
-                <span class="mb-1 md:mb-3 ml-2 md:ml-3 rounded-lg bg-blue-600 px-2 py-0.5 text-2xl md:text-4xl font-extrabold leading-tight text-white shadow-[0_0_25px_rgba(37,99,235,.7)]">v2</span>
             </h1>
             <p class="mx-auto lg:mx-0 mt-6 max-w-2xl text-lg md:text-2xl font-semibold text-white drop-shadow">
                 Every frag. Every flag. Every streak.
@@ -109,9 +108,9 @@ $features = [
         </a>
     </div>
 
-    <!-- New in v2 -->
+    <!-- What's new -->
     <div class="relative mx-auto w-full max-w-7xl px-4 pb-14 md:px-6">
-        <div class="mb-3 text-xs font-bold uppercase tracking-[0.3em] text-zinc-400 drop-shadow">New in v2</div>
+        <div class="mb-3 text-xs font-bold uppercase tracking-[0.3em] text-zinc-400 drop-shadow">What&rsquo;s new</div>
         <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             <?php foreach ($features as [$href, $icon, $color, $title, $sub]): $external = str_starts_with($href, 'http'); ?>
                 <a href="<?= h($href) ?>" <?= $external ? 'target="_blank" rel="noopener"' : '' ?>

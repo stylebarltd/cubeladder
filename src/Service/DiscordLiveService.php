@@ -188,6 +188,7 @@ class DiscordLiveService
             }
             $res = $this->http->post($this->cfg['webhook'] . '?wait=true', json_encode([
                 'username' => ($this->cfg['brand'] ?? 'CubeLadder') . ' Live',
+                'avatar_url' => $this->avatarUrl(),
                 'content' => $text,
                 'allowed_mentions' => ['parse' => empty($cfg['mention']) ? [] : ['roles', 'everyone', 'users']],
             ]), ['type' => 'json']);
@@ -312,6 +313,7 @@ class DiscordLiveService
 
         return [
             'username' => ($this->cfg['brand'] ?? 'CubeLadder') . ' Live',
+            'avatar_url' => $this->avatarUrl(),
             'embeds' => $embeds,
             'allowed_mentions' => ['parse' => []],
         ];
@@ -751,5 +753,23 @@ class DiscordLiveService
     private function writeState(array $state): void
     {
         file_put_contents($this->statePath(), json_encode($state, JSON_PRETTY_PRINT), LOCK_EX);
+    }
+
+    /**
+     * Webhook avatar: Ladder.discord.avatar, else the cubeLadder icon (for
+     * feeds without an own brand). Discord applies it to new posts only,
+     * an edited message keeps the avatar it was posted with. null = the
+     * webhook's own avatar.
+     */
+    private function avatarUrl(): ?string
+    {
+        if (array_key_exists('avatar', $this->cfg)) {
+            return $this->cfg['avatar'] ?: null;
+        }
+        if (!empty($this->cfg['brand']) || !$this->site()) {
+            return null;
+        }
+
+        return $this->site() . '/img/brand/cubeladder-discord-icon-512.png';
     }
 }

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="55%" cy="35%" r="80%">
+      <stop offset="0" stop-color="#132a63"/><stop offset=".55" stop-color="#0a1330"/><stop offset="1" stop-color="#04060c"/>
+    </radialGradient>
+    <radialGradient id="paint" cx="40%" cy="35%" r="75%">
+      <stop offset="0" stop-color="#60a5fa"/><stop offset=".55" stop-color="#2563eb"/><stop offset="1" stop-color="#1e3a8a"/>
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="14" result="b"/>
+      <feFlood flood-color="#3b82f6" flood-opacity=".7"/><feComposite in2="b" operator="in" result="g"/>
+      <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity=".55"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  <g filter="url(#glow)"><path d="M444.2,276.5 Q410.8,290.9 436.0,316.2 Q461.1,341.5 424.4,342.5 Q387.7,343.5 393.7,368.3 Q399.8,393.1 401.8,425.4 Q403.8,457.7 374.4,449.2 Q345.0,440.8 327.3,445.6 Q309.6,450.4 295.6,494.8 Q281.7,539.2 259.6,500.6 Q237.5,462.0 222.7,446.4 Q208.0,430.7 195.1,420.6 Q182.1,410.4 158.6,416.2 Q135.1,422.0 114.8,415.6 Q94.6,409.2 104.0,379.7 Q113.5,350.3 98.7,339.5 Q84.0,328.6 73.4,313.4 Q62.8,298.1 72.0,280.1 Q81.2,262.0 46.9,239.3 Q12.6,216.5 44.8,204.6 Q77.0,192.7 78.3,172.7 Q79.6,152.8 70.4,118.6 Q61.2,84.4 83.6,73.8 Q105.9,63.2 146.4,93.3 Q186.9,123.3 192.7,91.6 Q198.5,59.9 217.2,52.2 Q235.8,44.4 255.4,51.2 Q274.9,58.0 292.3,65.7 Q309.7,73.4 330.9,71.1 Q352.2,68.8 360.8,90.4 Q369.3,111.9 370.5,134.2 Q371.7,156.5 399.4,156.3 Q427.0,156.1 441.5,170.3 Q456.0,184.5 445.1,206.6 Q434.2,228.7 456.0,245.3 Q477.7,262.0 444.2,276.5Z" fill="url(#paint)"/><g fill="none"><circle cx="521.5" cy="299.9" r="7.0"/><circle cx="435.0" cy="424.0" r="11.5"/><circle cx="430.6" cy="446.4" r="8.7"/><circle cx="423.8" cy="86.5" r="9.1"/><circle cx="-26.1" cy="171.4" r="11.9"/><circle cx="424.1" cy="68.9" r="8.9"/><circle cx="68.9" cy="491.8" r="13.0"/><circle cx="401.3" cy="464.5" r="7.5"/><circle cx="284.2" cy="530.3" r="10.2"/></g></g>
+  <g filter="url(#shadow)"></g>
+  <g filter="url(#shadow)"><g stroke="#0f172a" stroke-width="9.4" stroke-linejoin="round" stroke-linecap="round">
+      <polygon points="256.0,142.3 351.4,197.4 256.0,252.5 160.6,197.4" fill="#ffffff"/>
+      <polygon points="160.6,197.4 256.0,252.5 256.0,362.7 160.6,307.6" fill="#e2e8f0"/>
+      <polygon points="256.0,252.5 351.4,197.4 351.4,307.6 256.0,362.7" fill="#cbd5e1"/>
+    </g></g>
+</svg>

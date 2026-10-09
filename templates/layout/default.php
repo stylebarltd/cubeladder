@@ -9,10 +9,16 @@
     <?= $this->Html->meta('csrfToken', $this->request->getAttribute('csrfToken')) ?>
 
     <!-- Tailwind CSS -->
-    <?= $this->Html->css('tailwind.css?ver=1.36') ?>
+    <?= $this->Html->css('tailwind.css?ver=1.38') ?>
 
-    <!-- Optional: favicon -->
+    <!-- cubeLadder icon (webroot/img/brand) -->
     <?= $this->Html->meta('icon', '/favicon.ico') ?>
+    <link rel="icon" type="image/svg+xml" href="/img/brand/cubeladder-favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <meta name="theme-color" content="#0b1225">
 
     <!-- Additional head content -->
     <?= $this->fetch('meta') ?>
@@ -38,7 +44,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
-                    <a href="/" class="text-2xl md:text-3xl font-bold"><span class="text-blue-500">cube</span>Ladder<small class="text-xs hidden md:inline">v2</small></a>
+                    <a href="/" class="flex items-center gap-2 text-2xl md:text-3xl font-bold"><img src="/img/brand/fav-48.png" alt="" class="hidden sm:block h-8 w-8"><span><span class="text-blue-500">cube</span>Ladder</span></a>
                 </div>
                 <div class="hidden md:flex items-center whitespace-nowrap md:space-x-4 md:text-sm lg:space-x-8 lg:text-base">
 

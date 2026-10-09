@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <defs>
+    <radialGradient id="bg" cx="55%" cy="35%" r="80%">
+      <stop offset="0" stop-color="#132a63"/><stop offset=".55" stop-color="#0a1330"/><stop offset="1" stop-color="#04060c"/>
+    </radialGradient>
+    <radialGradient id="paint" cx="40%" cy="35%" r="75%">
+      <stop offset="0" stop-color="#60a5fa"/><stop offset=".55" stop-color="#2563eb"/><stop offset="1" stop-color="#1e3a8a"/>
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="14" result="b"/>
+      <feFlood flood-color="#3b82f6" flood-opacity=".7"/><feComposite in2="b" operator="in" result="g"/>
+      <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity=".55"/>
+    </filter>
+  </defs>
+  <rect width="960" height="540" rx="0" fill="url(#bg)"/>
+  <g filter="url(#glow)"><path d="M587.3,155.9 Q573.6,161.9 583.9,172.2 Q594.2,182.6 579.1,183.0 Q564.0,183.5 566.5,193.6 Q569.0,203.8 569.9,217.1 Q570.7,230.4 558.6,226.9 Q546.5,223.4 539.3,225.4 Q532.0,227.3 526.3,245.6 Q520.5,263.8 511.5,247.9 Q502.4,232.1 496.3,225.7 Q490.3,219.3 485.0,215.1 Q479.7,210.9 470.0,213.3 Q460.4,215.7 452.1,213.1 Q443.7,210.4 447.6,198.3 Q451.5,186.2 445.4,181.8 Q439.4,177.4 435.0,171.1 Q430.7,164.8 434.5,157.4 Q438.2,150.0 424.2,140.7 Q410.1,131.3 423.3,126.4 Q436.5,121.5 437.1,113.4 Q437.6,105.2 433.8,91.1 Q430.0,77.1 439.2,72.8 Q448.4,68.4 465.0,80.7 Q481.6,93.0 484.0,80.0 Q486.4,67.0 494.1,63.9 Q501.7,60.7 509.7,63.5 Q517.8,66.3 524.9,69.4 Q532.0,72.6 540.8,71.6 Q549.5,70.7 553.0,79.5 Q556.5,88.4 557.0,97.5 Q557.5,106.7 568.9,106.6 Q580.2,106.5 586.2,112.4 Q592.1,118.2 587.6,127.3 Q583.2,136.3 592.1,143.2 Q601.0,150.0 587.3,155.9Z" fill="url(#paint)"/><g fill="#3b82f6"><circle cx="619.0" cy="165.6" r="2.9"/><circle cx="583.5" cy="216.5" r="4.7"/><circle cx="581.7" cy="225.7" r="3.6"/><circle cx="578.9" cy="77.9" r="3.7"/><circle cx="394.2" cy="112.8" r="4.9"/><circle cx="579.0" cy="70.7" r="3.6"/><circle cx="433.2" cy="244.3" r="5.3"/><circle cx="569.7" cy="233.1" r="3.1"/><circle cx="521.6" cy="260.1" r="4.2"/></g></g>
+  <g filter="url(#shadow)"><g stroke="#f8fafc" stroke-width="6.6" stroke-linecap="round"><line x1="462.9" y1="324.5" x2="421.6" y2="302.6" stroke-width="6.4"/><line x1="473.0" y1="302.0" x2="434.4" y2="281.6" stroke-width="6.0"/><line x1="483.2" y1="279.6" x2="447.3" y2="260.6" stroke-width="5.7"/><line x1="493.4" y1="257.1" x2="460.1" y2="239.5" stroke-width="5.3"/><line x1="503.6" y1="234.7" x2="472.9" y2="218.5" stroke-width="4.9"/><line x1="513.8" y1="212.3" x2="485.8" y2="197.5" stroke-width="4.5"/><line x1="457.3" y1="336.8" x2="519.3" y2="199.9"/><line x1="414.5" y1="314.2" x2="492.9" y2="185.9"/></g></g>
+  <g filter="url(#shadow)"><g stroke="#0f172a" stroke-width="3.8" stroke-linejoin="round" stroke-linecap="round">
+      <polygon points="510.0,100.9 549.2,123.5 510.0,146.1 470.8,123.5" fill="#ffffff"/>
+      <polygon points="470.8,123.5 510.0,146.1 510.0,191.3 470.8,168.7" fill="#e2e8f0"/>
+      <polygon points="510.0,146.1 549.2,123.5 549.2,168.7 510.0,191.3" fill="#cbd5e1"/>
+    </g></g><text x="480" y="430" text-anchor="middle" font-family="DejaVu Sans Mono, Liberation Mono, monospace" font-weight="bold" font-size="120" letter-spacing="-2"><tspan fill="#3b82f6">cube</tspan><tspan fill="#ffffff">Ladder</tspan></text><text x="480" y="490" text-anchor="middle" font-family="DejaVu Sans Mono, monospace" font-size="24" fill="#93c5fd" letter-spacing="5">LIVE GAMES · RANKINGS · HALL OF FAME</text>
+</svg>

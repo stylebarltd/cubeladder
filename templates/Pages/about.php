@@ -24,7 +24,7 @@ $rules = [
 <div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-10">
 
     <h1 class="mb-8 text-3xl md:text-5xl font-extrabold tracking-wide drop-shadow-lg">
-        about <span class="text-blue-500">cube</span>Ladder <span class="rounded-lg bg-blue-600 px-2 text-2xl md:text-3xl align-middle">v2</span>
+        about <span class="text-blue-500">cube</span>Ladder
     </h1>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

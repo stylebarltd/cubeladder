@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400">
+  <defs>
+    <radialGradient id="bg" cx="55%" cy="35%" r="80%">
+      <stop offset="0" stop-color="#132a63"/><stop offset=".55" stop-color="#0a1330"/><stop offset="1" stop-color="#04060c"/>
+    </radialGradient>
+    <radialGradient id="paint" cx="40%" cy="35%" r="75%">
+      <stop offset="0" stop-color="#60a5fa"/><stop offset=".55" stop-color="#2563eb"/><stop offset="1" stop-color="#1e3a8a"/>
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="14" result="b"/>
+      <feFlood flood-color="#3b82f6" flood-opacity=".7"/><feComposite in2="b" operator="in" result="g"/>
+      <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity=".55"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="400" rx="0" fill="url(#bg)"/>
+  <g filter="url(#glow)"><path d="M294.3,146.1 Q280.2,152.2 290.8,162.8 Q301.4,173.5 285.9,173.9 Q270.4,174.3 273.0,184.8 Q275.6,195.2 276.4,208.8 Q277.2,222.4 264.9,218.8 Q252.5,215.3 245.0,217.3 Q237.6,219.3 231.7,238.0 Q225.8,256.7 216.5,240.5 Q207.2,224.2 201.0,217.6 Q194.8,211.1 189.3,206.8 Q183.9,202.5 174.0,204.9 Q164.1,207.4 155.6,204.7 Q147.0,202.0 151.0,189.6 Q155.0,177.2 148.8,172.6 Q142.6,168.1 138.1,161.6 Q133.7,155.2 137.5,147.6 Q141.4,140.0 127.0,130.4 Q112.5,120.8 126.1,115.8 Q139.7,110.8 140.2,102.4 Q140.7,94.0 136.9,79.6 Q133.0,65.2 142.4,60.8 Q151.8,56.3 168.9,68.9 Q185.9,81.6 188.4,68.2 Q190.8,54.9 198.6,51.6 Q206.5,48.4 214.7,51.2 Q223.0,54.1 230.3,57.4 Q237.6,60.6 246.6,59.6 Q255.5,58.6 259.1,67.7 Q262.7,76.8 263.2,86.2 Q263.7,95.6 275.4,95.5 Q287.0,95.4 293.1,101.4 Q299.2,107.4 294.6,116.7 Q290.0,126.0 299.2,133.0 Q308.3,140.0 294.3,146.1Z" fill="url(#paint)"/><g fill="#3b82f6"><circle cx="326.8" cy="156.0" r="2.9"/><circle cx="290.4" cy="208.2" r="4.9"/><circle cx="288.5" cy="217.6" r="3.7"/><circle cx="285.7" cy="66.1" r="3.8"/><circle cx="96.2" cy="101.9" r="5.0"/><circle cx="285.8" cy="58.7" r="3.7"/><circle cx="136.2" cy="236.7" r="5.5"/><circle cx="276.2" cy="225.2" r="3.1"/><circle cx="226.9" cy="253.0" r="4.3"/></g></g>
+  <g filter="url(#shadow)"><g stroke="#f8fafc" stroke-width="6.8" stroke-linecap="round"><line x1="166.7" y1="318.9" x2="124.3" y2="296.5" stroke-width="6.6"/><line x1="177.1" y1="295.9" x2="137.5" y2="275.0" stroke-width="6.2"/><line x1="187.5" y1="272.9" x2="150.7" y2="253.4" stroke-width="5.8"/><line x1="198.0" y1="249.9" x2="163.8" y2="231.8" stroke-width="5.4"/><line x1="208.4" y1="226.9" x2="177.0" y2="210.2" stroke-width="5.0"/><line x1="218.8" y1="203.9" x2="190.2" y2="188.7" stroke-width="4.6"/><line x1="160.9" y1="331.6" x2="224.6" y2="191.2"/><line x1="117.1" y1="308.4" x2="197.4" y2="176.8"/></g></g>
+  <g filter="url(#shadow)"><g stroke="#0f172a" stroke-width="3.9" stroke-linejoin="round" stroke-linecap="round">
+      <polygon points="215.0,89.6 255.2,112.8 215.0,136.0 174.8,112.8" fill="#ffffff"/>
+      <polygon points="174.8,112.8 215.0,136.0 215.0,182.4 174.8,159.2" fill="#e2e8f0"/>
+      <polygon points="215.0,136.0 255.2,112.8 255.2,159.2 215.0,182.4" fill="#cbd5e1"/>
+    </g></g><text x="380" y="228" text-anchor="start" font-family="DejaVu Sans Mono, Liberation Mono, monospace" font-weight="bold" font-size="128" letter-spacing="-2"><tspan fill="#3b82f6">cube</tspan><tspan fill="#ffffff">Ladder</tspan></text><text x="385" y="288" text-anchor="start" font-family="DejaVu Sans Mono, monospace" font-size="27" fill="#93c5fd" letter-spacing="4">ASSAULTCUBE RANKING &amp; LIVE STATS</text>
+</svg>

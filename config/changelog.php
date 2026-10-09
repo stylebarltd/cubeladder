@@ -18,7 +18,7 @@ return [
         ],
         [
             'date' => '2026-10-09',
-            'title' => 'cubeLadder v2 - a new look',
+            'title' => 'cubeLadder - a new look',
             'items' => [
                 'Games look like the in-game scoreboard: full-screen map with the stats on top.',
                 'Team games show CLA (red) and RVSF (blue) side by side with the final team score and the winner.',
