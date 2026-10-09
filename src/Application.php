@@ -28,7 +28,6 @@ use Cake\Http\MiddlewareQueue;
 use Cake\ORM\Locator\TableLocator;
 use Cake\Routing\Middleware\AssetMiddleware;
 use Cake\Routing\Middleware\RoutingMiddleware;
-use App\Middleware\WebStatsMiddleware;
 use Cake\Utility\Security;
 
 /**
@@ -88,8 +87,6 @@ class Application extends BaseApplication
             // available as array through $request->getData()
             // https://book.cakephp.org/5/en/controllers/middleware.html#body-parser-middleware
             ->add(new BodyParserMiddleware())
-
-            ->add(new WebStatsMiddleware())
 
 
 

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Cake\Cache\Cache;
+use Cake\Core\Configure;
 use Cake\Http\Exception\ForbiddenException;
 
 /**
@@ -12,14 +14,29 @@ use Cake\Http\Exception\ForbiddenException;
  */
 class MessagesController extends AppController
 {
+    /** Contact-form messages to the admin per IP and hour */
+    private const ADMIN_MESSAGES_PER_HOUR = 3;
+
+    /**
+     * Logged-in player who may read / send private messages: identity and
+     * the player's own IP (ownsPlayer), else a 403.
+     */
+    private function messagingPlayer(): \App\Model\Entity\Player
+    {
+        $player = $this->request->getAttribute('identity');
+        if (!$this->ownsPlayer($player)) {
+            throw new ForbiddenException('Messages are only available from the IP you play from.');
+        }
+
+        return $player;
+    }
 
     public function delete($id)
     {
         $this->request->allowMethod(['post']);
 
+        $player = $this->messagingPlayer();
         $message = $this->Messages->get($id);
-
-        $player = $this->request->getAttribute('identity');
 
         if ($message->receiver_id !== $player->id) {
             throw new ForbiddenException("Not your message.");
@@ -33,11 +50,7 @@ class MessagesController extends AppController
 
     public function inbox()
     {
-        $player = $this->request->getAttribute('identity');
-
-        if (!$player) {
-            throw new ForbiddenException("Login required (IP mismatch).");
-        }
+        $player = $this->messagingPlayer();
 
         $messages = $this->Messages
             ->find()
@@ -57,22 +70,30 @@ class MessagesController extends AppController
     }
     public function sendToAdmin()
     {
-$receiverId='ed947213-05f5-4030-a7bc-f1f67e5c5de8';
-
-
-        $sender = $this->request->getAttribute('identity');
-        $senderId = $receiverId;
-        if ($sender) {
-            $senderId = $sender->id;
+        $receiverId = ((array)Configure::read('Ladder.admins'))[0] ?? null;
+        if (!$receiverId) {
+            $this->Flash->error('No admin configured.');
+            return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'about']);
         }
 
+        // known player (own IP) or an anonymous visitor (no sender)
+        $sender = $this->request->getAttribute('identity');
+        $senderId = $this->ownsPlayer($sender) ? $sender->id : null;
+
         $receiver = $this->Messages->Receivers->get($receiverId);
-        //debug($receiver);
         $message  = $this->Messages->newEmptyEntity();
 
         if (!$this->request->is('post')) {
             $this->set(compact('receiver', 'message'));
             return;
+        }
+
+        // rate limit per IP (cache 'default')
+        $rateKey = 'admin_msg_' . md5((string)$this->request->clientIp() . date('YmdH'));
+        $sent = (int)Cache::read($rateKey);
+        if ($sent >= self::ADMIN_MESSAGES_PER_HOUR) {
+            $this->Flash->error('Too many messages - please try again in an hour.');
+            return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'about']);
         }
 
         // Inbox limit
@@ -82,17 +103,17 @@ $receiverId='ed947213-05f5-4030-a7bc-f1f67e5c5de8';
 
         if ($inboxCount >= 200) {
             $this->Flash->error("Inbox full. {$receiver->name} cannot receive more messages.");
-            return $this->redirect(['controller' => 'pages', 'action' => 'about']);
+            return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'about']);
         }
 
-        $message = $this->Messages->patchEntity($message, $this->request->getData());
+        $message = $this->Messages->patchEntity($message, $this->request->getData(), ['fields' => ['body']]);
         $message->sender_id   = $senderId;
         $message->receiver_id = $receiverId;
         $message->is_read     = 0;
-        //dd($message);
         if ($this->Messages->save($message)) {
+            Cache::write($rateKey, $sent + 1);
             $this->Flash->success("Message sent to admin.");
-            return $this->redirect(['controller' => 'pages', 'action' => 'about']);
+            return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'about']);
         }
 
         $this->Flash->error('Could not send message to admin.');
@@ -110,8 +131,8 @@ $receiverId='ed947213-05f5-4030-a7bc-f1f67e5c5de8';
 
         $sender = $this->request->getAttribute('identity');
 
-        if (!$sender) {
-            $this->Flash->error('You must be a registered player to send messages.');
+        if (!$this->ownsPlayer($sender)) {
+            $this->Flash->error('You must be a registered player, on the IP you play from, to send messages.');
             return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
         }
 
@@ -138,7 +159,7 @@ $receiverId='ed947213-05f5-4030-a7bc-f1f67e5c5de8';
             return $this->redirect(['controller' => 'Players', 'action' => 'index']);
         }
 
-        $message = $this->Messages->patchEntity($message, $this->request->getData());
+        $message = $this->Messages->patchEntity($message, $this->request->getData(), ['fields' => ['body']]);
         $message->sender_id   = $sender->id;
         $message->receiver_id = $receiverId;
         $message->is_read     = 0;

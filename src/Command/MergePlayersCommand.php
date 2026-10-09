@@ -14,7 +14,7 @@ use Cake\Datasource\ConnectionManager;
  *
  * For each target name, the survivor is the profile with the MOST games
  * (player_stats_per_game rows). All other profiles for that name are merged
- * into it: their stats, web_visits and achievements are repointed to the
+ * into it: their stats and achievements are repointed to the
  * survivor and the duplicate rows are deleted.
  *
  * Usage:
@@ -354,10 +354,6 @@ class MergePlayersCommand extends Command
                 ['dup' => $dupId]
             );
 
-            $conn->execute(
-                'UPDATE web_visits SET player_id = :sid WHERE player_id = :dup',
-                ['sid' => $sid, 'dup' => $dupId]
-            );
             $conn->execute(
                 'UPDATE achievements SET player_id = :sid WHERE player_id = :dup',
                 ['sid' => $sid, 'dup' => $dupId]

@@ -798,6 +798,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
 
     public function avatar(?string $picture = null)
     {
+        $this->request->allowMethod(['post']);
         $player = $this->request->getAttribute('identity');
         if (!$this->ownsPlayer($player)) {
             $this->Flash->error('You can only edit your own profile, from the IP you play from.');
@@ -823,9 +824,9 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             return $this->redirect(['action' => 'profile']);
         }
 
-        // Normal avatar selection
-        $file = WWW_ROOT . 'img/players/' . $picture;
-        if (!file_exists($file)) {
+        // Normal avatar selection: only a file from img/players itself
+        $picture = basename((string)$picture);
+        if (!preg_match('/^[\w.-]+\.jpg$/i', $picture) || !is_file(WWW_ROOT . 'img/players/' . $picture)) {
             $this->Flash->error('Invalid avatar');
             return $this->redirect(['action' => 'profile']);
         }

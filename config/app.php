@@ -17,7 +17,7 @@ return [
      * Development Mode:
      * true: Errors and warnings shown.
      */
-    'debug' => filter_var(env('DEBUG', true), FILTER_VALIDATE_BOOLEAN),
+    'debug' => filter_var(env('DEBUG', false), FILTER_VALIDATE_BOOLEAN),
 
     /*
      * Configure basic information about the application.
@@ -546,6 +546,13 @@ return [
          *  - site     : absolute URL of the ladder, used for the embed links (null = no link)
          *  - state    : file that remembers the id of the message we keep editing
          */
+        /*
+         * Player ids of the site admins (set in app_local.php): visitor stats,
+         * contact-form messages and the sender of achievement messages (first
+         * one). Admin pages also require the admin's current IP.
+         */
+        'admins' => [],
+
         'discord' => [
             'webhook' => env('DISCORD_LIVE_WEBHOOK'),
             'servers' => ['acka-custom', 'acka-nostalgic', 'acka-assault', 'acka-europa', 'chobbz-banana', 'chobbz-potato'],

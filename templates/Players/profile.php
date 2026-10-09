@@ -54,7 +54,7 @@
     <div class="columns-2 sm:columns-3 md:columns-4 lg:columns-6 gap-3">
 
         <!-- No avatar -->
-        <?= $this->Html->link(
+        <?= $this->Form->postLink(
             '<span class="flex aspect-square w-full items-center justify-center rounded-lg border-4 border-dashed text-sm transition ' .
                 ($player->picture === null ? 'border-green-500 text-green-400' : 'border-zinc-600 text-zinc-400 hover:border-zinc-400') .
             '">No avatar</span>',
@@ -63,7 +63,7 @@
         ) ?>
 
         <?php foreach ($avatars as $avatar): $current = $player->picture === $avatar; ?>
-            <?= $this->Html->link(
+            <?= $this->Form->postLink(
                 '<span class="relative block overflow-hidden rounded-lg ring-4 transition ' .
                     ($current ? 'ring-green-500' : 'ring-transparent hover:ring-zinc-400') . '">' .
                     '<img src="/img/players/' . h(rawurlencode($avatar)) . '" alt="" loading="lazy" class="block w-full">' .

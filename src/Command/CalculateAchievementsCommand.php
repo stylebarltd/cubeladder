@@ -247,7 +247,7 @@ class CalculateAchievementsCommand extends Command
         string $body
     ): void {
         $message = $Messages->newEntity([
-            'sender_id'   => 'ed947213-05f5-4030-a7bc-f1f67e5c5de8',
+            'sender_id'   => ((array)\Cake\Core\Configure::read('Ladder.admins'))[0] ?? null,
             'receiver_id' => $receiverId,
             'body'        => "**{$title}**\n\n{$body}",
             'is_read'     => 0,

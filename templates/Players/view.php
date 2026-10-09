@@ -259,7 +259,7 @@ $achievementLabels = [
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 
-    const gamesData = <?= json_encode($gamesData) ?>;
+    const gamesData = <?= json_encode($gamesData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
     // K/D chart
     new Chart(document.getElementById('kdChart'), {
@@ -309,8 +309,8 @@ $achievementLabels = [
 <?php if (!empty($recent)): ?>
 <script>
 (function () {
-    const games = <?= json_encode($recent) ?>; // newest first
-    const playerId = <?= json_encode((string)$player->id) ?>;
+    const games = <?= json_encode($recent, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>; // newest first
+    const playerId = <?= json_encode((string)$player->id, JSON_HEX_TAG) ?>;
     const box = document.getElementById('pg-box');
     const card = document.getElementById('pg-card');
     const info = document.getElementById('pg-info');

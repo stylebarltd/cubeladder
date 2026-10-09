@@ -51,7 +51,7 @@ class MessagesTable extends Table
         $this->belongsTo('Senders', [
             'foreignKey' => 'sender_id',
             'className' => 'Players',
-            'joinType' => 'INNER',
+            'joinType' => 'LEFT', // anonymous contact-form messages have no sender
         ]);
         $this->belongsTo('Receivers', [
             'foreignKey' => 'receiver_id',
@@ -70,7 +70,7 @@ class MessagesTable extends Table
     {
         $validator
             ->uuid('sender_id')
-            ->notEmptyString('sender_id');
+            ->allowEmptyString('sender_id');
 
         $validator
             ->uuid('receiver_id')
@@ -96,7 +96,7 @@ class MessagesTable extends Table
      */
     public function buildRules(RulesChecker $rules): RulesChecker
     {
-        $rules->add($rules->existsIn(['sender_id'], 'Senders'), ['errorField' => 'sender_id']);
+        $rules->add($rules->existsIn(['sender_id'], 'Senders', ['allowNullableNulls' => true]), ['errorField' => 'sender_id']);
         $rules->add($rules->existsIn(['receiver_id'], 'Receivers'), ['errorField' => 'receiver_id']);
 
         return $rules;

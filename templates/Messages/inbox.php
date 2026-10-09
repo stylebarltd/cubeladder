@@ -36,12 +36,16 @@
                         <!-- Sender -->
                         <td class="px-6 py-5 whitespace-nowrap">
                             <div class="flex items-center gap-2">
-                                <?= $this->Html->link(
-                                    h($msg->sender->name),
-                                    ['controller' => 'Players', 'action' => 'view', $msg->sender->id],
-                                    ['class' => 'hover:text-blue-500 hover:underline']
-                                ) ?>
-                                <?= $this->Layout->flag($msg->sender->country) ?>
+                                <?php if ($msg->sender): ?>
+                                    <?= $this->Html->link(
+                                        h($msg->sender->name),
+                                        ['controller' => 'Players', 'action' => 'view', $msg->sender->id],
+                                        ['class' => 'hover:text-blue-500 hover:underline']
+                                    ) ?>
+                                    <?= $this->Layout->flag($msg->sender->country) ?>
+                                <?php else: ?>
+                                    <span class="italic text-gray-400">anonymous visitor</span>
+                                <?php endif; ?>
                             </div>
                         </td>
 

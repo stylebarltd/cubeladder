@@ -123,11 +123,6 @@ class AppController extends Controller
 
     protected function playerFromIp($Players): ?Player
     {
-        // If already authenticated via cookie, skip IP detection
-        if ($this->request->getCookie('player_id')) {
-            return null;
-        }
-
         $ip = $this->request->clientIp();
 
         $players = $Players->find()
@@ -169,12 +164,25 @@ class AppController extends Controller
         return !empty($player->ip) && $player->ip === $this->request->clientIp();
     }
 
+    /**
+     * The visitor is a site admin (Ladder.admins) and owns that identity
+     * (same IP as the admin's player - see ownsPlayer()).
+     */
+    protected function isAdmin(): bool
+    {
+        $identity = $this->request->getAttribute('identity');
+
+        return $identity !== null
+            && in_array($identity->id, (array)Configure::read('Ladder.admins'), true)
+            && $this->ownsPlayer($identity);
+    }
+
     public function writePlayerCookie(string $playerId): void
     {
         $cookie = (new Cookie('selected_player_id', $playerId))
             ->withExpiry(new \DateTime('+30 days'))
             ->withPath('/')
-            ->withSecure(false) // change to true in production
+            ->withSecure($this->request->is('https'))
             ->withHttpOnly(true)
             ->withSameSite(SameSiteEnum::LAX);
 
