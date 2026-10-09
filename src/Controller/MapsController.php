@@ -55,8 +55,11 @@ class MapsController extends AppController
         $map->best_on_map = $this->getBestOnMapByMap([$map->id])[$map->id] ?? [];
         // Per-map single-game records
         $map->leaders = $this->getMapLeaders([$map->id])[$map->id] ?? [];
+        // The visitor's own stats on this map (cookie / IP identity)
+        $identity = $this->request->getAttribute('identity');
+        $myStats = $identity ? $this->getPlayerMapStats($identity->id, $map->id) : null;
 
-        $this->set(compact('map', 'allMaps', 'rank', 'prevMap', 'nextMap'));
+        $this->set(compact('map', 'allMaps', 'rank', 'prevMap', 'nextMap', 'myStats'));
     }
 
     /**
@@ -245,4 +248,77 @@ class MapsController extends AppController
         return $leaders;
     }
 
+    /**
+     * One player's totals on one map (inaccurate games left out, short games
+     * not counted as played, see PlayerStatsPerGameTable::MIN_MINUTES), their
+     * place among all players by summed points and their best single game.
+     * Null when they never played the map.
+     */
+    private function getPlayerMapStats(string $playerId, string $mapId): ?array
+    {
+        $connection = $this->fetchTable('PlayerStatsPerGame')->getConnection();
+        $counted = \App\Model\Table\PlayerStatsPerGameTable::countedGamesSql('p');
+
+        $totals = $connection->execute(
+            "SELECT $counted AS games, COUNT(*) AS joined,
+                    SUM(p.minutes_played) AS minutes,
+                    SUM(p.total_score) AS points,
+                    SUM(p.kills) AS kills, SUM(p.deaths) AS deaths,
+                    SUM(p.scored_with_the_flag) AS flags,
+                    SUM(p.headshot) AS headshots,
+                    MAX(g.started_at) AS last_played
+             FROM player_stats_per_game p
+             INNER JOIN games g ON g.id = p.game_id
+             WHERE p.player_id = ? AND g.map_id = ? AND g.inaccurate = 0",
+            [$playerId, $mapId]
+        )->fetch('assoc');
+
+        if (!$totals || (int)$totals['joined'] === 0) {
+            return null;
+        }
+
+        // 1 + players with more summed points on this map
+        $place = 1 + (int)$connection->execute(
+            "SELECT COUNT(*) FROM (
+                 SELECT p.player_id
+                 FROM player_stats_per_game p
+                 INNER JOIN games g ON g.id = p.game_id
+                 WHERE g.map_id = ? AND g.inaccurate = 0
+                 GROUP BY p.player_id
+                 HAVING SUM(p.total_score) > ?
+             ) t",
+            [$mapId, (int)$totals['points']]
+        )->fetchColumn(0);
+
+        $best = $connection->execute(
+            "SELECT p.total_score AS points, g.id AS game_id, g.started_at AS played_at
+             FROM player_stats_per_game p
+             INNER JOIN games g ON g.id = p.game_id
+             WHERE p.player_id = ? AND g.map_id = ? AND g.inaccurate = 0
+             ORDER BY p.total_score DESC, g.started_at DESC
+             LIMIT 1",
+            [$playerId, $mapId]
+        )->fetch('assoc');
+
+        $kills = (int)$totals['kills'];
+        $deaths = (int)$totals['deaths'];
+
+        return [
+            'games' => (int)$totals['games'],
+            'minutes' => (int)$totals['minutes'],
+            'points' => (int)$totals['points'],
+            'place' => $place,
+            'kills' => $kills,
+            'deaths' => $deaths,
+            'kd' => $deaths > 0 ? $kills / $deaths : (float)$kills,
+            'flags' => (int)$totals['flags'],
+            'headshots' => (int)$totals['headshots'],
+            'lastPlayed' => $totals['last_played'] ? new \Cake\I18n\DateTime($totals['last_played']) : null,
+            'best' => $best ? [
+                'points' => (int)$best['points'],
+                'gameId' => $best['game_id'],
+                'playedAt' => $best['played_at'] ? new \Cake\I18n\DateTime($best['played_at']) : null,
+            ] : null,
+        ];
+    }
 }

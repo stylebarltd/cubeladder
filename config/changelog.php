@@ -26,6 +26,7 @@ return [
                 'Search is now in the header on phones too.',
                 '"Live" in the menu slowly pulses green while a game is on air; the Live page shows the running map full-screen behind the scoreboard.',
                 'Maps: full-screen map pages with records, top players and weekly winners, plus a map picker with thumbnails to jump to any of the maps played.',
+                'Maps: recognised players see their own stats on each map - place, points, games and time, K/D, flags, headshots and best game.',
                 'All Time Ranking in the same scoreboard style - click a column to sort by it.',
                 'Join our Discord (link on the front page) for live game stats of ladder games and inters.',
                 'Player pages: your most played map as background, personal records next to your top 10 nemesis and top 10 prey, weekly achievements and your last-100 stats.',

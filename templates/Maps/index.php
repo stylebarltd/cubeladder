@@ -11,6 +11,8 @@
  * @var int $rank
  * @var string|null $prevMap
  * @var string|null $nextMap
+ * @var array|null $myStats
+ * @var \App\Model\Entity\Player|null $authPlayer
  */
 if (!$map): ?>
     <p class="py-20 text-center text-zinc-500">No maps to show yet.</p>
@@ -86,8 +88,57 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
             </div>
         </div>
 
+        <div class="mt-auto flex flex-col gap-3 sm:gap-4">
+        <?php if (!empty($authPlayer)): ?>
+            <!-- The visitor's own stats on this map -->
+            <section class="<?= $panel ?>">
+                <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <h3 class="<?= $panelTitle ?> !mb-0 text-fuchsia-300"><i class="fa-solid fa-user mr-1"></i>
+                        Your stats on <?= $this->Layout->cleanMapName($map->name) ?> &ndash;
+                        <?= $this->Html->link(h($authPlayer->name), ['controller' => 'Players', 'action' => 'view', $authPlayer->id], ['class' => 'normal-case text-white hover:text-fuchsia-200', 'escape' => false]) ?>
+                    </h3>
+                    <?php if ($myStats && $myStats['lastPlayed']): ?>
+                        <span class="text-[11px] text-zinc-400">last played <?= h($myStats['lastPlayed']->format('d M Y')) ?></span>
+                    <?php endif; ?>
+                </div>
+                <?php if ($myStats):
+                    $tiles = [
+                        ['Place', '#' . number_format($myStats['place']), 'by points'],
+                        ['Points', number_format($myStats['points']), null],
+                        ['Games', number_format($myStats['games']), $this->Layout->duration($myStats['minutes'])],
+                        ['K/D', number_format($myStats['kd'], 2), number_format($myStats['kills']) . ' / ' . number_format($myStats['deaths'])],
+                        ['Flags', number_format($myStats['flags']), null],
+                        ['Headshots', number_format($myStats['headshots']), null],
+                    ];
+                    ?>
+                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                        <?php foreach ($tiles as [$label, $value, $sub]): ?>
+                            <div class="min-w-0 rounded bg-white/5 p-2">
+                                <div class="text-[10px] uppercase tracking-wide text-zinc-400"><?= $label ?></div>
+                                <div class="text-lg font-extrabold leading-tight text-fuchsia-200 tabular-nums"><?= $value ?></div>
+                                <?php if ($sub): ?><div class="truncate text-[10px] text-zinc-400"><?= h($sub) ?></div><?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php if ($myStats['best']): ?>
+                            <div class="col-span-3 min-w-0 rounded bg-white/5 p-2 sm:col-span-1">
+                                <div class="text-[10px] uppercase tracking-wide text-zinc-400">Best game</div>
+                                <div class="text-lg font-extrabold leading-tight text-fuchsia-200 tabular-nums"><?= number_format($myStats['best']['points']) ?> pts</div>
+                                <?= $this->Html->link(
+                                    $myStats['best']['playedAt'] ? h($myStats['best']['playedAt']->format('d M Y')) : 'view game',
+                                    ['controller' => 'Games', 'action' => 'view', $myStats['best']['gameId']],
+                                    ['class' => 'block truncate text-[10px] text-zinc-400 hover:text-fuchsia-200 hover:underline']
+                                ) ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php else: ?>
+                    <p class="text-sm text-zinc-400">You haven't played a counted game on this map yet.</p>
+                <?php endif; ?>
+            </section>
+        <?php endif; ?>
+
         <!-- Sections -->
-        <div class="mt-auto grid gap-3 sm:gap-4 lg:grid-cols-3">
+        <div class="grid gap-3 sm:gap-4 lg:grid-cols-3">
 
             <!-- Single-game records on this map -->
             <section class="<?= $panel ?>">
@@ -164,6 +215,7 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
                     <p class="text-sm text-zinc-400">No weekly winner on this map yet.</p>
                 <?php endif; ?>
             </section>
+        </div>
         </div>
     </div>
 
