@@ -86,4 +86,31 @@ class GamesController extends AppController
         $this->set(compact('game', 'board', 'prevId', 'nextId', 'notQualified'));
     }
 
+    /**
+     * Link preview picture of a game page (og:image): the final scoreboard
+     * as in the Discord results channel. GET /games/preview/{id}, cached on
+     * disk until the scoreboard changes.
+     */
+    public function preview(string $id)
+    {
+        $game = $this->loadGame($id);
+        $picture = \App\Service\GameResultPicture::describe($game, $this->Games->scoreboard($game))['picture'];
+
+        $dir = CACHE . 'cards' . DS;
+        $file = $dir . 'game-' . $id . '-' . md5((string)json_encode($picture)) . '.jpg';
+        if (!is_file($file)) {
+            if (!is_dir($dir)) {
+                mkdir($dir, 0775, true);
+            }
+            foreach (glob($dir . 'game-' . $id . '-*.jpg') ?: [] as $old) {
+                @unlink($old);
+            }
+            file_put_contents($file, (new \App\Service\LiveScoreboardImage())->render($picture));
+        }
+
+        return $this->response
+            ->withType('jpg')
+            ->withHeader('Cache-Control', 'public, max-age=86400')
+            ->withFile($file);
+    }
 }

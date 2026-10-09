@@ -1,3 +1,26 @@
+<?php
+// Link previews (Discord, WhatsApp, ...): the final scoreboard picture (GamesController::preview)
+$site = rtrim((string)(\Cake\Core\Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh'), '/');
+$result = \App\Service\GameResultPicture::describe($game, $board);
+$ogTitle = $result['map'] . ($result['mode'] !== '' ? ' · ' . $result['mode'] : '') . ' — ' . $result['title'];
+$ogText = implode(' · ', array_filter([
+    $result['server'],
+    $game->started_at ? $game->started_at->format('j M Y, H:i') : '',
+    $result['minutes'] > 0 ? $result['minutes'] . ' min' : '',
+    !empty($board['rows']) ? 'best player ' . $board['rows'][0]['player']->name . ' (' . number_format($board['rows'][0]['score']) . ' points)' : '',
+    $game->inaccurate ? 'not counted (inaccurate data)' : '',
+]));
+$this->assign('title', $ogTitle . ' · cubeLadder');
+$this->start('meta'); ?>
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="cubeLadder">
+    <meta property="og:title" content="<?= h($ogTitle) ?>">
+    <meta property="og:description" content="<?= h($ogText) ?>">
+    <meta property="og:url" content="<?= h($site . '/games/view/' . $game->id) ?>">
+    <meta property="og:image" content="<?= h($site . '/games/preview/' . $game->id . '?v=' . substr(md5((string)json_encode($result['picture'])), 0, 8)) ?>">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="description" content="<?= h($ogText) ?>">
+<?php $this->end(); ?>
 <div class="w-full">
 
     <?php $this->start('gameNotice'); ?>
