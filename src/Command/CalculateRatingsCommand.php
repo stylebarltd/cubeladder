@@ -148,6 +148,32 @@ class CalculateRatingsCommand extends Command
             });
         }
 
+        if (!$args->getOption('dry-run')) {
+            // every rated CTF game on the same 0-10 scale: 5.0 = an average
+            // game, one great game can reach 9.9
+            $games = $connection->execute($this->perGameSql(), [
+                'min_minutes' => PlayerStatsPerGameTable::MIN_MINUTES,
+                'min_players' => self::MIN_PLAYERS_PER_GAME,
+            ])->fetchAll('num');
+            $scores = array_map(fn($r) => (float)$r[2], $games);
+            $gMean = $scores ? array_sum($scores) / count($scores) : 0.0;
+            $gSd = $scores ? (sqrt(array_sum(array_map(fn($v) => ($v - $gMean) ** 2, $scores)) / count($scores)) ?: 1.0) : 1.0;
+            $connection->transactional(function ($connection) use ($games, $gMean, $gSd) {
+                $connection->execute('DELETE FROM player_game_ratings');
+                foreach (array_chunk($games, 1000) as $chunk) {
+                    $query = $connection->insertQuery('player_game_ratings')->insert(['game_id', 'player_id', 'rating']);
+                    foreach ($chunk as [$gameId, $playerId, $score]) {
+                        $query->values([
+                            'game_id' => $gameId,
+                            'player_id' => $playerId,
+                            'rating' => round(max(0.1, min(9.9, 5 + 1.5 * ((float)$score - $gMean) / $gSd)), 1),
+                        ]);
+                    }
+                    $query->execute();
+                }
+            });
+        }
+
         $io->out(sprintf('%d players rated in %.1f s', count($ratings), microtime(true) - $started));
 
         return self::CODE_SUCCESS;
@@ -160,9 +186,37 @@ class CalculateRatingsCommand extends Command
      */
     private function sql(): string
     {
+        return $this->ctes() . "
+            SELECT ranked.player_id, COUNT(*) AS games, AVG(score) AS raw,
+                   AVG(att_z) AS attack, AVG(dfn_z) AS defense, AVG(combat_z) AS combat,
+                   SUM(win = 1) AS wins, SUM(win <> 0) AS decided, " . $this->sumWeapons() . "
+            FROM ranked
+            INNER JOIN players pl ON pl.id = ranked.player_id AND pl.track = 1
+            WHERE rn <= :window
+            GROUP BY ranked.player_id
+            HAVING COUNT(*) >= :min_games";
+    }
+
+    /**
+     * The score of every player in every rated CTF game (an INSERT ... WITH
+     * of the same query is very slow in MariaDB, so the rows go through PHP).
+     */
+    private function perGameSql(): string
+    {
+        return $this->ctes() . '
+            SELECT game_id, player_id, score FROM ranked';
+    }
+
+    private function sumWeapons(): string
+    {
+        return implode(', ', array_map(fn($c) => "SUM($c) AS $c", array_merge(...array_values(self::WEAPONS))));
+    }
+
+    /** Per player-game scores ("ranked"), see the class comment */
+    private function ctes(): string
+    {
         $weaponCols = array_merge(...array_values(self::WEAPONS));
         $pgWeapons = implode(', ', array_map(fn($c) => "p.$c", $weaponCols));
-        $sumWeapons = implode(', ', array_map(fn($c) => "SUM($c) AS $c", $weaponCols));
 
         return "
             WITH pg AS (
@@ -215,7 +269,7 @@ class CalculateRatingsCommand extends Command
                 FROM rel
             ),
             z AS (
-                SELECT rel.player_id, rel.ended_at, rel.win, " . implode(', ', $weaponCols) . ",
+                SELECT rel.player_id, rel.game_id, rel.ended_at, rel.win, " . implode(', ', $weaponCols) . ",
                        (obj_rel - m_obj) / s_obj AS obj_z, (att_rel - m_att) / s_att AS att_z,
                        (dfn_rel - m_dfn) / s_dfn AS dfn_z,
                        0.8 * (kd_rel - m_kd) / s_kd + 0.2 * (fpm_rel - m_fpm) / s_fpm AS combat_z,
@@ -227,15 +281,7 @@ class CalculateRatingsCommand extends Command
                        0.55 * obj_z + 0.30 * combat_z + 0.12 * win_z + 0.03 * disc_z AS score,
                        ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY ended_at DESC) AS rn
                 FROM z
-            )
-            SELECT ranked.player_id, COUNT(*) AS games, AVG(score) AS raw,
-                   AVG(att_z) AS attack, AVG(dfn_z) AS defense, AVG(combat_z) AS combat,
-                   SUM(win = 1) AS wins, SUM(win <> 0) AS decided, $sumWeapons
-            FROM ranked
-            INNER JOIN players pl ON pl.id = ranked.player_id AND pl.track = 1
-            WHERE rn <= :window
-            GROUP BY ranked.player_id
-            HAVING COUNT(*) >= :min_games";
+            )";
     }
 
     /** The weapon with 40%+ of the player's kills, else "Mixed" */

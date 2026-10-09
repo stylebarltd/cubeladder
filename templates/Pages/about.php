@@ -212,7 +212,8 @@ $rules = [
                         on a scale from 0 to 10 like a football match rating: <b>5.0</b> is the average player, <b>7+</b> is very good, <b>8+</b> is top.</p>
                     <p>Every CTF game you play for 3+ minutes (with 4+ players) gets a score. Everything is counted
                         <b>per minute</b> and <b>against the other players in the same game</b>, so short games, late joins and full servers are fair.
-                        Your rating is the average of your <b>last 100 CTF games</b> (from 20 games on), updated after every import.</p>
+                        Your rating is the average of your <b>last 100 CTF games</b> (from 20 games on), updated after every import.
+                        Every CTF scoreboard also shows each player&rsquo;s rating <b>for that one game</b> (<b>rtg</b>) &ndash; 5.0 is an average game.</p>
                     <table class="w-full text-sm">
                         <tbody class="divide-y divide-white/10">
                             <tr><td class="py-1.5 pr-3 font-bold text-lime-300">55%</td><td class="py-1.5"><b>Flag play</b> &ndash; flags scored &times;5, steals +1, lost flags &minus;1, returns +1</td></tr>

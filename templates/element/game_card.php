@@ -28,7 +28,19 @@ $ratioClass = fn(float $r) => $r >= 1.5 ? 'text-green-400' : ($r >= 1 ? 'text-bl
 $flagMode = $board['flagMode'];
 $mapName = $this->Layout->cleanMapName($game->map->name);
 
-$playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight) {
+$rated = !empty($board['rated']);
+// CTF rating of this game, colored like the player page's rating
+$ratingClass = fn(?float $r) => match (true) {
+    $r === null => 'text-zinc-500',
+    $r >= 8.0 => 'text-sky-300',
+    $r >= 7.0 => 'text-green-400',
+    $r >= 6.0 => 'text-lime-300',
+    $r >= 5.0 => 'text-yellow-300',
+    $r >= 4.0 => 'text-orange-400',
+    default => 'text-red-400',
+};
+
+$playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight, $rated, $ratingClass) {
     $mine = $highlight !== null && (string)$row['player']->id === (string)$highlight;
     ob_start(); ?>
     <tr class="<?= $mine ? 'bg-sky-500/25 font-bold outline outline-1 -outline-offset-1 outline-sky-400' : ($row['is_mvp'] ? 'bg-yellow-400/10' : '') ?>">
@@ -46,8 +58,13 @@ $playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight) {
         <?php if ($flagMode): ?><td class="px-1 py-1 sm:px-2 text-right"><?= $row['flags'] ?></td><?php endif; ?>
         <td class="px-1 py-1 sm:px-2 text-right"><?= $row['kills'] ?></td>
         <td class="px-1 py-1 sm:px-2 text-right"><?= $row['deaths'] ?></td>
-        <td class="px-1 py-1 sm:px-2 text-right <?= $ratioClass($row['kd_ratio']) ?>"><?= number_format($row['kd_ratio'], 2) ?></td>
+        <?php /* phones: with a rating column, k/d (frags / deaths) makes room */ ?>
+        <td class="px-1 py-1 sm:px-2 text-right <?= $rated ? 'hidden sm:table-cell' : '' ?> <?= $ratioClass($row['kd_ratio']) ?>"><?= number_format($row['kd_ratio'], 2) ?></td>
         <td class="px-1 py-1 sm:px-2 text-right font-bold text-sky-300"><?= $row['score'] ?></td>
+        <?php if ($rated): ?>
+            <td class="px-1 py-1 sm:px-2 text-right font-bold <?= $ratingClass($row['rating']) ?>"
+                title="<?= $row['rating'] === null ? 'no rating: under 3 minutes played' : 'CTF rating of this game' ?>"><?= $row['rating'] !== null ? number_format($row['rating'], 1) : '–' ?></td>
+        <?php endif; ?>
         <?php $short = $row['minutes'] !== null && $row['minutes'] < \App\Model\Table\PlayerStatsPerGameTable::MIN_MINUTES; ?>
         <td class="px-1 py-1 sm:px-2 text-right <?= $short ? 'text-zinc-500' : 'text-zinc-300' ?>"
             title="<?= $row['minutes'] === null ? 'minutes unknown' : ($short ? 'played under ' . \App\Model\Table\PlayerStatsPerGameTable::MIN_MINUTES . ' min: not counted as a game played' : (int)$row['minutes'] . ' minutes played') ?>"><?= $row['minutes'] ?? '–' ?></td>
@@ -55,15 +72,16 @@ $playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight) {
     <?php return ob_get_clean();
 };
 
-$head = function () use ($flagMode) {
+$head = function () use ($flagMode, $rated) {
     ob_start(); ?>
     <tr class="text-zinc-400">
         <th class="px-1.5 py-1 sm:px-2 text-left font-normal">name</th>
         <?php if ($flagMode): ?><th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">fl</span><span class="hidden sm:inline">flags</span></th><?php endif; ?>
         <th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">k</span><span class="hidden sm:inline">frags</span></th>
         <th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">d</span><span class="hidden sm:inline">deaths</span></th>
-        <th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">k/d</span><span class="hidden sm:inline">ratio</span></th>
+        <th class="px-1 py-1 sm:px-2 text-right font-normal <?= $rated ? 'hidden sm:table-cell' : '' ?>"><span class="sm:hidden">k/d</span><span class="hidden sm:inline">ratio</span></th>
         <th class="px-1 py-1 sm:px-2 text-right font-normal">pts</th>
+        <?php if ($rated): ?><th class="px-1 py-1 sm:px-2 text-right font-normal" title="CTF rating of this game, 0-10 (5.0 = an average game) - see About">rtg</th><?php endif; ?>
         <th class="px-1 py-1 sm:px-2 text-right font-normal" title="minutes played">min</th>
     </tr>
     <?php return ob_get_clean();

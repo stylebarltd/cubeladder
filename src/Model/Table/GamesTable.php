@@ -139,7 +139,7 @@ class GamesTable extends Table
      * contained): tracked players by points, and for team games with known
      * final scores the CLA / RVSF split like the in-game scoreboard.
      *
-     * @return array{rows: array, teams: ?array, winner: ?string, flagMode: bool, unassigned: array}
+     * @return array{rows: array, teams: ?array, winner: ?string, flagMode: bool, unassigned: array, rated: bool}
      */
     public function scoreboard(Game $game): array
     {
@@ -147,6 +147,15 @@ class GamesTable extends Table
             ->filter(fn($s) => $s->player && (int)$s->player->track === 1)
             ->sortBy('total_score', SORT_DESC)
             ->toList();
+
+        // CTF rating of each player in this game (bin/cake CalculateRatings)
+        $ratings = [];
+        if ($game->mode === 'ctf') {
+            $ratings = $this->getConnection()
+                ->execute('SELECT player_id, rating FROM player_game_ratings WHERE game_id = ?', [$game->id])
+                ->fetchAll('assoc');
+            $ratings = array_column($ratings, 'rating', 'player_id');
+        }
 
         $rows = [];
         foreach ($stats as $i => $stat) {
@@ -160,11 +169,12 @@ class GamesTable extends Table
                 'kd_ratio' => (float)$stat->kd_ratio,
                 'score' => (int)$stat->total_score,
                 'minutes' => $stat->minutes_played,
+                'rating' => isset($ratings[$stat->player_id]) ? (float)$ratings[$stat->player_id] : null,
             ];
         }
 
         $flagMode = in_array($game->mode, self::FLAG_MODES, true);
-        $board = ['rows' => $rows, 'teams' => null, 'winner' => null, 'flagMode' => $flagMode, 'unassigned' => []];
+        $board = ['rows' => $rows, 'teams' => null, 'winner' => null, 'flagMode' => $flagMode, 'unassigned' => [], 'rated' => $ratings !== []];
 
         $teamScores = $game->team_scores ? json_decode($game->team_scores, true) : null;
         if (!$teamScores || !in_array($game->mode, self::TEAM_MODES, true)) {
