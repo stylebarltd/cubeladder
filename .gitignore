@@ -14,7 +14,8 @@
 .Spotlight-V100
 .Trashes
 # Icon must end with two \r
-Icon
+Icon
+
 ehthumbs.db
 Thumbs.db
 .directory
@@ -80,3 +81,6 @@ __pycache__/
 /webroot/img/players/
 /webroot/img/maps/
 /webroot/img/world-war-bullet-*.png
+
+# server logins for process_logs*.sh
+/.env.local

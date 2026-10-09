@@ -67,24 +67,11 @@ class PagesController extends AppController
                 ->orderByDesc('modified');
 
 
-//            $gameTable = $this->fetchTable('Games');
-//            $games = $gameTable->find()->where(['ended_at IS NULL']);
-//            //dd($games->toArray());
-//            foreach($games as $game) {
-//                //$this->gamesDeleted++;
-//                $gameTable->delete($game);
-//            }
 
 
 
             $Events = $this->fetchTable('Events');
 
-//            $lastKills = $Events->find()
-//                ->where(['type IN' => ['kill', 'stole_the_flag', 'lost_the_flag', 'return_the_flag', 'teamkill']])       // Adjust if your column is different!
-//                ->orderByDesc('event_time')
-//                ->limit(100)
-//                ->toArray();
-//dd($lastKills);
             $bestPlayersByScore = $this->bestPlayersByScore();
             // Hall of Fame record holder per category (shared, cached lists)
             $hofTitles = [

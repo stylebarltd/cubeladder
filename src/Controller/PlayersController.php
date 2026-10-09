@@ -83,7 +83,7 @@ class PlayersController extends AppController
      * player_stats_per_game. Single source for the HoF page and the
      * personal-records card on the player view.
      */
-    /** Hall of Fame window start (keep in sync with LastGamesTrait::getHallOfFameGameIds) */
+    /** Hall of Fame: only games since this date count (start of the current ladder rules) */
     public const HOF_SINCE = '2026-03-01';
 
     public const HOF_CATEGORIES = [
@@ -258,7 +258,7 @@ class PlayersController extends AppController
                         . 'ORDER BY g2.started_at DESC LIMIT 1)',
                 ])
                 ->innerJoinWith('PlayerStatsPerGame.Games', function ($q) {
-                    return $q->where(['Games.started_at >' => date('Y')]);
+                    return $q->where(['Games.started_at >=' => date('Y') . '-01-01']);
                 })
                 ->where(['Players.track' => 1])
                 ->group(['Players.id'])
@@ -658,33 +658,6 @@ $gamesDataGlobal = [];        // games inside lastGameIds
 
             }
 
-//            foreach ($player->player_stats_per_game as $stat) {
-//                // Basic totals
-//                $totalKills  += $stat->kills;
-//                $totalDeaths += $stat->deaths;
-//                $totalScore  += $stat->total_score;
-//
-//                // Dynamic stat sums
-//                foreach ($statFields as $field) {
-//                    $statSums[$field] += (int)($stat->{$field} ?? 0);
-//                }
-//
-//                // Per-game data for UI
-//                $gamesData[] = [
-//                    'game_id' => $stat->game->id,
-//                    'map_name' => $stat->game->map->name,
-//                    'played_at' => $stat->game->started_at->format('D, dS M'),
-//                    'map_image' => file_exists(
-//                        WWW_ROOT . 'img/maps/' . $stat->game->map->name . '.jpg'
-//                    )
-//                        ? '/img/maps/' . $stat->game->map->name . '.jpg'
-//                        : '/img/maps/placeholder.jpg',
-//                    'score' => $stat->total_score,
-//                    'kills' => $stat->kills,
-//                    'deaths' => $stat->deaths,
-//                    'kd_ratio' => $stat->kd_ratio,
-//                ];
-//            }
         }
 
         // Derived stat

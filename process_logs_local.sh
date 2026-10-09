@@ -3,6 +3,9 @@ set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# server logins / credentials live in .env.local (not in git) - see .env.local.example
+if [ -f "$BASE_DIR/.env.local" ]; then . "$BASE_DIR/.env.local"; else echo "missing $BASE_DIR/.env.local" >&2; exit 1; fi
+
 PROCESSOR_LOG_DIR="$BASE_DIR/logs"
 TMP_DIR="$BASE_DIR/tmp"
 LOGFILE="$PROCESSOR_LOG_DIR/logfile_server_processor.log"

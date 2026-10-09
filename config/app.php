@@ -553,6 +553,9 @@ return [
          */
         'admins' => [],
 
+        // "the last 100": ranking window in games (also shown on the front page)
+        'maxGamesToRank' => 100,
+
         'discord' => [
             'webhook' => env('DISCORD_LIVE_WEBHOOK'),
             'servers' => ['acka-custom', 'acka-nostalgic', 'acka-assault', 'acka-europa', 'chobbz-banana', 'chobbz-potato'],

@@ -7,11 +7,13 @@ use Cake\ORM\TableRegistry;
 
 trait LastGamesTrait
 {
-    protected function getLastGameIds(int $limit = 100): array
+    /**
+     * Ids of the last Ladder.maxGamesToRank (100) counted games - "the last 100".
+     */
+    protected function getLastGameIds(?int $limit = null): array
     {
+        $limit ??= (int)(Configure::read('Ladder.maxGamesToRank') ?: 100);
         $Games = TableRegistry::getTableLocator()->get('Games');
-
-        //$maxGamesToRank = Configure::read('Ladder.maxGamesToRank');
 
         $gameIds = $Games
             ->find()
@@ -30,15 +32,12 @@ trait LastGamesTrait
     {
         $Games = TableRegistry::getTableLocator()->get('Games');
 
-        //$maxGamesToRank = Configure::read('Ladder.maxGamesToRank');
-
         $gameIds = $Games
             ->find()
             ->select(['id'])
             ->where(['inaccurate' => false])
             ->orderByDesc('ended_at')
-            ->where(['started_at >=' => '2026-03-01'])
-            //->limit($limit)
+            ->where(['started_at >=' => \App\Controller\PlayersController::HOF_SINCE])
             ->enableHydration(false)
             ->all()
             ->extract('id')
@@ -50,15 +49,12 @@ trait LastGamesTrait
     {
         $Games = TableRegistry::getTableLocator()->get('Games');
 
-        //$maxGamesToRank = Configure::read('Ladder.maxGamesToRank');
-
         $gameIds = $Games
             ->find()
             ->select(['id'])
             ->where(['inaccurate' => false])
             ->orderByDesc('ended_at')
-            ->where(['started_at >' => date('Y')])
-            //->limit($limit)
+            ->where(['started_at >=' => date('Y') . '-01-01'])
             ->enableHydration(false)
             ->all()
             ->extract('id')
@@ -67,11 +63,10 @@ trait LastGamesTrait
         return $gameIds;
     }
 
-    protected function getGameDateRange(int $limit = 100): array
+    protected function getGameDateRange(?int $limit = null): array
     {
+        $limit ??= (int)(Configure::read('Ladder.maxGamesToRank') ?: 100);
         $Games = TableRegistry::getTableLocator()->get('Games');
-
-        //$maxGamesToRank = Configure::read('Ladder.maxGamesToRank');
 
         $games = $Games->find()
             ->select(['started_at', 'ended_at'])
