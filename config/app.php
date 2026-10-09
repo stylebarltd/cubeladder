@@ -602,6 +602,11 @@ return [
             // front page and /about – "Server Widget" must be enabled in Discord
             'guild' => '1558032547034963988',
 
+            // results channel: bin/cake discord_results after every log import
+            'results' => [
+                'webhook' => env('DISCORD_RESULTS_WEBHOOK'),
+            ],
+
             // welcome channel: bin/cake discord_welcome (posted once, re-run edits it)
             'welcome' => [
                 'webhook' => env('DISCORD_WELCOME_WEBHOOK'),

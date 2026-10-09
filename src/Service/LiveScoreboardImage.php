@@ -39,7 +39,10 @@ class LiveScoreboardImage
     }
 
     /**
-     * @param array $s one polled server (DiscordLiveService::poll())
+     * @param array $s one polled server (DiscordLiveService::poll()); a
+     *   finished game (DiscordResultsCommand) may override 'meta' (second
+     *   header line), 'badge' ([big, small] top right), 'footer', 'team_scores'
+     *   (final score per team) and 'winner' (team)
      * @return string JPEG bytes
      */
     public function render(array $s): string
@@ -58,7 +61,7 @@ class LiveScoreboardImage
             }
             foreach (['CLA', 'RVSF'] as $team) {
                 usort($teams[$team], $sort);
-                $columns[] = ['team' => $team, 'players' => $teams[$team], 'score' => array_sum(array_column($teams[$team], $key))];
+                $columns[] = ['team' => $team, 'players' => $teams[$team], 'score' => $s['team_scores'][$team] ?? array_sum(array_column($teams[$team], $key))];
             }
         } else {
             usort($players, $sort);
@@ -77,12 +80,12 @@ class LiveScoreboardImage
         // header: map, mode · server · time left
         $map = (new LayoutHelper(new View()))->cleanMapName((string)$s['map']) ?: (string)$s['map'];
         $this->text(strtoupper($map), self::PAD, 72, 44, $this->bold, [255, 255, 255]);
-        $meta = strtoupper((string)($s['mode_name'] ?? '?')) . '  ·  ' . $s['name']
+        $meta = $s['meta'] ?? strtoupper((string)($s['mode_name'] ?? '?')) . '  ·  ' . $s['name']
             . ($s['minremain'] !== null ? sprintf('  ·  %d min left', $s['minremain']) : '');
         $this->text($meta, self::PAD, 112, 20, $this->regular, [212, 212, 216]);
-        $count = sprintf('%d/%d', (int)$s['numplayers'], (int)($s['maxclients'] ?? 0));
+        [$count, $small] = $s['badge'] ?? [sprintf('%d/%d', (int)$s['numplayers'], (int)($s['maxclients'] ?? 0)), 'players'];
         $this->text($count, self::WIDTH - self::PAD - $this->width($count, 30, $this->bold), 72, 30, $this->bold, [134, 239, 172]);
-        $this->text('players', self::WIDTH - self::PAD - $this->width('players', 16, $this->regular), 104, 16, $this->regular, [161, 161, 170]);
+        $this->text($small, self::WIDTH - self::PAD - $this->width($small, 16, $this->regular), 104, 16, $this->regular, [161, 161, 170]);
 
         $gap = 24;
         $colWidth = (int)((self::WIDTH - 2 * self::PAD - (count($columns) - 1) * $gap) / count($columns));
@@ -90,12 +93,15 @@ class LiveScoreboardImage
         $leader = $teamMode && count(array_unique($scores)) > 1 ? max($scores) : null;
         foreach ($columns as $i => $c) {
             $x = self::PAD + $i * ($colWidth + $gap);
-            $this->column($c, $x, $tableTop, $colWidth, $rows, $byFlags, $c['score'] !== null && $c['score'] === $leader);
+            $leads = array_key_exists('winner', $s)
+                ? $c['team'] !== null && $c['team'] === $s['winner']
+                : $c['score'] !== null && $c['score'] === $leader;
+            $this->column($c, $x, $tableTop, $colWidth, $rows, $byFlags, $leads);
         }
 
         // no clock: an unchanged scoreboard must give the same image (Discord
         // shows "updated …" itself), so it is not uploaded again
-        $foot = 'cubeladder.ovh/live';
+        $foot = $s['footer'] ?? 'cubeladder.ovh/live';
         $this->text($foot, self::WIDTH - self::PAD - $this->width($foot, 15, $this->regular), $height - 24, 15, $this->regular, [161, 161, 170]);
         if (!empty($s['host'])) {
             $this->text(sprintf('/connect %s %d', $s['host'], (int)$s['port']), self::PAD, $height - 24, 15, $this->regular, [161, 161, 170]);
