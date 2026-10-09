@@ -39,6 +39,7 @@ return [
                 'Maps: recognised players see their own stats on each map - place, points, games and time, K/D, flags, headshots and best game.',
                 'All Time Ranking in the same scoreboard style - click a column to sort by it.',
                 'Join our Discord (link on the front page) for live game stats of ladder games and inters.',
+                'Discord live channel: every running game is shown as a scoreboard picture (map, CLA vs RVSF, flags, frags, deaths), with buttons to open the live pages.',
                 'Player pages: your most played map as background, personal records next to your top 10 nemesis and top 10 prey, weekly achievements and your last-100 stats.',
                 'Player pages show your total time played and your time in the last 100 games.',
                 'Recent games on your player page look like the game pages - flip through them with the arrows, your row is highlighted.',

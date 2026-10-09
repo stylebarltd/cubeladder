@@ -21,8 +21,11 @@ use RuntimeException;
  * Discord cannot embed a web page, so the Live page is rebuilt as embeds:
  * one embed per server with map / mode / time left, a monospaced
  * scoreboard per team (CLA | RVSF), links to the ladder profiles of the
- * players we track, a link to the game on the ladder when the log has
- * already been processed, and the map picture as thumbnail.
+ * players we track and a link to the game on the ladder when the log has
+ * already been processed. Servers being played on get their scoreboard as
+ * a picture instead (LiveScoreboardImage, uploaded with the message and
+ * only re-uploaded when it changed); link buttons below the message open
+ * the Live pages.
  */
 class DiscordLiveService
 {
@@ -35,6 +38,15 @@ class DiscordLiveService
 
     private array $cfg;
     private Client $http;
+
+    /**
+     * Scoreboard pictures of the payload being built: server key =>
+     * ['filename', 'hash', 'jpeg' (new upload) | 'id' (kept attachment)]
+     */
+    private array $images = [];
+
+    /** Last uploaded picture per server key (from the state file) */
+    private array $prevImages = [];
 
     public function __construct(?array $cfg = null, ?Client $http = null)
     {
@@ -56,23 +68,28 @@ class DiscordLiveService
         $servers = $this->poll();
         $state['live'] = $this->trackFlags($servers, $state['live'] ?? []);
         $this->notifyJoins($servers, $state);
-        $payload = $this->buildPayload($servers);
 
         $action = 'edited';
         $messageId = $forceNew ? null : ($state['message_id'] ?? null);
+        // kept attachments only exist on the remembered message
+        $this->prevImages = $messageId !== null ? ($state['images'] ?? []) : [];
+        $payload = $this->buildPayload($servers);
 
         if ($messageId !== null) {
-            $res = $this->http->patch($this->messageUrl($messageId), json_encode($payload), ['type' => 'json']);
+            $res = $this->send('PATCH', $this->messageUrl($messageId), $payload);
             if ($res->getStatusCode() === 404) {
                 Log::info('discord_live: message ' . $messageId . ' is gone, posting a new one');
                 $messageId = null;
+                // nothing to keep on a new message: upload every picture
+                $this->prevImages = [];
+                $payload = $this->buildPayload($servers);
             } elseif (!$res->isOk()) {
                 throw new RuntimeException('Discord edit failed: HTTP ' . $res->getStatusCode() . ' ' . $res->getStringBody());
             }
         }
 
         if ($messageId === null) {
-            $res = $this->http->post($this->cfg['webhook'] . '?wait=true', json_encode($payload), ['type' => 'json']);
+            $res = $this->send('POST', $this->cfg['webhook'] . '?wait=true', $payload);
             if (!$res->isOk()) {
                 throw new RuntimeException('Discord post failed: HTTP ' . $res->getStatusCode() . ' ' . $res->getStringBody());
             }
@@ -84,6 +101,7 @@ class DiscordLiveService
             $state['posted_at'] = time();
             $action = 'posted';
         }
+        $state['images'] = $this->rememberImages((array)$res->getJson());
         $state['webhook_id'] = $this->webhookId();
         $this->writeState($state);
 
@@ -269,6 +287,10 @@ class DiscordLiveService
     public function buildPayload(array $servers): array
     {
         $profiles = $this->profiles($servers);
+        $this->images = [];
+        foreach ($servers as $s) {
+            $this->scoreboardImage($s);
+        }
 
         $online = 0;
         $players = 0;
@@ -311,12 +333,157 @@ class DiscordLiveService
             }
         }
 
-        return [
+        $payload = [
             'username' => ($this->cfg['brand'] ?? 'CubeLadder') . ' Live',
             'avatar_url' => $this->avatarUrl(),
             'embeds' => $embeds,
             'allowed_mentions' => ['parse' => []],
+            // the message keeps exactly these: kept pictures by id, new ones
+            // by their index in the upload (see send())
+            'attachments' => $this->attachmentList(),
         ];
+        if (($components = $this->buttons($servers)) !== []) {
+            $payload['components'] = $components;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Render the scoreboard picture of a server being played on (unless
+     * Ladder.discord.images is false). An unchanged scoreboard keeps the
+     * attachment that is already on the message instead of a new upload.
+     */
+    private function scoreboardImage(array $s): void
+    {
+        if (($this->cfg['images'] ?? true) === false || !$s['online'] || empty($s['map']) || (int)$s['numplayers'] === 0) {
+            return;
+        }
+        $players = array_map(
+            fn($p) => [$p['name'], $p['team'], $p['frags'], $p['flags'], $p['deaths'], !empty($p['is_spectator'])],
+            $s['players']
+        );
+        $hash = md5(json_encode([$s['map'], $s['mode'], $s['minremain'], $s['numplayers'], $s['maxclients'] ?? 0, $players]));
+        $filename = 'live-' . preg_replace('/[^a-z0-9-]/', '', strtolower($s['key'])) . '.jpg';
+
+        $prev = $this->prevImages[$s['key']] ?? null;
+        if ($prev && $prev['hash'] === $hash && !empty($prev['id'])) {
+            $this->images[$s['key']] = ['filename' => $filename, 'hash' => $hash, 'id' => $prev['id']];
+
+            return;
+        }
+        try {
+            $this->images[$s['key']] = ['filename' => $filename, 'hash' => $hash, 'jpeg' => (new LiveScoreboardImage())->render($s)];
+        } catch (\Throwable $e) {
+            // no picture: the embed falls back to the text scoreboard
+            Log::warning('discord_live: scoreboard image for ' . $s['key'] . ' failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Webhook "attachments" list: kept ones by id, new uploads by index.
+     */
+    private function attachmentList(): array
+    {
+        $list = [];
+        $upload = 0;
+        foreach ($this->images as $img) {
+            $list[] = isset($img['jpeg'])
+                ? ['id' => $upload++, 'filename' => $img['filename']]
+                : ['id' => $img['id'], 'filename' => $img['filename']];
+        }
+
+        return $list;
+    }
+
+    /**
+     * Attachment ids of the pictures on the returned message, by file name,
+     * for the state file: the next run keeps unchanged pictures. Pictures
+     * used by an embed are not listed under "attachments" – their id is in
+     * the embed's image url (.../attachments/{channel}/{id}/{filename}).
+     */
+    private function rememberImages(array $message): array
+    {
+        $ids = [];
+        foreach ($message['attachments'] ?? [] as $a) {
+            $ids[$a['filename'] ?? ''] = (string)($a['id'] ?? '');
+        }
+        foreach ($message['embeds'] ?? [] as $e) {
+            if (preg_match('#/attachments/\d+/(\d+)/([^/?]+)#', (string)($e['image']['url'] ?? ''), $m)) {
+                $ids[$m[2]] = $m[1];
+            }
+        }
+        $out = [];
+        foreach ($this->images as $key => $img) {
+            if (!empty($ids[$img['filename']])) {
+                $out[$key] = ['hash' => $img['hash'], 'id' => $ids[$img['filename']]];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Link buttons below the message: the Live page and the live scoreboard
+     * of up to four servers being played on (fullest first). Discord takes
+     * them from non-bot webhooks with ?with_components=true (see send()).
+     */
+    private function buttons(array $servers): array
+    {
+        if (($this->cfg['buttons'] ?? true) === false || !$this->site()) {
+            return [];
+        }
+        $busy = array_filter($servers, fn($s) => $s['online'] && (int)$s['numplayers'] > 0 && !empty($s['map']));
+        uasort($busy, fn($a, $b) => (int)$b['numplayers'] <=> (int)$a['numplayers']);
+
+        $row = [[
+            'type' => 2, 'style' => 5,
+            'label' => 'Live servers',
+            'emoji' => ['name' => '📡'],
+            'url' => $this->site() . '/live',
+        ]];
+        foreach (array_slice($busy, 0, 4) as $s) {
+            $row[] = [
+                'type' => 2, 'style' => 5,
+                'label' => mb_substr(sprintf('%s · %d/%d', $s['name'], (int)$s['numplayers'], (int)($s['maxclients'] ?? 0)), 0, 80),
+                'url' => $this->site() . '/live/game/' . rawurlencode($s['key']),
+            ];
+        }
+
+        return [['type' => 1, 'components' => $row]];
+    }
+
+    /**
+     * POST / PATCH a webhook message: JSON, or multipart (payload_json +
+     * files[n]) when there are new scoreboard pictures to upload.
+     */
+    private function send(string $method, string $url, array $payload): \Cake\Http\Client\Response
+    {
+        if (!empty($payload['components'])) {
+            $url .= (str_contains($url, '?') ? '&' : '?') . 'with_components=true';
+        }
+        $uploads = array_values(array_filter($this->images, fn($img) => isset($img['jpeg'])));
+        if (!$uploads) {
+            $body = json_encode($payload);
+            $options = ['type' => 'json'];
+        } else {
+            $form = new \Cake\Http\Client\FormData();
+            $json = $form->newPart('payload_json', (string)json_encode($payload));
+            $json->type('application/json');
+            $form->add($json);
+            foreach ($uploads as $i => $img) {
+                $part = $form->newPart('files[' . $i . ']', $img['jpeg']);
+                $part->filename($img['filename']);
+                $part->type('image/jpeg');
+                $form->add($part);
+            }
+            $body = (string)$form;
+            $options = ['headers' => ['Content-Type' => $form->contentType()]];
+        }
+
+        return $method === 'PATCH'
+            ? $this->http->patch($url, $body, $options)
+            : $this->http->post($url, $body, $options);
     }
 
     /**
@@ -405,6 +572,13 @@ class DiscordLiveService
         // pages). Besides looking like the in-game scoreboard this forces
         // Discord to render the embed at its maximum width, which is what
         // gives the scoreboards room. Only for servers being played on.
+        if (isset($this->images[$s['key']])) {
+            // the scoreboard picture already shows the map and both teams
+            $embed['image'] = ['url' => 'attachment://' . $this->images[$s['key']]['filename']];
+            $embed['footer'] = ['text' => sprintf('/connect %s %d', $s['host'], $s['port'])];
+
+            return $embed;
+        }
         if ($this->site() && !empty($s['map']) && $n > 0) {
             // no screenshot: the bullet artwork (as on the website), 1280x720
             $path = is_file(WWW_ROOT . 'img/maps/' . $s['map'] . '.jpg')
