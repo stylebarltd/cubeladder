@@ -1182,6 +1182,9 @@
       background-color: color-mix(in oklab, var(--color-blue-900) 30%, transparent);
     }
   }
+  .bg-current {
+    background-color: currentcolor;
+  }
   .bg-emerald-600 {
     background-color: var(--color-emerald-600);
   }

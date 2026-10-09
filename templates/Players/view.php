@@ -137,7 +137,8 @@ $achievementLabels = [
             'headshot' => ['icon' => 'fa-crosshairs', 'color' => 'text-red-400'],
             'scored_with_the_flag' => ['icon' => 'fa-trophy', 'color' => 'text-red-400'],
             'longest_streak' => ['icon' => 'fa-fire', 'color' => 'text-orange-400'],
-            'slashed' => ['icon' => 'fa-knife', 'color' => 'text-purple-400'],
+            // no knife in the free Font Awesome: our own icon, tinted via a mask
+            'slashed' => ['img' => '/img/achievements/slashed.svg', 'color' => 'text-purple-400'],
             'gibbed' => ['icon' => 'fa-bomb', 'color' => 'text-yellow-400'],
             'flag_helper' => ['icon' => 'fa-flag', 'color' => 'text-blue-400'],
         ];
@@ -159,7 +160,12 @@ $achievementLabels = [
                     <?php foreach ($records as $key => $rec): $st = $recordStyle[$key] ?? ['icon' => 'fa-circle-dot', 'color' => 'text-white']; ?>
                         <a href="<?= $rec['game_id'] ? '/games/view/' . h($rec['game_id']) : '#' ?>"
                            class="flex items-center gap-3 rounded-lg bg-white/5 px-2 py-1.5 hover:bg-white/10 transition">
-                            <i class="fa-solid <?= $st['icon'] ?> <?= $st['color'] ?> w-5 text-center"></i>
+                            <?php if (!empty($st['img'])): ?>
+                                <span class="inline-block h-4 w-5 shrink-0 bg-current <?= $st['color'] ?>"
+                                      style="mask: url('<?= $st['img'] ?>') center / contain no-repeat; -webkit-mask: url('<?= $st['img'] ?>') center / contain no-repeat;"></span>
+                            <?php else: ?>
+                                <i class="fa-solid <?= $st['icon'] ?> <?= $st['color'] ?> w-5 text-center"></i>
+                            <?php endif; ?>
                             <div class="min-w-0 flex-1">
                                 <div class="text-[10px] uppercase tracking-wide text-zinc-400"><?= h($rec['title']) ?></div>
                                 <div class="truncate text-[11px] text-zinc-500"><?= h((string)$rec['map_name']) ?><?php if ($rec['played_at']): ?> &middot; <?= h($rec['played_at']->format('d M Y')) ?><?php endif; ?></div>
