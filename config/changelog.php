@@ -11,6 +11,7 @@ return [
             'items' => [
                 'Weekly achievements arrive as cards: the week, your score in big numbers, and the map in the background for map champions.',
                 'New messages are marked "new", and you can reply straight from the inbox.',
+                'News from cubeLadder, like the invite to our Discord, shows as its own card.',
                 'Fixed the stray "\n" in achievement messages.',
             ],
         ],

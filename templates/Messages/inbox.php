@@ -50,8 +50,42 @@ $newBadge = '<span class="rounded-full bg-blue-500 px-2 py-0.5 text-[10px] font-
     <div class="space-y-4">
     <?php foreach ($messages as $msg):
         $a = $this->Achievements->fromMessage((string)$msg->body);
+        $invite = $a ? null : $this->Layout->discordInvite((string)$msg->body);
         $date = $msg->created->format('M j, Y · H:i');
-        if ($a):
+        if ($invite): ?>
+
+        <!-- Discord invite -->
+        <article class="relative overflow-hidden rounded-2xl border <?= $msg->is_read ? 'border-[#5865F2]/40' : 'border-[#5865F2] shadow-[0_0_30px_rgba(88,101,242,.35)]' ?> bg-gradient-to-br from-[#5865F2]/35 via-zinc-950 to-zinc-950">
+            <i class="fa-brands fa-discord pointer-events-none absolute -bottom-8 -right-4 text-[11rem] leading-none text-[#5865F2]/15"></i>
+
+            <div class="relative flex gap-4 p-5 sm:gap-6 sm:p-6">
+                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#5865F2] shadow-lg shadow-indigo-900/50 sm:h-16 sm:w-16">
+                    <i class="fa-brands fa-discord text-3xl text-white sm:text-4xl"></i>
+                </div>
+
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-300">
+                        <span>From cubeLadder</span>
+                        <?php if (!$msg->is_read): ?><?= $newBadge ?><?php endif; ?>
+                    </div>
+                    <h2 class="mt-1 text-xl font-extrabold sm:text-2xl"><?= h($invite['title'] ?? 'Join us on Discord') ?></h2>
+                    <?php if ($invite['text'] !== ''): ?>
+                        <div class="mt-2 max-w-xl leading-relaxed text-zinc-200"><?= $this->Layout->messageBody($invite['text']) ?></div>
+                    <?php endif; ?>
+                    <a href="<?= h($invite['url']) ?>" target="_blank" rel="noopener"
+                       class="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#5865F2] px-5 py-2.5 font-bold text-white shadow-lg shadow-indigo-900/40 hover:bg-[#4752c4] transition">
+                        <i class="fa-brands fa-discord"></i> Join the Discord
+                    </a>
+                </div>
+
+                <div class="flex shrink-0 flex-col items-end justify-between gap-2">
+                    <span class="hidden whitespace-nowrap text-xs text-zinc-500 sm:block"><?= h($date) ?></span>
+                    <?= $deleteLink($msg) ?>
+                </div>
+            </div>
+        </article>
+
+        <?php elseif ($a):
             $bg = $a['map'] ? $this->Layout->mapImage($a['map']) : null; ?>
 
         <!-- Achievement -->

@@ -46,6 +46,30 @@ class LayoutHelper extends Helper
     }
 
     /**
+     * A Discord invite in a message: the invite URL, the **bold** title on the
+     * first line and the text without both - or null when there is none.
+     *
+     * @return array{url: string, title: ?string, text: string}|null
+     */
+    public function discordInvite(string $body): ?array
+    {
+        if (!preg_match('#https?://(?:www\.)?discord(?:\.gg|(?:app)?\.com/invite)/[\w-]+#i', $body, $m)) {
+            return null;
+        }
+        $title = null;
+        $text = $body;
+        if (preg_match('/^\*\*(.+?)\*\*\s*/', $text, $t)) {
+            $title = $t[1];
+            $text = substr($text, strlen($t[0]));
+        }
+        // drop the link (and a "...: " lead-in left dangling before it)
+        $text = trim(preg_replace('#[ \t]*' . preg_quote($m[0], '#') . '#', '', $text));
+        $text = rtrim($text, " \t:");
+
+        return ['url' => $m[0], 'title' => $title, 'text' => $text];
+    }
+
+    /**
      * Minutes as "12 h 34 min" / "45 min".
      */
     public function duration(int $minutes): string
