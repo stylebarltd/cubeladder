@@ -76,6 +76,8 @@ class GameResultPicture
         ];
         if ($teamGame) {
             $picture['team_scores'] = ['CLA' => $score('CLA'), 'RVSF' => $score('RVSF')];
+            // players who opted out of tracking are not drawn, but counted
+            $picture['hidden'] = ['CLA' => (int)($board['teams']['CLA']['hidden'] ?? 0), 'RVSF' => (int)($board['teams']['RVSF']['hidden'] ?? 0)];
             $picture['winner'] = $board['winner'];
         }
 

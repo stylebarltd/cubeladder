@@ -173,6 +173,11 @@ $head = function () use ($flagMode, $rated) {
                                 </tbody>
                             </table>
                             </div>
+                            <?php if (!empty($team['hidden'])): ?>
+                                <p class="px-2 py-1 text-[11px] text-zinc-400" title="Their stats count in the team score, but they chose &quot;Don't track me&quot;">
+                                    +<?= (int)$team['hidden'] ?> player<?= $team['hidden'] > 1 ? 's' : '' ?> not shown (opted out of tracking)
+                                </p>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -196,6 +201,9 @@ $head = function () use ($flagMode, $rated) {
                         </tbody>
                     </table>
                 </div>
+                <?php if (!empty($board['hidden'])): ?>
+                    <p class="mt-1 text-[11px] text-zinc-400">+<?= (int)$board['hidden'] ?> player<?= $board['hidden'] > 1 ? 's' : '' ?> not shown (opted out of tracking)</p>
+                <?php endif; ?>
             <?php else: ?>
                 <p class="text-zinc-400">No ladder players in this game.</p>
             <?php endif; ?>

@@ -139,7 +139,7 @@ class GamesTable extends Table
      * contained): tracked players by points, and for team games with known
      * final scores the CLA / RVSF split like the in-game scoreboard.
      *
-     * @return array{rows: array, teams: ?array, winner: ?string, flagMode: bool, unassigned: array, rated: bool}
+     * @return array{rows: array, teams: ?array, winner: ?string, flagMode: bool, unassigned: array, rated: bool, hidden: int}
      */
     public function scoreboard(Game $game): array
     {
@@ -174,7 +174,19 @@ class GamesTable extends Table
         }
 
         $flagMode = in_array($game->mode, self::FLAG_MODES, true);
-        $board = ['rows' => $rows, 'teams' => null, 'winner' => null, 'flagMode' => $flagMode, 'unassigned' => [], 'rated' => $ratings !== []];
+        // players who chose "Don't track me" stay hidden, but the scoreboard
+        // says they were there (their flags are in the team score)
+        $hidden = ['CLA' => 0, 'RVSF' => 0, 'all' => 0];
+        foreach ($game->player_stats_per_game ?? [] as $stat) {
+            if ($stat->player && (int)$stat->player->track === 0) {
+                $hidden['all']++;
+                if (isset($hidden[$stat->team])) {
+                    $hidden[$stat->team]++;
+                }
+            }
+        }
+
+        $board = ['rows' => $rows, 'teams' => null, 'winner' => null, 'flagMode' => $flagMode, 'unassigned' => [], 'rated' => $ratings !== [], 'hidden' => $hidden['all']];
 
         $teamScores = $game->team_scores ? json_decode($game->team_scores, true) : null;
         if (!$teamScores || !in_array($game->mode, self::TEAM_MODES, true)) {
@@ -187,6 +199,7 @@ class GamesTable extends Table
                 'score' => ($teamScores[$team] ?? []) + ['players' => 0, 'frags' => 0, 'flags' => null],
                 'deaths' => array_sum(array_column($teamRows, 'deaths')),
                 'rows' => $teamRows,
+                'hidden' => $hidden[$team],
             ];
         }
         $points = fn($t) => [$flagMode ? (int)$t['score']['flags'] : 0, (int)$t['score']['frags']];
