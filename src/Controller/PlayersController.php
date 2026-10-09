@@ -317,21 +317,7 @@ class PlayersController extends AppController
 
         // CTF rating (bin/cake CalculateRatings) - looked up per request, as
         // it is recalculated after the import that clears the cache above
-        $ratings = $this->fetchTable('PlayerRatings')->find()
-            ->select(['player_id', 'rating', 'type', 'attack_pct', 'defense_pct', 'combat_pct'])
-            ->disableHydration()->all()->indexBy('player_id')->toArray();
-        foreach ($players as $player) {
-            $r = $ratings[$player->id] ?? null;
-            $player->rating = $r ? (float)$r['rating'] : null;
-            $player->player_type = $r['type'] ?? null;
-            $player->player_type_label = $r
-                ? \App\Command\CalculateRatingsCommand::typeLabel($r['type'], (int)$r['attack_pct'], (int)$r['defense_pct'], (int)$r['combat_pct'])
-                : null;
-        }
-        if ($sort === 'rating') {
-            // unrated players (fewer than 20 CTF games) last, by points
-            usort($players, fn($a, $b) => [$b->rating ?? -1, (int)$b->total_score] <=> [$a->rating ?? -1, (int)$a->total_score]);
-        }
+        $this->attachRatings($players, $sort);
 
         //$lastGameDateRange = $this->getGameDateRange(800);
 
@@ -348,6 +334,30 @@ class PlayersController extends AppController
 
         $this->set(compact('players', 'sort',  'achievementPlayers'));
     }
+    /**
+     * CTF rating and type (bin/cake CalculateRatings) for the ranking boards -
+     * looked up per request, as they are recalculated after the import that
+     * clears the cached rankings. Sorting by rating puts unrated players
+     * (fewer than 20 CTF games) last, by points.
+     */
+    private function attachRatings(array &$players, string $sort): void
+    {
+        $ratings = $this->fetchTable('PlayerRatings')->find()
+            ->select(['player_id', 'rating', 'type', 'attack_pct', 'defense_pct', 'combat_pct'])
+            ->disableHydration()->all()->indexBy('player_id')->toArray();
+        foreach ($players as $player) {
+            $r = $ratings[$player->id] ?? null;
+            $player->rating = $r ? (float)$r['rating'] : null;
+            $player->player_type = $r['type'] ?? null;
+            $player->player_type_label = $r
+                ? \App\Command\CalculateRatingsCommand::typeLabel($r['type'], (int)$r['attack_pct'], (int)$r['defense_pct'], (int)$r['combat_pct'])
+                : null;
+        }
+        if ($sort === 'rating') {
+            usort($players, fn($a, $b) => [$b->rating ?? -1, (int)$b->total_score] <=> [$a->rating ?? -1, (int)$a->total_score]);
+        }
+    }
+
     private function getPlayerRank(string $playerId, array $gameIds): int
     {
         $ranking = $this->getPlayerRanking($gameIds);
@@ -417,7 +427,7 @@ class PlayersController extends AppController
     public function thelast100()
     {
 
-        $sort = $this->request->getQuery('sort', 'points');
+        $sort = $this->request->getQuery('sort', 'rating');
 
         switch ($sort) {
             case 'points':
@@ -553,13 +563,12 @@ class PlayersController extends AppController
             ->toArray();
 
 
+        $players = is_array($players) ? array_values($players) : $players->toList();
+        // kd_ratio is worked out in PHP, so it is sorted here
         if ($sort === 'kd') {
-            $players = $players->sortBy(
-                fn($p) => $p->stats['kd_ratio'],
-                SORT_DESC,
-                SORT_NUMERIC
-            );
+            usort($players, fn($a, $b) => $b->stats['kd_ratio'] <=> $a->stats['kd_ratio']);
         }
+        $this->attachRatings($players, $sort);
 
         $lastGameDateRange = $this->getGameDateRange();
 
