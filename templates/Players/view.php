@@ -213,8 +213,9 @@ $achievementLabels = [
         <section class="<?= $panel ?> p-5">
             <?php
             $achievements = collection($player->achievements ?? [])->sortBy('week_end', SORT_DESC)->toList();
-            $weekly = array_values(array_filter($achievements, fn($a) => $a->event_type !== 'best_on_map'));
-            $bestOnMap = count($achievements) - count($weekly);
+            // all of them, "best on map" wins included (many players only have those)
+            $weekly = $achievements;
+            $bestOnMap = count(array_filter($achievements, fn($a) => $a->event_type === 'best_on_map'));
             ?>
             <div class="mb-3 flex items-baseline justify-between gap-2">
                 <h3 class="text-lg font-bold">🥇 Weekly achievements</h3>
@@ -230,7 +231,12 @@ $achievementLabels = [
                         <div class="flex items-center gap-3 rounded-lg bg-white/5 px-2 py-1.5">
                             <img src="/img/achievements/<?= h($a->event_type) ?>.svg" class="h-6 w-6 shrink-0" alt="">
                             <div class="min-w-0 flex-1">
-                                <div class="text-sm font-semibold"><?= h($achievementLabels[$a->event_type] ?? $a->event_type) ?></div>
+                                <div class="truncate text-sm font-semibold">
+                                    <?= h($achievementLabels[$a->event_type] ?? $a->event_type) ?>
+                                    <?php if ($a->event_type === 'best_on_map' && !empty($a->map)): ?>
+                                        &middot; <?= $this->Html->link(h($this->Layout->cleanMapName($a->map->name)), ['controller' => 'Maps', 'action' => 'index', '?' => ['map' => $a->map->name]], ['class' => 'hover:text-blue-300', 'escape' => false]) ?>
+                                    <?php endif; ?>
+                                </div>
                                 <div class="text-[11px] text-zinc-400">week ending <?= date('d M Y', strtotime((string)$a->week_end)) ?></div>
                             </div>
                             <div class="font-mono text-lg font-bold text-orange-300">

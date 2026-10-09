@@ -13,6 +13,7 @@ return [
                 'Specials: Marathon, Map addict, Tourist, Untouchable, Hat-trick and Super hat-trick.',
                 'Fun facts: how many players and countries you have met, your most played teammate, favourite server and weekday, how often you said gg and more.',
                 'Big milestones (Gold and up) are announced in our Discord #results channel.',
+                'Weekly achievements on player pages now also list your "Best on map" wins, with the map.',
             ],
         ],
         [

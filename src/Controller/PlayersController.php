@@ -560,7 +560,7 @@ class PlayersController extends AppController
 
         $player = $this->Players->get($id, [
             'contain' => [
-                'Achievements',
+                'Achievements' => ['Maps'],
                 'PlayerStatsPerGame' => function ($q) use ($theLast100GameIds) {
                     return $q
                         // listed (marked inaccurate), but kept out of charts and sums
