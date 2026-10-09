@@ -179,7 +179,7 @@ class PlayersController extends AppController
     public function index()
     {
 
-        $sort = $this->request->getQuery('sort', 'points');
+        $sort = $this->request->getQuery('sort', 'rating');
 
         switch ($sort) {
             case 'points':
