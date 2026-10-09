@@ -158,15 +158,6 @@ shuffle($playerImages);
                                                 </span>
                                                 <?= $this->element('player_type_badge', ['type' => $pr['type'], 'label' => $pr['label']]) ?>
                                             <?php endif; ?>
-                                            <!-- the record game's map, after the player's rating and type -->
-                                            <a href="<?= $this->Url->build([
-                                                'controller' => 'Games',
-                                                'action' => 'view',
-                                                $player->game_id
-                                            ]) ?>"
-                                               class="truncate hover:underline text-blue-500">
-                                                <?= h($player->map_name) ?>
-                                            </a>
                                         </div>
 
                                         <!-- Achievements -->
@@ -191,6 +182,11 @@ shuffle($playerImages);
                                         <div class="text-[10px] text-zinc-500 whitespace-nowrap mt-1">
                                             <?= $player->played_at->format('d M Y') ?>
                                         </div>
+                                        <!-- the record game's map, under its date -->
+                                        <a href="<?= $this->Url->build(['controller' => 'Games', 'action' => 'view', $player->game_id]) ?>"
+                                           class="mt-0.5 ml-auto block max-w-[5.5rem] truncate text-[10px] text-blue-500 hover:underline sm:max-w-[7rem]" title="<?= h($player->map_name) ?>">
+                                            <?= h($player->map_name) ?>
+                                        </a>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
