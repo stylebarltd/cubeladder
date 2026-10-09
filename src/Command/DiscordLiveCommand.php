@@ -94,10 +94,13 @@ class DiscordLiveCommand extends Command
 
         $deadline = ($every > 0 && $for > 0) ? time() + $for : null;
         do {
+            $started = time();
             $failed = false;
             foreach ($services as $name => $service) {
                 try {
-                    $r = $service->update($forceNew);
+                    // countdown in the message: a little margin, so the next
+                    // edit arrives before it reaches zero (cron restart, polling)
+                    $r = $service->update($forceNew, $every > 0 ? $every + 3 : null);
                     $io->out(sprintf(
                         '[%s] %s: %s message %s – %d online, %d players',
                         date('H:i:s'), $name, $r['action'], $r['message_id'], $r['online'], $r['players']
@@ -112,7 +115,8 @@ class DiscordLiveCommand extends Command
                 if ($deadline !== null && time() + $every >= $deadline) {
                     break;
                 }
-                sleep($every);
+                // fixed rhythm: the run time is part of the interval
+                sleep(max(1, $started + $every - time()));
             }
         } while ($every > 0);
 

@@ -48,6 +48,9 @@ class DiscordLiveService
     /** Last uploaded picture per server key (from the state file) */
     private array $prevImages = [];
 
+    /** Seconds until the next run (looping command), for the countdown */
+    private ?int $nextIn = null;
+
     public function __construct(?array $cfg = null, ?Client $http = null)
     {
         $this->cfg = $cfg ?? (Configure::read('Ladder.discord') ?: []);
@@ -62,8 +65,9 @@ class DiscordLiveService
      *
      * @return array{action:string, message_id:string, players:int, online:int}
      */
-    public function update(bool $forceNew = false): array
+    public function update(bool $forceNew = false, ?int $nextIn = null): array
     {
+        $this->nextIn = $nextIn !== null && $nextIn > 0 ? $nextIn : null;
         $state = $this->readState();
         $servers = $this->poll();
         $state['live'] = $this->trackFlags($servers, $state['live'] ?? []);
@@ -304,14 +308,16 @@ class DiscordLiveService
 
         $summary = [
             'title' => $this->cfg['title'] ?? 'cubeLadder – live servers',
+            // Discord counts a future <t:…:R> down by itself ("in 12 seconds")
             'description' => sprintf(
-                '**%d** player%s on **%d/%d** server%s · updated <t:%d:R>',
+                '**%d** player%s on **%d/%d** server%s · %s <t:%d:R>',
                 $players,
                 $players === 1 ? '' : 's',
                 $online,
                 count($servers),
                 count($servers) === 1 ? '' : 's',
-                time()
+                $this->nextIn !== null ? 'next update' : 'updated',
+                time() + ($this->nextIn ?? 0)
             ),
             'color' => $color,
         ];
