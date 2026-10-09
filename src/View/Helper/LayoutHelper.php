@@ -20,7 +20,20 @@ class LayoutHelper extends Helper
     {
         $file = $mapName ? self::mapPicture($mapName, $seed) : null;
 
-        return $file !== null ? '/img/maps/' . rawurlencode($file) : self::NO_MAP_IMAGE;
+        return $file !== null ? self::mapUrl($file) : self::NO_MAP_IMAGE;
+    }
+
+    /**
+     * URL of a file in webroot/img/maps (or its thumbs/) with the file's
+     * date as version: a replaced picture gets a new URL, so browsers and
+     * Discord load the new one instead of their cached copy.
+     */
+    public static function mapUrl(string $file, bool $thumb = false): string
+    {
+        $dir = 'img/maps/' . ($thumb ? 'thumbs/' : '');
+        $mtime = @filemtime(WWW_ROOT . $dir . $file);
+
+        return '/' . $dir . rawurlencode($file) . ($mtime ? '?v=' . base_convert((string)$mtime, 10, 36) : '');
     }
 
     /**
@@ -43,7 +56,7 @@ class LayoutHelper extends Helper
     public function mapThumb(?string $mapName): string
     {
         if ($mapName && is_file(WWW_ROOT . 'img/maps/thumbs/' . $mapName . '.jpg')) {
-            return '/img/maps/thumbs/' . rawurlencode($mapName) . '.jpg';
+            return self::mapUrl($mapName . '.jpg', true);
         }
         $image = $this->mapImage($mapName);
 

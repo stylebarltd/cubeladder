@@ -5,7 +5,7 @@ use Cake\Core\Configure;
 ?>
 <?php
 $bgMap = !empty($favoriteMap['name']) && is_file(WWW_ROOT . 'img/maps/' . $favoriteMap['name'] . '.jpg')
-    ? '/img/maps/' . rawurlencode($favoriteMap['name']) . '.jpg'
+    ? \App\View\Helper\LayoutHelper::mapUrl($favoriteMap['name'] . '.jpg')
     : '/img/bullet.jpg';
 $panel = 'rounded-xl border border-white/15 bg-black/60 backdrop-blur-[2px]';
 $achievementLabels = [

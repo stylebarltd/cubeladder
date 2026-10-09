@@ -583,7 +583,7 @@ class DiscordLiveService
         if ($this->site() && !empty($s['map']) && $n > 0) {
             // no screenshot: the bullet artwork (as on the website), 1280x720
             $path = is_file(WWW_ROOT . 'img/maps/' . $s['map'] . '.jpg')
-                ? '/img/maps/' . rawurlencode($s['map'] . '.jpg')
+                ? \App\View\Helper\LayoutHelper::mapUrl($s['map'] . '.jpg')
                 : '/img/bullet-wide.jpg';
             $embed['image'] = ['url' => $this->site() . $path];
         }

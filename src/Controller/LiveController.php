@@ -99,7 +99,7 @@ class LiveController extends AppController
             $info['team_mode'] = in_array((int)$info['mode'], AcExtInfoService::TEAM_MODES, true);
             $info['by_flags'] = in_array((int)$info['mode'], AcExtInfoService::FLAG_MODES, true);
             $info['map_image'] = $info['map'] && is_file(WWW_ROOT . 'img/maps/' . $info['map'] . '.jpg')
-                ? '/img/maps/' . rawurlencode($info['map']) . '.jpg'
+                ? \App\View\Helper\LayoutHelper::mapUrl($info['map'] . '.jpg')
                 : null; // no screenshot: the page keeps the bullet background
             $info['game_id'] = $this->currentGameId($info);
             $list = [$info];
@@ -220,7 +220,7 @@ class LiveController extends AppController
         foreach ($list as &$srv) {
             $map = (string)($srv['map'] ?? '');
             $srv['map_thumb'] = $map !== '' && is_file(WWW_ROOT . 'img/maps/thumbs/' . $map . '.jpg')
-                ? '/img/maps/thumbs/' . rawurlencode($map) . '.jpg'
+                ? \App\View\Helper\LayoutHelper::mapUrl($map . '.jpg', true)
                 : null;
         }
         unset($srv);

@@ -640,7 +640,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
                     'map_name'  => $stat->game->map->name,
                     'played_at' => $stat->game->started_at->format('D, dS M'),
                     'map_image' => ($picture = \App\View\Helper\LayoutHelper::mapPicture($stat->game->map->name, (string)$stat->game->id)) !== null
-                        ? '/img/maps/' . rawurlencode($picture)
+                        ? \App\View\Helper\LayoutHelper::mapUrl($picture)
                         : '/img/bullet.jpg',
                     'score'     => $stat->total_score,
                     'kills'     => $stat->kills,
