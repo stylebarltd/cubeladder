@@ -86,7 +86,18 @@ class PagesController extends AppController
 //                ->toArray();
 //dd($lastKills);
             $bestPlayersByScore = $this->bestPlayersByScore();
-            $bestPlayersByMap = $this->bestPlayersByMap();
+            // Hall of Fame record holder per category (shared, cached lists)
+            $hofTitles = [
+                'kills' => 'Most Kills', 'headshot' => 'Most Headshots', 'flags' => 'Most Flags scored',
+                'streak' => 'Longest Streak', 'slashed' => 'Most Slashes', 'gibbed' => 'Most Gibbed',
+                'helper' => 'Flag Helper',
+            ];
+            $hofRecords = [];
+            foreach ((new \App\Service\HallOfFameService())->topLists() as $key => $list) {
+                if (!empty($list[0])) {
+                    $hofRecords[] = ['title' => $hofTitles[$key] ?? $key, 'player' => $list[0]];
+                }
+            }
             $achievementTable = $this->fetchTable('Achievements');
 
             //debug(date('Y-m-d', strtotime('last week sunday')));
@@ -117,9 +128,25 @@ class PagesController extends AppController
                 return $row ?: null;
             }, 'rankings');
 
-            $this->set(compact('lastLogs', 'bestPlayersByScore', 'bestPlayersByMap', 'achievementPlayers', 'lastGameDateRange', 'recordStreak'));
+            // Hero numbers (cached with the rankings)
+            $heroStats = \Cake\Cache\Cache::remember('hero_stats', fn() => [
+                'games' => $this->fetchTable('Games')->find()->where(['inaccurate' => false, 'ended_at IS NOT' => null])->count(),
+                'players' => $this->fetchTable('Players')->find()->where(['track' => 1])
+                    ->innerJoinWith('PlayerStatsPerGame')->distinct(['Players.id'])->count(),
+                'maps' => $this->fetchTable('Games')->find()->select(['map_id'])->distinct(['map_id'])
+                    ->where(['inaccurate' => false])->count(),
+            ], 'rankings');
+
+
+            $this->set(compact('lastLogs', 'bestPlayersByScore', 'hofRecords', 'achievementPlayers', 'lastGameDateRange', 'recordStreak', 'heroStats'));
         }
 
+
+        if ($page === 'about') {
+            // "What's new" (config/changelog.php), newest first
+            Configure::load('changelog');
+            $this->set('changelog', Configure::read('Changelog', []));
+        }
 
         $this->set(compact('page', 'subpage'));
 
@@ -228,7 +255,7 @@ class PagesController extends AppController
             })
             ->groupBy(['Players.id'])
             ->orderByDesc('total_score')
-            ->limit(6)
+            ->limit(10)
             ->all()
             ->toArray();
 

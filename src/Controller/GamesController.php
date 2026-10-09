@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Service\HallOfFameService;
 use Cake\Core\Configure;
 use Cake\Collection\Collection;
 
@@ -10,113 +11,79 @@ class GamesController extends AppController
 {
     public function index()
     {
-        // Fetch last 100 games with players
-        $games = $this->Games->find('all')
-            ->contain([
-                'Maps',
-                'Players' => function ($q) {
-                    return $q->select([
-                        'Players.id',
-                        'Players.name',
-                        'Players.country',
-                        'PlayerStatsPerGame.kills',
-                        'PlayerStatsPerGame.kd_ratio',
-                        'PlayerStatsPerGame.total_score',
-                        'PlayerStatsPerGame.gibbed',
-                        'PlayerStatsPerGame.slashed',
-                        'PlayerStatsPerGame.scored_with_the_flag',
-                        'PlayerStatsPerGame.headshot',
-                        'PlayerStatsPerGame.teamkills',
-                    ])->order(['PlayerStatsPerGame.total_score' => 'DESC'])->where(['track'=>1]);
-                }
-            ])
-            ->orderByDesc('ended_at')
+        $games = $this->Games->find()
+            ->contain(['Maps', 'PlayerStatsPerGame' => ['Players']])
+            ->where(['Games.inaccurate' => false, 'Games.ended_at IS NOT' => null])
+            ->orderByDesc('Games.ended_at')
             ->limit(50)
             ->toArray();
 
+        $boards = [];
         foreach ($games as $game) {
-            $leaders = [
-                'total_score' => null,
-                'kills' => null,
-                'kd_ratio' => null,
-                'gibbed' => null,
-                'slashed' => null,
-                'scored_with_the_flag' => null,
-                'headshot' => null,
-                'teamkills' => null,
-            ];
-
-            $max = [
-                'total_score' => 0,
-                'kd_ratio' => 0,
-                'kills' => 0,
-                'gibbed' => 0,
-                'slashed' => 0,
-                'scored_with_the_flag' => 0,
-                'headshot' => 0,
-                'teamkills' => 0,
-            ];
-
-            foreach ($game->players as $player) {
-                $stats = $player->PlayerStatsPerGame;
-
-                foreach ($max as $key => $value) {
-                    if (!empty($stats[$key]) && $stats[$key] > $max[$key]) {
-                        $max[$key] = $stats[$key];
-                        $leaders[$key] = $player->id;
-                    }
-                }
-            }
-
-            // Attach leaders to the game entity
-            $game->stat_leaders = $leaders;
+            $boards[$game->id] = $this->Games->scoreboard($game);
         }
-
 
         $lastGameDateRange = $this->getGameDateRange();
 
-        $this->set(compact('games', 'lastGameDateRange'));
+        $this->set(compact('games', 'boards', 'lastGameDateRange'));
     }
 
+    /**
+     * Game with all its stats (inaccurate games keep their scoreboard too).
+     */
+    private function loadGame(string $id): \App\Model\Entity\Game
+    {
+        return $this->Games->get($id, contain: [
+            'Maps',
+            'PlayerStatsPerGame' => fn($q) => $q
+                ->applyOptions(['includeInaccurate' => true])
+                ->contain(['Players']),
+        ]);
+    }
+
+    /**
+     * Bare game card (no layout) for the player page's recent-games box:
+     * the game like on its page, the player's row highlighted and their
+     * own stats on top. /games/card/<game id>?player=<player id>
+     */
+    public function card(string $id)
+    {
+        $this->request->allowMethod(['get']);
+        $this->viewBuilder()->disableAutoLayout();
+
+        $game = $this->loadGame($id);
+        $board = $this->Games->scoreboard($game);
+        $playerId = (string)$this->request->getQuery('player', '');
+        $stat = null;
+        foreach ($game->player_stats_per_game as $s) {
+            if ((string)$s->player_id === $playerId) {
+                $stat = $s;
+                break;
+            }
+        }
+        $inLast100 = in_array($game->id, $this->getLastGameIds(), true);
+
+        $this->set(compact('game', 'board', 'stat', 'playerId', 'inLast100'));
+    }
 
     public function view(string $id)
     {
-        $game = $this->Games->get($id, [
-            'contain' => [
-                'Maps',
-                'PlayerStatsPerGame' => ['Players'],
-            ],
-        ]);
+        $game = $this->loadGame($id);
+        $board = $this->Games->scoreboard($game);
 
-        $rankedStats = [];
-        $rank = 1;
-        $sorted = collection($game->player_stats_per_game)
-            ->sortBy('total_score', SORT_DESC)
-            ->toList();
+        // Neighbouring (counted) games for the prev / next arrows
+        $neighbour = fn(string $op, string $dir) => $this->Games->find()
+            ->select(['Games.id'])
+            ->where(['Games.inaccurate' => false, 'Games.ended_at IS NOT' => null, "Games.started_at $op" => $game->started_at])
+            ->orderBy(['Games.started_at' => $dir])
+            ->disableHydration()
+            ->first()['id'] ?? null;
+        $prevId = $neighbour('<', 'DESC');
+        $nextId = $neighbour('>', 'ASC');
 
-        foreach ($sorted as $stat) {
-            if($stat->player->track!=1) continue;
-            $rankedStats[] = [
-                'rank'        => $rank,
-                'is_mvp'      => $rank === 1,
-                'player'      => $stat->player,
-                'kills'       => $stat->kills,
-                'deaths'      => $stat->deaths,
-                'kd_ratio'    => $stat->kd_ratio,
-                'score'       => $stat->total_score,
-                'headshots'   => $stat->headshot,
-                'gibbed'   => $stat->gibbed,
-                'slashed'   => $stat->slashed,
-                'suicides'    => $stat->suicided+$stat->teamkills,
-                'objectives'  =>
-                    $stat->stole_the_flag +
-                    $stat->returned_the_flag +
-                    $stat->scored_with_the_flag,
-            ];
-            $rank++;
-        }
+        $notQualified = $game->inaccurate ? (new HallOfFameService())->notQualified($game->id) : [];
 
-        $this->set(compact('game', 'rankedStats'));
+        $this->set(compact('game', 'board', 'prevId', 'nextId', 'notQualified'));
     }
 
     public function bomberman(?string $id = null)

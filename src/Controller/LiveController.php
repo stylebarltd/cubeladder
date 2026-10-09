@@ -51,6 +51,18 @@ class LiveController extends AppController
     }
 
     /**
+     * Small JSON for the green "on air" dot on Live in the navigation:
+     * {live, players, server}. Polled by every page every 30 seconds.
+     */
+    public function onair()
+    {
+        $this->request->allowMethod(['get']);
+        $this->viewBuilder()->setClassName('Json');
+        $this->set('data', (new \App\Service\LiveStatusService())->onAir());
+        $this->viewBuilder()->setOption('serialize', 'data');
+    }
+
+    /**
      * Live match page for one server: CLA vs RVSF, in-game style.
      */
     public function game(string $key)
@@ -87,8 +99,8 @@ class LiveController extends AppController
             $info['team_mode'] = in_array((int)$info['mode'], AcExtInfoService::TEAM_MODES, true);
             $info['by_flags'] = in_array((int)$info['mode'], AcExtInfoService::FLAG_MODES, true);
             $info['map_image'] = $info['map'] && is_file(WWW_ROOT . 'img/maps/' . $info['map'] . '.jpg')
-                ? '/img/maps/' . $info['map'] . '.jpg'
-                : '/img/maps/placeholder.jpg';
+                ? '/img/maps/' . rawurlencode($info['map']) . '.jpg'
+                : null; // no screenshot: the page keeps the bullet background
             $info['game_id'] = $this->currentGameId($info);
             $list = [$info];
             $this->linkProfiles($list);
@@ -182,6 +194,9 @@ class LiveController extends AppController
 
         $this->linkProfiles($servers);
         $this->linkProfiles($elsewhere);
+        $this->addThumbs($servers);
+        $this->addThumbs($clanServers);
+        $this->addThumbs($elsewhere);
 
         return [
             'fetched_at' => date('c'),
@@ -194,6 +209,21 @@ class LiveController extends AppController
                 'players' => $players,
             ],
         ];
+    }
+
+    /**
+     * Small map thumbnail (bin/cake map_thumbs) for the server picker, or
+     * null when there is no map / no screenshot.
+     */
+    private function addThumbs(array &$list): void
+    {
+        foreach ($list as &$srv) {
+            $map = (string)($srv['map'] ?? '');
+            $srv['map_thumb'] = $map !== '' && is_file(WWW_ROOT . 'img/maps/thumbs/' . $map . '.jpg')
+                ? '/img/maps/thumbs/' . rawurlencode($map) . '.jpg'
+                : null;
+        }
+        unset($srv);
     }
 
     /**

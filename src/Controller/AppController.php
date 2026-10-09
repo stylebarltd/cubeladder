@@ -148,6 +148,27 @@ class AppController extends Controller
     }
 
 
+    /**
+     * The visitor may edit this player's profile: it is their identity
+     * (cookie / IP detection) AND they are on the IP the player last
+     * played from. A cookie alone is not enough.
+     */
+    protected function ownsPlayer(?Player $player): bool
+    {
+        $identity = $this->request->getAttribute('identity');
+
+        if ($player === null || $identity === null || $identity->id !== $player->id) {
+            return false;
+        }
+        // Local dev (debug): requests come from the Docker network and can
+        // never match a real player IP - the identity alone is enough there.
+        if (Configure::read('debug')) {
+            return true;
+        }
+
+        return !empty($player->ip) && $player->ip === $this->request->clientIp();
+    }
+
     public function writePlayerCookie(string $playerId): void
     {
         $cookie = (new Cookie('selected_player_id', $playerId))
@@ -174,6 +195,9 @@ class AppController extends Controller
     {
 
         $this->set('maxGamesToRank', Configure::read('Ladder.maxGamesToRank'));
+        // initial state of the "on air" dot (state files only, no polling;
+        // the layout refreshes it from /live/onair)
+        $this->set('liveNow', (new \App\Service\LiveStatusService())->onAir(false));
 
         $player = $this->viewBuilder()->getVar('authPlayer');
 
@@ -192,6 +216,5 @@ class AppController extends Controller
             $this->set('inboxUnread', 0);
         }
     }
-
 
 }

@@ -7,6 +7,44 @@ use Cake\View\Helper;
 
 class LayoutHelper extends Helper
 {
+    /** Shown for maps without a screenshot */
+    public const NO_MAP_IMAGE = '/img/bullet.jpg';
+    public const NO_MAP_THUMB = '/img/bullet-thumb.jpg';
+
+    /**
+     * URL of the map's screenshot, or the bullet artwork.
+     */
+    public function mapImage(?string $mapName): string
+    {
+        return $mapName && is_file(WWW_ROOT . 'img/maps/' . $mapName . '.jpg')
+            ? '/img/maps/' . rawurlencode($mapName) . '.jpg'
+            : self::NO_MAP_IMAGE;
+    }
+
+    /**
+     * URL of the map's small thumbnail (bin/cake map_thumbs) - the full
+     * screenshot when the thumb was not built yet, else the bullet thumb.
+     */
+    public function mapThumb(?string $mapName): string
+    {
+        if ($mapName && is_file(WWW_ROOT . 'img/maps/thumbs/' . $mapName . '.jpg')) {
+            return '/img/maps/thumbs/' . rawurlencode($mapName) . '.jpg';
+        }
+        $image = $this->mapImage($mapName);
+
+        return $image === self::NO_MAP_IMAGE ? self::NO_MAP_THUMB : $image;
+    }
+
+    /**
+     * Minutes as "12 h 34 min" / "45 min".
+     */
+    public function duration(int $minutes): string
+    {
+        return $minutes >= 60
+            ? intdiv($minutes, 60) . ' h ' . ($minutes % 60) . ' min'
+            : $minutes . ' min';
+    }
+
     public function cleanMapName(string $mapName): string
     {
         $name = strtolower($mapName);

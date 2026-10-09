@@ -42,17 +42,18 @@ class PlayersController extends AppController
     }
     public function hallOfFame()
     {
-        $topHeadshots = $this->getTopPlayers('headshot');
-        $topSlashes   = $this->getTopPlayers('slashed');
-        $topGibbed    = $this->getTopPlayers('gibbed');
-        $topKills     = $this->getTopPlayers('kills');
-        $topFlags     = $this->getTopPlayers('scored_with_the_flag');
-        $topStreaks   = $this->getTopPlayers('longest_streak');
+        $top = (new \App\Service\HallOfFameService())->topLists();
+        $topHeadshots = $top['headshot'];
+        $topSlashes   = $top['slashed'];
+        $topGibbed    = $top['gibbed'];
+        $topKills     = $top['kills'];
+        $topFlags     = $top['flags'];
+        $topStreaks   = $top['streak'];
 
 //        $topSteals    = $this->getTopPlayers('stole_the_flag');
 //        $topReturned    = $this->getTopPlayers('returned_the_flag');
 
-        $bestFlagHelpers = $this->getTopPlayers(['stole_the_flag', 'returned_the_flag']);
+        $bestFlagHelpers = $top['helper'];
 
         // Weekly achievement medals, keyed by player (same source as Players::index)
         $achievePlayers = $this->Players->Achievements->find()
@@ -175,74 +176,6 @@ class PlayersController extends AppController
         }, 'rankings');
     }
 
-    private function getTopPlayers(string|array $fields, int $limit = 10)
-    {
-        $gameIds = $this->getHallOfFameGameIds();
-
-        if (is_array($fields)) {
-            $fieldExpr = implode(' + ', array_map(fn($f) => "PlayerStatsPerGame.$f", $fields));
-        } else {
-            $fieldExpr = "PlayerStatsPerGame.$fields";
-        }
-
-        $sub = $this->Players->PlayerStatsPerGame->find()
-            ->select([
-                'player_id' => 'PlayerStatsPerGame.player_id',
-                'max_value' => "MAX($fieldExpr)"
-            ])
-            ->where([
-                'PlayerStatsPerGame.game_id IN' => $gameIds
-            ])
-            ->group(['PlayerStatsPerGame.player_id']);
-
-        $query = $this->Players->PlayerStatsPerGame->find()
-            ->select([
-                'player_id' => 'Players.id',
-                'name' => 'Players.name',
-                'country' => 'Players.country',
-                'picture' => 'Players.picture',
-                'value' => $fieldExpr,
-                'game_id' => 'Games.id',
-                'played_at' => 'Games.started_at',
-                'map_name' => 'Maps.name',
-                // Weapon usage from the record-setting game (for the HoF cards)
-                'kills' => 'PlayerStatsPerGame.kills',
-                'headshot' => 'PlayerStatsPerGame.headshot',
-                'shredded' => 'PlayerStatsPerGame.shredded',
-                'peppered' => 'PlayerStatsPerGame.peppered',
-                'sprayed' => 'PlayerStatsPerGame.sprayed',
-                'punctured' => 'PlayerStatsPerGame.punctured',
-                'splattered' => 'PlayerStatsPerGame.splattered',
-                'slashed' => 'PlayerStatsPerGame.slashed',
-                'gibbed' => 'PlayerStatsPerGame.gibbed',
-                'picked_off' => 'PlayerStatsPerGame.picked_off',
-                'busted' => 'PlayerStatsPerGame.busted',
-            ])
-            ->innerJoin(
-                ['sub' => $sub],
-                [
-                    'sub.player_id = PlayerStatsPerGame.player_id',
-                    "sub.max_value = $fieldExpr",
-                    'sub.max_value > 0',
-                ]
-            )
-            ->innerJoinWith('Players')
-            ->innerJoinWith('Games.Maps')
-            ->where([
-                'PlayerStatsPerGame.game_id IN' => $gameIds,
-                'Players.track' => 1,
-            ])
-            ->order([
-                'value' => 'DESC',
-                'Games.started_at' => 'DESC'
-            ])
-            ->group(['Players.id'])
-            ->limit($limit);
-
-        return $query->all()->toArray();
-    }
-
-
     public function index()
     {
 
@@ -316,12 +249,12 @@ class PlayersController extends AppController
                     'punctured' => 'SUM(PlayerStatsPerGame.punctured)',
                     'splattered' => 'SUM(PlayerStatsPerGame.splattered)',
                     'picked_off' => 'SUM(PlayerStatsPerGame.picked_off)',
-                    'games' => 'COUNT(PlayerStatsPerGame.id)',
+                    'games' => \App\Model\Table\PlayerStatsPerGameTable::countedGamesSql(),
                     'last_seen' => 'MAX(Games.started_at)',
                     // Game id of that most-recent game, so the date can link to it
                     'last_game_id' => '(SELECT ps2.game_id FROM player_stats_per_game ps2 '
                         . 'INNER JOIN games g2 ON g2.id = ps2.game_id '
-                        . 'WHERE ps2.player_id = Players.id '
+                        . 'WHERE ps2.player_id = Players.id AND g2.inaccurate = 0 '
                         . 'ORDER BY g2.started_at DESC LIMIT 1)',
                 ])
                 ->innerJoinWith('PlayerStatsPerGame.Games', function ($q) {
@@ -435,7 +368,8 @@ class PlayersController extends AppController
             ->where(['id' => $playerId])
             ->first();
 
-        if (!$player) {
+        // Only players that played from this IP can be picked
+        if (!$player || $player->ip !== $this->request->clientIp()) {
             throw new BadRequestException('Invalid player');
         }
 
@@ -506,7 +440,7 @@ class PlayersController extends AppController
                 'teamkills' => 'SUM(PlayerStatsPerGame.teamkills)',
                 'gibbed' => 'SUM(PlayerStatsPerGame.gibbed)',
                 'scored_with_the_flag' => 'SUM(PlayerStatsPerGame.scored_with_the_flag)',
-                'games' => 'COUNT(PlayerStatsPerGame.id)',
+                'games' => \App\Model\Table\PlayerStatsPerGameTable::countedGamesSql(),
             ])
             ->innerJoinWith('PlayerStatsPerGame', function ($q) use ($theLast100GameIds) {
                 return $q->where([
@@ -610,6 +544,8 @@ class PlayersController extends AppController
                 'Achievements',
                 'PlayerStatsPerGame' => function ($q) use ($theLast100GameIds) {
                     return $q
+                        // listed (marked inaccurate), but kept out of charts and sums
+                        ->applyOptions(['includeInaccurate' => true])
 //                        ->where([
 //                            'PlayerStatsPerGame.game_id IN' => $theLast100GameIds
 //                        ])
@@ -622,7 +558,11 @@ class PlayersController extends AppController
                 },
             ]
         ]);
-        if($player->track==0){
+        // Owner (identity + same IP) gets the edit button and still sees
+        // their page when they opted out of tracking
+        $canEdit = $this->ownsPlayer($player);
+        $this->set('canEdit', $canEdit);
+        if ($player->track == 0 && !$canEdit) {
             $this->Flash->error('No profile found!');
             return $this->redirect(['action' => 'index']);
         }
@@ -682,15 +622,20 @@ $gamesDataGlobal = [];        // games inside lastGameIds
                         WWW_ROOT . 'img/maps/' . $stat->game->map->name . '.jpg'
                     )
                         ? '/img/maps/' . $stat->game->map->name . '.jpg'
-                        : '/img/maps/placeholder.jpg',
+                        : '/img/bullet.jpg',
                     'score'     => $stat->total_score,
                     'kills'     => $stat->kills,
                     'deaths'    => $stat->deaths,
                     'kd_ratio'  => $stat->kd_ratio,
                 ];
 
-                // always push to full list
-                $gamesData[] = $gameData;
+                // charts: no inaccurate games and no short appearances
+                // (under PlayerStatsPerGameTable::MIN_MINUTES on a team)
+                $short = $stat->minutes_played !== null
+                    && $stat->minutes_played < \App\Model\Table\PlayerStatsPerGameTable::MIN_MINUTES;
+                if (!$stat->game->inaccurate && !$short) {
+                    $gamesData[] = $gameData;
+                }
 
                 // if game is inside global 100 → push to second list
 //                if (in_array($stat->game_id, $theLast100GameIds, true)) {
@@ -759,14 +704,16 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $conn = \Cake\Datasource\ConnectionManager::get('default');
         $nemeses = $conn->execute(
             'SELECT p.id, p.name, p.country, p.picture, SUM(kp.kills) n FROM kill_pairs kp
-             JOIN players p ON p.id = kp.killer_id WHERE kp.victim_id = ?
-             GROUP BY p.id, p.name, p.country, p.picture HAVING n > 0 ORDER BY n DESC LIMIT 3',
+             JOIN players p ON p.id = kp.killer_id
+             JOIN games g ON g.id = kp.game_id AND g.inaccurate = 0 WHERE kp.victim_id = ?
+             GROUP BY p.id, p.name, p.country, p.picture HAVING n > 0 ORDER BY n DESC LIMIT 10',
             [$player->id]
         )->fetchAll('assoc');
         $victims = $conn->execute(
             'SELECT p.id, p.name, p.country, p.picture, SUM(kp.kills) n FROM kill_pairs kp
-             JOIN players p ON p.id = kp.victim_id WHERE kp.killer_id = ?
-             GROUP BY p.id, p.name, p.country, p.picture HAVING n > 0 ORDER BY n DESC LIMIT 3',
+             JOIN players p ON p.id = kp.victim_id
+             JOIN games g ON g.id = kp.game_id AND g.inaccurate = 0 WHERE kp.killer_id = ?
+             GROUP BY p.id, p.name, p.country, p.picture HAVING n > 0 ORDER BY n DESC LIMIT 10',
             [$player->id]
         )->fetchAll('assoc');
         $quotes = array_map(
@@ -779,7 +726,29 @@ $gamesDataGlobal = [];        // games inside lastGameIds
 
         $records = $this->getPlayerRecords((string)$player->id);
 
-        $this->set(compact('nemeses', 'victims', 'quotes', 'records'));
+        // Most played map (counted games) - the page background
+        $favoriteMap = $this->Players->PlayerStatsPerGame->find()
+            ->select(['name' => 'Maps.name', 'n' => \App\Model\Table\PlayerStatsPerGameTable::countedGamesSql()])
+            ->innerJoinWith('Games.Maps')
+            ->where(['PlayerStatsPerGame.player_id' => $player->id])
+            ->groupBy(['Maps.id', 'Maps.name'])
+            ->orderByDesc('n')
+            ->disableHydration()
+            ->first();
+
+        // Time played: minutes on a team, summed over all counted games and
+        // over the last 100 (games without a known time are left out)
+        $minutes = fn(array $where) => (int)($this->Players->PlayerStatsPerGame->find()
+            ->select(['m' => 'SUM(PlayerStatsPerGame.minutes_played)'])
+            ->where(['PlayerStatsPerGame.player_id' => $player->id] + $where)
+            ->disableHydration()
+            ->first()['m'] ?? 0);
+        $timePlayed = [
+            'all' => $minutes([]),
+            'last100' => $theLast100GameIds ? $minutes(['PlayerStatsPerGame.game_id IN' => $theLast100GameIds]) : 0,
+        ];
+
+        $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed'));
         $this->set(compact(
             'player',
             'totalKills',
@@ -795,8 +764,8 @@ $gamesDataGlobal = [];        // games inside lastGameIds
     public function profile()
     {
         $player = $this->request->getAttribute('identity');
-        if(!$player){
-            $this->Flash->error('No profile found!');
+        if (!$this->ownsPlayer($player)) {
+            $this->Flash->error('You can only edit your own profile, from the IP you play from.');
             return $this->redirect(['action' => 'index']);
         }
         // all avatar files
@@ -816,12 +785,13 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             ->extract('picture')
             ->toList();
 
-        // remove used avatars
+        // every avatar nobody else uses, current one first
         $avatars = array_values(array_diff($avatars, $usedAvatars));
-
-        // random 20
-        shuffle($avatars);
-        $avatars = array_slice($avatars, 0, 39);
+        natsort($avatars);
+        $avatars = array_values($avatars);
+        if ($player->picture && in_array($player->picture, $avatars, true)) {
+            $avatars = array_values(array_unique([$player->picture, ...$avatars]));
+        }
 
         $this->set(compact('player', 'avatars'));
     }
@@ -829,6 +799,10 @@ $gamesDataGlobal = [];        // games inside lastGameIds
     public function avatar(?string $picture = null)
     {
         $player = $this->request->getAttribute('identity');
+        if (!$this->ownsPlayer($player)) {
+            $this->Flash->error('You can only edit your own profile, from the IP you play from.');
+            return $this->redirect(['action' => 'index']);
+        }
 
         $used = $this->Players->exists([
             'picture' => $picture,
@@ -860,6 +834,30 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $this->Players->saveOrFail($player);
 
         $this->Flash->success('Avatar updated');
+        return $this->redirect(['action' => 'profile']);
+    }
+
+    /**
+     * "Don't track me": players.track = 0 hides the player from every
+     * ranking, the Hall of Fame and their public profile page.
+     */
+    public function privacy()
+    {
+        $this->request->allowMethod(['post']);
+        $player = $this->request->getAttribute('identity');
+        if (!$this->ownsPlayer($player)) {
+            $this->Flash->error('You can only edit your own profile, from the IP you play from.');
+            return $this->redirect(['action' => 'index']);
+        }
+
+        $player->track = $this->request->getData('dont_track') ? 0 : 1;
+        $this->Players->saveOrFail($player);
+        \Cake\Cache\Cache::clear('rankings');
+
+        $this->Flash->success($player->track
+            ? 'You are tracked again and show up in the rankings.'
+            : 'You are hidden from the rankings, the Hall of Fame and your public profile.');
+
         return $this->redirect(['action' => 'profile']);
     }
 
@@ -899,7 +897,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $this->request->allowMethod(['get']);
 
         $players = $this->Players->find()
-            ->select(['id', 'name', 'latitude', 'longitude', 'country'])
+            ->select(['id', 'name', 'latitude', 'longitude', 'country', 'picture'])
             ->where([
                 'latitude IS NOT' => null,
                 'longitude IS NOT' => null,

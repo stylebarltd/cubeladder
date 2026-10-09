@@ -129,7 +129,20 @@ return [
             'prefix' => 'myapp_live_',
             'path' => CACHE . 'live' . DS,
             'serialize' => true,
-            'duration' => '+10 seconds',
+            // just under the 5 s refresh of the Live page
+            'duration' => '+4 seconds',
+        ],
+
+        /*
+         * Slower live data: the "on air" check in the navigation (polls every
+         * public server when ours are empty - not worth doing every 5 s).
+         */
+        'live_slow' => [
+            'className' => FileEngine::class,
+            'prefix' => 'myapp_live_slow_',
+            'path' => CACHE . 'live' . DS,
+            'serialize' => true,
+            'duration' => '+30 seconds',
         ],
 
         /*
@@ -561,6 +574,10 @@ return [
              * skipped. State files are kept apart automatically.
              */
             'feeds' => [
+                // second channel with the same ladder servers as the default feed
+                'cubeladder' => [
+                    'webhook' => env('DISCORD_CUBELADDER_WEBHOOK'),
+                ],
                 'mys' => [
                     'webhook' => env('DISCORD_MYS_WEBHOOK'),
                     'servers' => ['mys-1111', 'mys-2222', 'mys-3333'],

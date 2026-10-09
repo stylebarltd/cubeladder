@@ -404,8 +404,11 @@ class DiscordLiveService
         // Discord to render the embed at its maximum width, which is what
         // gives the scoreboards room. Only for servers being played on.
         if ($this->site() && !empty($s['map']) && $n > 0) {
-            $file = is_file(WWW_ROOT . 'img/maps/' . $s['map'] . '.jpg') ? $s['map'] . '.jpg' : 'placeholder.jpg';
-            $embed['image'] = ['url' => $this->site() . '/img/maps/' . rawurlencode($file)];
+            // no screenshot: the bullet artwork (as on the website), 1280x720
+            $path = is_file(WWW_ROOT . 'img/maps/' . $s['map'] . '.jpg')
+                ? '/img/maps/' . rawurlencode($s['map'] . '.jpg')
+                : '/img/bullet-wide.jpg';
+            $embed['image'] = ['url' => $this->site() . $path];
         }
 
         // footer is the only embed part rendered below the image
@@ -508,7 +511,7 @@ class DiscordLiveService
                     'md' => sprintf(
                         '%s[%s](%s/players/view/%s)',
                         $rank !== null ? "**#{$rank}** " : '',
-                        $this->mdEscape($p['name']),
+                        $this->linkText($p['name']),
                         $this->site(),
                         $prof['id']
                     ),
@@ -620,6 +623,25 @@ class DiscordLiveService
     private function mdEscape(string $s): string
     {
         return preg_replace('/([\\*_`~|\[\]])/', '\\\\$1', $s);
+    }
+
+    /**
+     * Player name for use as masked-link text "[name](url)". Discord does not
+     * honour backslash escapes inside link text of embeds (it shows the
+     * backslash literally), so instead: brackets would end the link and are
+     * replaced by parentheses, "*" and "`" (which pair up anywhere) by their
+     * look-alikes U+2217 / U+02CB, and the two-character delimiters "**",
+     * "__", "~~", "||" are split with a zero-width space. Underscores stay
+     * unless the name could italicise as "_word_", then they become U+02CD.
+     */
+    private function linkText(string $s): string
+    {
+        $s = strtr($s, ['[' => '(', ']' => ')', '*' => "\u{2217}", '`' => "\u{2CB}"]);
+        if (preg_match('/\b_(?:__|[^_])+?_\b/', $s)) {
+            $s = str_replace('_', "\u{2CD}", $s);
+        }
+
+        return preg_replace('/([_~|])(?=\1)/', "$1\u{200B}", $s);
     }
 
     /** ANSI (discord ```ansi blocks): [foreground, background] – CLA red, RVSF dark blue */

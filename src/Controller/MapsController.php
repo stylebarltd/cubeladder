@@ -12,16 +12,11 @@ class MapsController extends AppController
 {
     public function index()
     {
-//        $maps = $this->Maps->find()
-//            ->contain(['Games'])
-//            ->orderDesc('Maps.times_played')
-//            ->all();
-
-        // NOTE: Maps.times_played is a denormalized counter incremented at parse
-        // time and never corrected when games are merged/deleted, so it no longer
-        // reflects reality (e.g. ac_shine had counter=3 vs 281 real games). Count
-        // the actual games (with stats) live instead.
-        $maps = $this->Maps->find()
+        // Every map with counted games, most played first (dropdown + the
+        // prev / next order). Maps.times_played is a stale parse-time counter
+        // (e.g. ac_shine 3 vs 281 real games), so count the games live;
+        // stats of inaccurate games are filtered out by PlayerStatsPerGame.
+        $allMaps = $this->Maps->find()
             ->select([
                 'Maps.id',
                 'Maps.name',
@@ -30,39 +25,42 @@ class MapsController extends AppController
             ->innerJoinWith('Games.PlayerStatsPerGame')
             ->groupBy(['Maps.id', 'Maps.name'])
             ->orderByDesc('games_count')
-            ->limit(50)
-            ->all();
+            ->orderByAsc('Maps.name')
+            ->all()
+            ->toList();
 
+        if (!$allMaps) {
+            $this->set(['map' => null, 'allMaps' => [], 'rank' => 0, 'prevMap' => null, 'nextMap' => null]);
 
-        // Batch everything the slideshow needs for all maps at once. This page
-        // used to run ~8 queries per map (top players + best-on-map + 6 stat
-        // leaders) = ~400 round trips. The three helpers below each fold that
-        // into a single window-function query keyed by map_id.
-        $mapIds = collection($maps)->extract('id')->toList();
-
-        $topPlayers = $this->getTopPlayersByMap($mapIds);
-        $bestOnMap  = $this->getBestOnMapByMap($mapIds);
-        $leaders    = $this->getMapLeaders($mapIds);
-
-        foreach ($maps as $map) {
-            $map->top_players = $topPlayers[$map->id] ?? [];
-            // Last 10 weekly "best on map" winners for this map (newest first)
-            $map->best_on_map = $bestOnMap[$map->id] ?? [];
-            // Per-map stat leaders shown above the top-players list
-            $map->leaders = $leaders[$map->id] ?? [];
+            return;
         }
 
+        // ?map=<name>, default: the most played map
+        $index = 0;
+        $wanted = (string)$this->request->getQuery('map', '');
+        foreach ($allMaps as $i => $m) {
+            if ($m->name === $wanted) {
+                $index = $i;
+                break;
+            }
+        }
+        $map = $allMaps[$index];
+        $rank = $index + 1;
+        $count = count($allMaps);
+        $prevMap = $allMaps[($index - 1 + $count) % $count]->name;
+        $nextMap = $allMaps[($index + 1) % $count]->name;
 
-        $achievementMaps = $this->fetchTable('Achievements')->find()->where(['event_type' => 'best_on_map', 'week_end'=>date('Y-m-d', strtotime('last week sunday'))])->contain(['Players', 'Maps'])->toArray();
+        $map->top_players = $this->getTopPlayersByMap([$map->id])[$map->id] ?? [];
+        // Last 10 weekly "best on map" winners for this map (newest first)
+        $map->best_on_map = $this->getBestOnMapByMap([$map->id])[$map->id] ?? [];
+        // Per-map single-game records
+        $map->leaders = $this->getMapLeaders([$map->id])[$map->id] ?? [];
 
-
-        $lastGameDateRange = $this->getGameDateRange();
-
-        $this->set(compact('maps', 'lastGameDateRange', 'achievementMaps'));
+        $this->set(compact('map', 'allMaps', 'rank', 'prevMap', 'nextMap'));
     }
 
     /**
-     * Top 8 players (by summed total_score) for each of the given maps, keyed
+     * Top 12 players (by summed total_score) for each of the given maps, keyed
      * by map id. One window-function query instead of one query per map.
      *
      * @return array<string, array<int, \Cake\ORM\Entity>>
@@ -88,9 +86,10 @@ class MapsController extends AppController
                     INNER JOIN games g ON g.id = p.game_id
                     INNER JOIN players pl ON pl.id = p.player_id
                     WHERE g.map_id IN ($placeholders)
+                      AND g.inaccurate = 0
                     GROUP BY g.map_id, p.player_id, pl.name, pl.country
                 ) t
-                WHERE t.rn <= 8
+                WHERE t.rn <= 12
                 ORDER BY t.map_id, t.score DESC";
 
         $rows = $this->fetchTable('PlayerStatsPerGame')->getConnection()
@@ -197,7 +196,12 @@ class MapsController extends AppController
         $connection = $this->fetchTable('PlayerStatsPerGame')->getConnection();
 
         $leaders = [];
+        $minMinutes = \App\Model\Table\PlayerStatsPerGameTable::MIN_MINUTES;
         foreach ($fields as $key => $field) {
+            // a ratio from a 1-minute visit is no record: skip short games
+            $shortGames = $key === 'ratio'
+                ? "AND (p.minutes_played IS NULL OR p.minutes_played >= $minMinutes)"
+                : '';
             $sql = "SELECT map_id, val, game_id, played_at,
                            player_id, player_name, player_country FROM (
                         SELECT g.map_id AS map_id,
@@ -215,7 +219,9 @@ class MapsController extends AppController
                         INNER JOIN games g ON g.id = p.game_id
                         INNER JOIN players pl ON pl.id = p.player_id
                         WHERE g.map_id IN ($placeholders)
+                          AND g.inaccurate = 0
                           AND p.$field > 0
+                          $shortGames
                     ) t
                     WHERE t.rn = 1";
 
