@@ -86,27 +86,4 @@ class GamesController extends AppController
         $this->set(compact('game', 'board', 'prevId', 'nextId', 'notQualified'));
     }
 
-    public function bomberman(?string $id = null)
-    {
-        // templates/Games/bomberman.php is a complete standalone HTML document
-        // (its own <head>, meta, etc.), so render only it — no default layout.
-        $this->viewBuilder()->disableAutoLayout();
-    }
-
-    public function snake(?string $id = null)
-    {
-        // templates/Games/snake.php is a complete standalone HTML document,
-        // so render only it — no default layout.
-        $this->viewBuilder()->disableAutoLayout();
-    }
-
-    public function backAttacker()
-    {
-        // Self-hosted single-file js13k game (its own <head>/<style>/<script>),
-        // so render only the template with no default layout.
-        $this->viewBuilder()
-            ->disableAutoLayout()
-            ->setTemplate('back_attacker');
-    }
-
 }
