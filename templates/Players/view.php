@@ -15,6 +15,34 @@ $achievementLabels = [
     'headshot' => 'Most Headshots', 'best_on_map' => 'Best on Map', 'games' => 'Most Games Played',
 ];
 ?>
+<?php
+// Link previews (Discord, WhatsApp, ...): the player card picture (PlayersController::card)
+if ((int)$player->track === 1):
+    $site = rtrim((string)(Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh'), '/');
+    $ogTitle = $player->name . ' · cubeLadder';
+    $ogText = !empty($rating)
+        ? sprintf('CTF rating %s · %s · #%d of %s rated players', number_format((float)$rating->rating, 1), $rating->type, (int)$rating->rank, number_format((int)$ratedPlayers))
+        : 'AssaultCube player stats on cubeLadder';
+    if (!empty($timePlayed['all'])) {
+        $ogText .= ' · ' . $this->Layout->duration((int)$timePlayed['all']) . ' played';
+    }
+    // a new picture URL whenever the rating changes, so previews don't stay stale
+    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $player->name, $player->picture])), 0, 8);
+    $this->assign('title', $ogTitle);
+    $this->start('meta'); ?>
+    <meta property="og:type" content="profile">
+    <meta property="og:site_name" content="cubeLadder">
+    <meta property="og:title" content="<?= h($ogTitle) ?>">
+    <meta property="og:description" content="<?= h($ogText) ?>">
+    <meta property="og:url" content="<?= h($site . '/players/view/' . $player->id) ?>">
+    <meta property="og:image" content="<?= h($ogImage) ?>">
+    <meta property="og:image:width" content="<?= \App\Service\PlayerCardImage::WIDTH ?>">
+    <meta property="og:image:height" content="<?= \App\Service\PlayerCardImage::HEIGHT ?>">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="description" content="<?= h($ogText) ?>">
+<?php $this->end();
+endif;
+?>
 <!-- Player page on their most played map (or the bullet) -->
 <div class="relative min-h-[calc(100svh-4rem)] bg-zinc-900 bg-cover bg-center bg-fixed text-white"
      style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.35) 35%, rgba(0,0,0,.8)), url('<?= $bgMap ?>');">

@@ -1009,4 +1009,72 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             ];
         }, 'rankings');
     }
+
+    /**
+     * Link preview picture of a player page (og:image): GET /players/card/{id}.
+     * Drawn by PlayerCardImage and cached on disk until something on it changes.
+     */
+    public function card(string $id)
+    {
+        $player = $this->Players->find()->where(['id' => $id, 'track' => 1])->first();
+        if (!$player) {
+            throw new \Cake\Http\Exception\NotFoundException();
+        }
+
+        $PlayerRatings = $this->fetchTable('PlayerRatings');
+        $rating = $PlayerRatings->find()->where(['player_id' => $id])->first();
+        $progressRow = $this->fetchTable('PlayerMilestoneProgress')->find()->where(['player_id' => $id])->first();
+        $progress = $progressRow ? (json_decode($progressRow->progress, true) ?: []) : [];
+        $map = $this->Players->PlayerStatsPerGame->find()
+            ->select(['name' => 'Maps.name', 'n' => \App\Model\Table\PlayerStatsPerGameTable::countedGamesSql()])
+            ->innerJoinWith('Games.Maps')
+            ->where(['PlayerStatsPerGame.player_id' => $id])
+            ->groupBy(['Maps.id', 'Maps.name'])
+            ->orderByDesc('n')
+            ->disableHydration()
+            ->first();
+
+        $card = [
+            'name' => (string)$player->name,
+            'country' => (string)$player->country,
+            'subtitle' => $progress
+                ? sprintf('%s h played  ·  %s games', number_format((float)($progress['hours'] ?? 0)), number_format((int)($progress['games'] ?? 0)))
+                : '',
+            'background' => !empty($map['name']) && is_file(WWW_ROOT . 'img/maps/' . $map['name'] . '.jpg')
+                ? WWW_ROOT . 'img/maps/' . $map['name'] . '.jpg'
+                : WWW_ROOT . 'img/bullet.jpg',
+            'avatar' => !empty($player->picture) && is_file(WWW_ROOT . 'img/players/' . $player->picture)
+                ? WWW_ROOT . 'img/players/' . $player->picture
+                : WWW_ROOT . 'img/acl.png',
+            'rating' => $rating ? [
+                'rating' => (float)$rating->rating, 'type' => $rating->type, 'weapon' => $rating->weapon,
+                'rank' => (int)$rating->rank, 'rated' => $PlayerRatings->find()->count(),
+                'win_rate' => $rating->win_rate !== null ? (float)$rating->win_rate : null,
+                'attack_pct' => (int)$rating->attack_pct, 'defense_pct' => (int)$rating->defense_pct, 'combat_pct' => (int)$rating->combat_pct,
+            ] : null,
+            'stats' => $progress ? array_filter([
+                'kills' => number_format((int)($progress['kills'] ?? 0)),
+                'flags scored' => number_format((int)($progress['flags'] ?? 0)),
+                'wins' => number_format((int)($progress['wins'] ?? 0)),
+                'times MVP' => number_format((int)($progress['mvp'] ?? 0)),
+            ], fn($v) => $v !== '0') : [],
+        ];
+
+        $dir = CACHE . 'cards' . DS;
+        $file = $dir . $id . '-' . md5(json_encode($card) . filemtime($card['avatar'])) . '.jpg';
+        if (!is_file($file)) {
+            if (!is_dir($dir)) {
+                mkdir($dir, 0775, true);
+            }
+            foreach (glob($dir . $id . '-*.jpg') ?: [] as $old) {
+                @unlink($old);
+            }
+            file_put_contents($file, (new \App\Service\PlayerCardImage())->render($card));
+        }
+
+        return $this->response
+            ->withType('jpg')
+            ->withHeader('Cache-Control', 'public, max-age=3600')
+            ->withFile($file);
+    }
 }
