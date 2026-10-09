@@ -1080,6 +1080,9 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             'rating' => $rating ? [
                 'rating' => (float)$rating->rating, 'type' => $rating->type, 'weapon' => $rating->weapon,
                 'type_label' => \App\Command\CalculateRatingsCommand::typeLabel($rating->type, (int)$rating->attack_pct, (int)$rating->defense_pct, (int)$rating->combat_pct),
+                // trend arrow from +-TREND_ARROW (last 10 CTF games vs the last 100)
+                'trend' => $rating->trend !== null && abs((float)$rating->trend) >= \App\Command\CalculateRatingsCommand::TREND_ARROW
+                    ? ((float)$rating->trend > 0 ? 'up' : 'down') : null,
                 'rank' => (int)$rating->rank, 'rated' => $PlayerRatings->find()->count(),
                 'win_rate' => $rating->win_rate !== null ? (float)$rating->win_rate : null,
                 'attack_pct' => (int)$rating->attack_pct, 'defense_pct' => (int)$rating->defense_pct, 'combat_pct' => (int)$rating->combat_pct,

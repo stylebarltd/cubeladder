@@ -25,11 +25,15 @@ if ((int)$player->track === 1):
             \App\Command\CalculateRatingsCommand::typeLabel($rating->type, (int)$rating->attack_pct, (int)$rating->defense_pct, (int)$rating->combat_pct),
             (int)$rating->rank, number_format((int)$ratedPlayers))
         : 'AssaultCube player stats on cubeLadder';
+    if (!empty($rating) && $rating->trend !== null && abs((float)$rating->trend) >= \App\Command\CalculateRatingsCommand::TREND_ARROW) {
+        $ogText = str_replace('CTF rating ' . number_format((float)$rating->rating, 1),
+            'CTF rating ' . number_format((float)$rating->rating, 1) . ((float)$rating->trend > 0 ? ' ▲ on the rise' : ' ▼ going down'), $ogText);
+    }
     if (!empty($timePlayed['all'])) {
         $ogText .= ' · ' . $this->Layout->duration((int)$timePlayed['all']) . ' played';
     }
     // a new picture URL whenever the rating changes, so previews don't stay stale
-    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $player->name, $player->picture])), 0, 8);
+    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $rating?->trend, $player->name, $player->picture])), 0, 8);
     $this->assign('title', $ogTitle);
     $this->start('meta'); ?>
     <meta property="og:type" content="profile">

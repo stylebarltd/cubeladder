@@ -96,6 +96,12 @@ class PlayerCardImage
                 }
             }
             $this->text($value, $pad + 40, $boxY + 130, 104, $this->bold, $color);
+            if (!empty($r['trend'])) {
+                // trend arrow, as on the site: green up / red down
+                $up = $r['trend'] === 'up';
+                $this->text($up ? '▲' : '▼', $pad + 48 + $this->width($value, 104, $this->bold), $boxY + ($up ? 62 : 128), 34, $this->bold,
+                    $up ? [74, 222, 128] : [248, 113, 113]);
+            }
             $this->text('CTF RATING', $pad + 46, $boxY + 175, 18, $this->regular, $grey);
 
             $x = $pad + 360;
