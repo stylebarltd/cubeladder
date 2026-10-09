@@ -4,16 +4,54 @@ namespace App\Command;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
+use Cake\Console\ConsoleOptionParser;
+use Cake\Core\Configure;
+use Cake\Http\Client;
 use DateTimeImmutable;
 use App\Service\LastGamesTrait;
+use Throwable;
 
+/**
+ * Weekly achievements (cron, Monday 00:01, for the week that just ended):
+ * the #1 of each category over the last 100 games and the best player on
+ * every map, stored in achievements, sent to the winners' inbox and posted
+ * to the Discord achievements channel (Ladder.discord.achievements.webhook).
+ *
+ *   bin/cake CalculateAchievements              calculate, store, post
+ *   bin/cake CalculateAchievements --post-only  post the stored week again
+ */
 class CalculateAchievementsCommand extends Command
 {
 
     use LastGamesTrait;
 
+    /** Discord labels of the weekly categories */
+    private const LABELS = [
+        'total_score' => ['🏆', 'Most points'],
+        'kd_ratio' => ['🎯', 'Best K/D'],
+        'scored_with_the_flag' => ['🚩', 'Most flags scored'],
+        'headshot' => ['💀', 'Most headshots'],
+        'slashed' => ['🔪', 'Most slashes'],
+        'gibbed' => ['💣', 'Most gibs'],
+        'teamkills' => ['🤦', 'Most teamkills'],
+        'suicided' => ['☠️', 'Most suicides'],
+    ];
+
+    protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
+    {
+        return $parser->setDescription('Weekly achievements: calculate, store, notify, post to Discord')
+            ->addOption('post-only', ['boolean' => true, 'help' => 'Only post the stored achievements of the last week to Discord']);
+    }
+
     public function execute(Arguments $args, ConsoleIo $io): int
     {
+        if ($args->getOption('post-only')) {
+            [$weekStart, $weekEnd] = $this->week();
+            $this->postToDiscord($weekStart, $weekEnd, $io);
+
+            return Command::CODE_SUCCESS;
+        }
+        $saved = 0;
 
         $Messages = $this->fetchTable('Messages');
 
@@ -23,16 +61,7 @@ class CalculateAchievementsCommand extends Command
         $Achievements = $this->fetchTable('Achievements');
         $Maps         = $this->fetchTable('Maps');
 
-        /**
-         * Week range (last completed Sunday)
-         */
-        $today = new DateTimeImmutable('today');
-
-        $weekEnd = ($today->format('w') === '0')
-            ? $today
-            : $today->modify('last sunday');
-
-        $weekStart = $weekEnd->modify('-6 days');
+        [$weekStart, $weekEnd] = $this->week();
 
         /**
          * Last 100 games
@@ -124,6 +153,7 @@ class CalculateAchievementsCommand extends Command
             ]);
 
             $Achievements->saveOrFail($entity);
+            $saved++;
 
             $this->sendAchievementMessage(
                 $Messages,
@@ -215,6 +245,7 @@ class CalculateAchievementsCommand extends Command
             ]);
 
             $Achievements->saveOrFail($entity);
+            $saved++;
 
             $this->sendAchievementMessage(
                 $Messages,
@@ -236,7 +267,115 @@ class CalculateAchievementsCommand extends Command
             ));
         }
 
-        return 1;
+        // the week's achievements in the Discord channel (once: only when
+        // this run stored new ones)
+        if ($saved > 0) {
+            $this->postToDiscord($weekStart, $weekEnd, $io);
+        }
+
+        return Command::CODE_SUCCESS;
+    }
+
+    /**
+     * The week ending last Sunday (today on a Sunday).
+     *
+     * @return array{0: DateTimeImmutable, 1: DateTimeImmutable}
+     */
+    private function week(): array
+    {
+        $today = new DateTimeImmutable('today');
+        $weekEnd = ($today->format('w') === '0') ? $today : $today->modify('last sunday');
+
+        return [$weekEnd->modify('-6 days'), $weekEnd];
+    }
+
+    /**
+     * One Discord message with the stored achievements of the week: the
+     * category winners, then the map champions. Players who opted out of
+     * tracking are shown as Anonymous, without a link.
+     */
+    private function postToDiscord(DateTimeImmutable $weekStart, DateTimeImmutable $weekEnd, ConsoleIo $io): void
+    {
+        $webhook = Configure::read('Ladder.discord.achievements.webhook');
+        if (empty($webhook)) {
+            $io->out('No achievements webhook configured (Ladder.discord.achievements.webhook) - not posted');
+
+            return;
+        }
+        $site = rtrim((string)(Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh'), '/');
+        $rows = $this->fetchTable('Achievements')->find()
+            ->contain(['Players', 'Maps'])
+            ->where(['Achievements.week_start' => $weekStart->format('Y-m-d')])
+            ->all();
+        if ($rows->isEmpty()) {
+            $io->out('No achievements stored for the week of ' . $weekStart->format('Y-m-d'));
+
+            return;
+        }
+
+        $who = function ($a) use ($site): string {
+            if (!$a->player || (int)$a->player->track !== 1) {
+                return '_Anonymous_';
+            }
+            $name = strtr((string)$a->player->name, ['[' => '(', ']' => ')', '*' => "\u{2217}", '`' => "\u{2CB}"]);
+
+            return sprintf('[%s](%s/players/view/%s)', $name, $site, $a->player->id);
+        };
+        $value = fn($a) => $a->event_type === 'kd_ratio'
+            ? number_format((float)$a->count, 2)
+            : number_format((float)$a->count);
+
+        $fields = [];
+        foreach (self::LABELS as $type => [$emoji, $label]) {
+            foreach ($rows as $a) {
+                if ($a->event_type === $type) {
+                    $fields[] = ['name' => $emoji . ' ' . $label, 'value' => $who($a) . ' · **' . $value($a) . '**', 'inline' => true];
+                }
+            }
+        }
+
+        $maps = array_values(array_filter($rows->toList(), fn($a) => $a->event_type === 'best_on_map' && $a->map));
+        usort($maps, fn($x, $y) => (float)$y->count <=> (float)$x->count);
+        $lines = [];
+        $length = 0;
+        foreach ($maps as $i => $a) {
+            $line = sprintf('**%s** · %s · %s pts', $a->map->name, $who($a), $value($a));
+            if ($length + strlen($line) > 3800) {
+                $lines[] = sprintf('… and %d more maps', count($maps) - $i);
+                break;
+            }
+            $lines[] = $line;
+            $length += strlen($line) + 1;
+        }
+
+        $period = $weekStart->format('j M') . ' – ' . $weekEnd->format('j M Y');
+        $embeds = [[
+            'title' => '🥇 Weekly achievements · ' . $period,
+            'url' => $site . '/players',
+            'description' => 'The best of the week over the last 100 games.',
+            'color' => 0xEAB308,
+            'fields' => $fields,
+        ]];
+        if ($lines) {
+            $embeds[] = [
+                'title' => '🗺️ Best on map · ' . count($maps) . ' maps',
+                'url' => $site . '/maps',
+                'description' => implode("\n", $lines),
+                'color' => 0x3B82F6,
+            ];
+        }
+
+        try {
+            $res = (new Client(['timeout' => 15]))->post($webhook . '?wait=true', (string)json_encode([
+                'username' => 'cubeLadder Achievements',
+                'avatar_url' => $site . '/img/brand/cubeladder-discord-icon-512.png',
+                'embeds' => $embeds,
+                'allowed_mentions' => ['parse' => []],
+            ]), ['type' => 'json']);
+            $io->out($res->isOk() ? 'Posted the week to Discord' : 'Discord: HTTP ' . $res->getStatusCode() . ' ' . $res->getStringBody());
+        } catch (Throwable $e) {
+            $io->err('Discord: ' . $e->getMessage());
+        }
     }
 
 

@@ -16,7 +16,8 @@ use Throwable;
 /**
  * Rebuilds player_milestones and player_milestone_progress (MilestoneService)
  * after every import, and announces new Gold-and-up milestones of tracked
- * players in the Discord results channel (Ladder.discord.results.webhook).
+ * players in the Discord achievements channel (Ladder.discord.achievements.webhook,
+ * the results channel when there is none).
  *
  * "New" = not in the table before this run; the very first run (empty
  * table) announces nothing, and only milestones reached in the last
@@ -91,7 +92,7 @@ class CalculateMilestonesCommand extends Command
      */
     private function announce(array $new, ConsoleIo $io): void
     {
-        $webhook = Configure::read('Ladder.discord.results.webhook');
+        $webhook = Configure::read('Ladder.discord.achievements.webhook') ?: Configure::read('Ladder.discord.results.webhook');
         $since = date('Y-m-d H:i:s', strtotime('-' . self::ANNOUNCE_DAYS . ' days'));
         $big = array_values(array_filter($new, fn($m) => isset(MilestoneService::MILESTONES[$m['milestone']])
             && $m['tier'] >= MilestoneService::ANNOUNCE_FROM_TIER && $m['reached_at'] >= $since));

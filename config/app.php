@@ -609,6 +609,12 @@ return [
                 'minPlayers' => 6,
             ],
 
+            // achievements channel: weekly achievements (CalculateAchievements) and
+            // new Gold+ milestones (CalculateMilestones)
+            'achievements' => [
+                'webhook' => env('DISCORD_ACHIEVEMENTS_WEBHOOK'),
+            ],
+
             // welcome channel: bin/cake discord_welcome (posted once, re-run edits it)
             'welcome' => [
                 'webhook' => env('DISCORD_WELCOME_WEBHOOK'),
