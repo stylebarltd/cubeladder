@@ -200,7 +200,10 @@ class DiscordResultsCommand extends Command
         $filename = 'result-' . substr((string)$game->id, 0, 8) . '.jpg';
 
         // highlights
-        $link = fn($player) => sprintf('[%s](%s/players/view/%s)', $this->linkText((string)$player->name), $site, $player->id);
+        // Anonymous (opted out of tracking): no link
+        $link = fn($player) => $player->id === null
+            ? '_Anonymous_'
+            : sprintf('[%s](%s/players/view/%s)', $this->linkText((string)$player->name), $site, $player->id);
         $fields = [];
         if ($board['rows']) {
             $mvp = $board['rows'][0];

@@ -46,12 +46,16 @@ $playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight, $rat
     <tr class="<?= $mine ? 'bg-sky-500/25 font-bold outline outline-1 -outline-offset-1 outline-sky-400' : ($row['is_mvp'] ? 'bg-yellow-400/10' : '') ?>">
         <td class="whitespace-nowrap px-1.5 py-1 sm:max-w-0 sm:w-full sm:px-2">
             <div class="flex items-center gap-1.5 sm:min-w-0">
-                <?= $this->Html->link(
-                    h($row['player']->name),
-                    ['controller' => 'Players', 'action' => 'view', $row['player']->id],
-                    ['class' => 'sm:truncate hover:text-blue-300', 'escape' => false]
-                ) ?>
-                <span class="shrink-0"><?= $this->Layout->flag($row['player']->country) ?></span>
+                <?php if (!empty($row['anonymous'])): ?>
+                    <span class="italic text-zinc-400 sm:truncate" title="This player opted out of tracking">Anonymous</span>
+                <?php else: ?>
+                    <?= $this->Html->link(
+                        h($row['player']->name),
+                        ['controller' => 'Players', 'action' => 'view', $row['player']->id],
+                        ['class' => 'sm:truncate hover:text-blue-300', 'escape' => false]
+                    ) ?>
+                    <span class="shrink-0"><?= $this->Layout->flag($row['player']->country) ?></span>
+                <?php endif; ?>
                 <?= $row['is_mvp'] ? '<span class="shrink-0" title="Most points">🏆</span>' : '' ?>
             </div>
         </td>
@@ -173,11 +177,6 @@ $head = function () use ($flagMode, $rated) {
                                 </tbody>
                             </table>
                             </div>
-                            <?php if (!empty($team['hidden'])): ?>
-                                <p class="px-2 py-1 text-[11px] text-zinc-400" title="Their stats count in the team score, but they chose &quot;Don't track me&quot;">
-                                    +<?= (int)$team['hidden'] ?> player<?= $team['hidden'] > 1 ? 's' : '' ?> not shown (opted out of tracking)
-                                </p>
-                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -185,7 +184,7 @@ $head = function () use ($flagMode, $rated) {
                     <p class="mt-2 text-[11px] text-zinc-400">
                         Left early (no team):
                         <?php foreach ($board['unassigned'] as $i => $row): ?>
-                            <?= $i ? ', ' : '' ?><?= $this->Html->link(h($row['player']->name), ['controller' => 'Players', 'action' => 'view', $row['player']->id], ['class' => 'hover:text-blue-300', 'escape' => false]) ?>
+                            <?= $i ? ', ' : '' ?><?= !empty($row['anonymous']) ? '<span class="italic">Anonymous</span>' : $this->Html->link(h($row['player']->name), ['controller' => 'Players', 'action' => 'view', $row['player']->id], ['class' => 'hover:text-blue-300', 'escape' => false]) ?>
                             (<?= $row['score'] ?> pts)
                         <?php endforeach; ?>
                     </p>
@@ -201,9 +200,6 @@ $head = function () use ($flagMode, $rated) {
                         </tbody>
                     </table>
                 </div>
-                <?php if (!empty($board['hidden'])): ?>
-                    <p class="mt-1 text-[11px] text-zinc-400">+<?= (int)$board['hidden'] ?> player<?= $board['hidden'] > 1 ? 's' : '' ?> not shown (opted out of tracking)</p>
-                <?php endif; ?>
             <?php else: ?>
                 <p class="text-zinc-400">No ladder players in this game.</p>
             <?php endif; ?>

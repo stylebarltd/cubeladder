@@ -61,15 +61,14 @@ class LiveScoreboardImage
             }
             foreach (['CLA', 'RVSF'] as $team) {
                 usort($teams[$team], $sort);
-                $columns[] = ['team' => $team, 'players' => $teams[$team], 'score' => $s['team_scores'][$team] ?? array_sum(array_column($teams[$team], $key)), 'hidden' => (int)($s['hidden'][$team] ?? 0)];
+                $columns[] = ['team' => $team, 'players' => $teams[$team], 'score' => $s['team_scores'][$team] ?? array_sum(array_column($teams[$team], $key))];
             }
         } else {
             usort($players, $sort);
             $columns[] = ['team' => null, 'players' => $players, 'score' => null];
         }
 
-        $rows = min(self::MAX_ROWS, max(array_map(fn($c) => count($c['players']), $columns) ?: [0]))
-            + (max(array_map(fn($c) => $c['hidden'] ?? 0, $columns) ?: [0]) > 0 ? 1 : 0);
+        $rows = min(self::MAX_ROWS, max(array_map(fn($c) => count($c['players']), $columns) ?: [0]));
         $more = max(array_map(fn($c) => count($c['players']), $columns) ?: [0]) > self::MAX_ROWS;
         $tableTop = 150;
         $height = max(600, $tableTop + 64 + 36 + max(1, $rows) * self::ROW + ($more ? self::ROW : 0) + 70);
@@ -175,10 +174,6 @@ class LiveScoreboardImage
         }
         if (count($c['players']) > self::MAX_ROWS) {
             $this->text(sprintf('+%d more', count($c['players']) - self::MAX_ROWS), $x + 52, $ry + 29, 17, $this->regular, $grey);
-            $ry += self::ROW;
-        }
-        if (!empty($c['hidden'])) {
-            $this->text(sprintf('+%d not shown (opted out of tracking)', $c['hidden']), $x + 52, ($c['players'] ? $ry : $ry + self::ROW) + 27, 15, $this->regular, $grey);
         }
     }
 

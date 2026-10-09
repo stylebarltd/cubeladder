@@ -136,15 +136,16 @@ class GamesTable extends Table
 
     /**
      * Scoreboard of a game (needs player_stats_per_game with player
-     * contained): tracked players by points, and for team games with known
+     * contained): players by points (those who opted out of tracking as
+     * "Anonymous"), and for team games with known
      * final scores the CLA / RVSF split like the in-game scoreboard.
      *
-     * @return array{rows: array, teams: ?array, winner: ?string, flagMode: bool, unassigned: array, rated: bool, hidden: int}
+     * @return array{rows: array, teams: ?array, winner: ?string, flagMode: bool, unassigned: array, rated: bool}
      */
     public function scoreboard(Game $game): array
     {
         $stats = collection($game->player_stats_per_game ?? [])
-            ->filter(fn($s) => $s->player && (int)$s->player->track === 1)
+            ->filter(fn($s) => $s->player)
             ->sortBy('total_score', SORT_DESC)
             ->toList();
 
@@ -159,8 +160,13 @@ class GamesTable extends Table
 
         $rows = [];
         foreach ($stats as $i => $stat) {
+            // "Don't track me": shown as Anonymous - no name, country, link or id
+            $anonymous = (int)$stat->player->track !== 1;
             $rows[] = [
-                'player' => $stat->player,
+                'player' => $anonymous
+                    ? new \Cake\ORM\Entity(['id' => null, 'name' => 'Anonymous', 'country' => null])
+                    : $stat->player,
+                'anonymous' => $anonymous,
                 'team' => $stat->team,
                 'is_mvp' => $i === 0,
                 'flags' => (int)$stat->scored_with_the_flag,
@@ -174,19 +180,7 @@ class GamesTable extends Table
         }
 
         $flagMode = in_array($game->mode, self::FLAG_MODES, true);
-        // players who chose "Don't track me" stay hidden, but the scoreboard
-        // says they were there (their flags are in the team score)
-        $hidden = ['CLA' => 0, 'RVSF' => 0, 'all' => 0];
-        foreach ($game->player_stats_per_game ?? [] as $stat) {
-            if ($stat->player && (int)$stat->player->track === 0) {
-                $hidden['all']++;
-                if (isset($hidden[$stat->team])) {
-                    $hidden[$stat->team]++;
-                }
-            }
-        }
-
-        $board = ['rows' => $rows, 'teams' => null, 'winner' => null, 'flagMode' => $flagMode, 'unassigned' => [], 'rated' => $ratings !== [], 'hidden' => $hidden['all']];
+        $board = ['rows' => $rows, 'teams' => null, 'winner' => null, 'flagMode' => $flagMode, 'unassigned' => [], 'rated' => $ratings !== []];
 
         $teamScores = $game->team_scores ? json_decode($game->team_scores, true) : null;
         if (!$teamScores || !in_array($game->mode, self::TEAM_MODES, true)) {
@@ -199,7 +193,6 @@ class GamesTable extends Table
                 'score' => ($teamScores[$team] ?? []) + ['players' => 0, 'frags' => 0, 'flags' => null],
                 'deaths' => array_sum(array_column($teamRows, 'deaths')),
                 'rows' => $teamRows,
-                'hidden' => $hidden[$team],
             ];
         }
         $points = fn($t) => [$flagMode ? (int)$t['score']['flags'] : 0, (int)$t['score']['frags']];
