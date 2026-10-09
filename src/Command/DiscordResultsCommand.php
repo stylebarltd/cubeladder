@@ -220,7 +220,9 @@ class DiscordResultsCommand extends Command
             }
         }
 
-        $ended = $game->ended_at ? $game->ended_at->getTimestamp() : time();
+        $when = $game->started_at
+            ? $game->started_at->format('D j M, H:i') . ($game->ended_at ? ' – ' . $game->ended_at->format('H:i') : '')
+            : '';
         $button = fn(string $label, string $url, ?string $emoji = null) => ['type' => 2, 'style' => 5, 'label' => $label, 'url' => $url]
             + ($emoji ? ['emoji' => ['name' => $emoji]] : []);
 
@@ -230,7 +232,9 @@ class DiscordResultsCommand extends Command
             'embeds' => [[
                 'title' => '🏁 ' . $map . ($mode !== '' ? ' · ' . $mode : '') . ' — ' . $title,
                 'url' => $site . '/games/view/' . $game->id,
-                'description' => sprintf('**%s** · <t:%d:f>%s', $server, $ended, $minutes > 0 ? " · {$minutes} min" : ''),
+                // plain text, as on the game page: a <t:…> timestamp shows up raw in
+                // push notifications and previews
+                'description' => sprintf('**%s** · %s%s', $server, $when, $minutes > 0 ? " · {$minutes} min" : ''),
                 'color' => $color,
                 'fields' => $fields,
                 'image' => ['url' => 'attachment://' . $filename],

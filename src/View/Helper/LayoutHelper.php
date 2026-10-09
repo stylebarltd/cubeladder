@@ -67,6 +67,29 @@ class LayoutHelper extends Helper
     }
 
     /**
+     * Trend arrow next to a CTF rating (player_ratings.trend: the last 10
+     * CTF games against the last 100): green up / red down from
+     * CalculateRatingsCommand::TREND_ARROW, nothing in between.
+     */
+    public function trendArrow(?float $trend, string $class = ''): string
+    {
+        if ($trend === null || abs($trend) < \App\Command\CalculateRatingsCommand::TREND_ARROW) {
+            return '';
+        }
+        $up = $trend > 0;
+
+        return sprintf(
+            '<span class="%s %s" title="%s: last 10 CTF games %s%s against the last 100">%s</span>',
+            $up ? 'text-green-400' : 'text-red-400',
+            h($class),
+            $up ? 'On the rise' : 'Going down',
+            $up ? '+' : '',
+            number_format($trend, 1),
+            $up ? '▲' : '▼'
+        );
+    }
+
+    /**
      * URL of the map's small thumbnail (bin/cake map_thumbs) - the full
      * screenshot when the thumb was not built yet, else the bullet thumb.
      */

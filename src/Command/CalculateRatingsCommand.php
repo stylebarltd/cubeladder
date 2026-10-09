@@ -56,6 +56,9 @@ class CalculateRatingsCommand extends Command
         return 'CalculateRatings';
     }
 
+    /** From this difference (last 10 vs last 100 games) the trend arrow shows */
+    public const TREND_ARROW = 0.5;
+
     /**
      * The type as shown: All-Rounders get their specialization - the
      * strongest of attack (flag play), defense (returns) and combat, as the
@@ -189,6 +192,29 @@ class CalculateRatingsCommand extends Command
                         ]);
                     }
                     $query->execute();
+                }
+            });
+        }
+
+        if (!$args->getOption('dry-run')) {
+            // form: last 10 games vs last 100 (per-game ratings), for the arrows
+            $trends = $connection->execute("
+                WITH x AS (
+                    SELECT r.player_id, r.rating AS game_rating,
+                           ROW_NUMBER() OVER (PARTITION BY r.player_id ORDER BY g.ended_at DESC) AS rn
+                    FROM player_game_ratings r
+                    INNER JOIN games g ON g.id = r.game_id
+                )
+                SELECT x.player_id, AVG(IF(rn <= 10, game_rating, NULL)) - AVG(game_rating) AS trend
+                FROM x INNER JOIN player_ratings pr ON pr.player_id = x.player_id
+                WHERE rn <= :window
+                GROUP BY x.player_id", ['window' => self::WINDOW])->fetchAll('assoc');
+            $connection->transactional(function ($connection) use ($trends) {
+                foreach ($trends as $t) {
+                    $connection->updateQuery('player_ratings')
+                        ->set(['trend' => round((float)$t['trend'], 2)])
+                        ->where(['player_id' => $t['player_id']])
+                        ->execute();
                 }
             });
         }

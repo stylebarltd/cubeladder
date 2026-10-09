@@ -128,7 +128,7 @@ endif;
             <a href="/about#rating" title="How the rating works"
                class="<?= $panel ?> flex w-full shrink-0 items-center gap-5 p-4 hover:border-white/30 transition sm:ml-auto sm:w-auto">
                 <div class="shrink-0 text-center">
-                    <div class="font-mono text-5xl font-extrabold tabular-nums leading-none <?= $ratingColor ?>"><?= number_format($ratingValue, 1) ?></div>
+                    <div class="font-mono text-5xl font-extrabold tabular-nums leading-none <?= $ratingColor ?>"><?= number_format($ratingValue, 1) ?><?= $this->Layout->trendArrow($rating->trend !== null ? (float)$rating->trend : null, 'ml-1 align-top text-lg') ?></div>
                     <div class="mt-1 text-[10px] uppercase tracking-wider text-zinc-400">CTF rating</div>
                 </div>
                 <div class="min-w-0 space-y-2">

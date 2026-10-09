@@ -343,11 +343,12 @@ class PlayersController extends AppController
     private function attachRatings(array &$players, string $sort): void
     {
         $ratings = $this->fetchTable('PlayerRatings')->find()
-            ->select(['player_id', 'rating', 'type', 'attack_pct', 'defense_pct', 'combat_pct'])
+            ->select(['player_id', 'rating', 'trend', 'type', 'attack_pct', 'defense_pct', 'combat_pct'])
             ->disableHydration()->all()->indexBy('player_id')->toArray();
         foreach ($players as $player) {
             $r = $ratings[$player->id] ?? null;
             $player->rating = $r ? (float)$r['rating'] : null;
+            $player->rating_trend = isset($r['trend']) ? (float)$r['trend'] : null;
             $player->player_type = $r['type'] ?? null;
             $player->player_type_label = $r
                 ? \App\Command\CalculateRatingsCommand::typeLabel($r['type'], (int)$r['attack_pct'], (int)$r['defense_pct'], (int)$r['combat_pct'])

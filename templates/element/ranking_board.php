@@ -5,7 +5,7 @@
  *
  * @var \App\View\AppView $this
  * @var iterable $players
- * @var array $stats key => [label, value(fn), title?] (key = ?sort= value)
+ * @var array $stats key => [label, value(fn), title?, html? (value is HTML, not escaped)] (key = ?sort= value)
  * @var string $sort
  * @var array $activeStat
  * @var array $achievementPlayers
@@ -128,7 +128,7 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                         <?php foreach ($stats as $key => $stat): ?>
                             <td class="px-1.5 py-2 sm:px-2 text-right <?= in_array($key, $mobileStats, true) ? '' : 'hidden sm:table-cell' ?>
                                 <?= $sort === $key ? 'bg-sky-400/10 font-bold text-sky-300' : ($key === 'points' ? 'font-bold' : 'text-zinc-200') ?>">
-                                <?= h($stat['value']($player)) ?>
+                                <?= !empty($stat['html']) ? $stat['value']($player) : h($stat['value']($player)) ?>
                             </td>
                         <?php endforeach; ?>
                     </tr>

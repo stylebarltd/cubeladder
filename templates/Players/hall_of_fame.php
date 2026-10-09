@@ -161,7 +161,7 @@ shuffle($playerImages);
                                             <?php if ($pr = $playerRatings[(string)$player->player_id] ?? null): ?>
                                                 <!-- the player's CTF rating, rank among rated players and type -->
                                                 <span class="whitespace-nowrap" title="CTF rating · rank among <?= h('rated players') ?>">
-                                                    <b class="font-mono <?= $this->Layout->ratingClass((float)$pr['rating']) ?>"><?= number_format((float)$pr['rating'], 1) ?></b>
+                                                    <b class="font-mono <?= $this->Layout->ratingClass((float)$pr['rating']) ?>"><?= number_format((float)$pr['rating'], 1) ?></b><?= $this->Layout->trendArrow(isset($pr['trend']) ? (float)$pr['trend'] : null, 'ml-0.5 text-[9px]') ?>
                                                     <span class="text-zinc-500">#<?= (int)$pr['rank'] ?></span>
                                                 </span>
                                                 <?= $this->element('player_type_badge', ['type' => $pr['type'], 'label' => $pr['label']]) ?>

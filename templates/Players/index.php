@@ -13,7 +13,11 @@ $stats = [
     ],
     'rating' => [
         'label' => 'Rating',
-        'value' => fn($p) => $p->rating !== null ? number_format($p->rating, 1) : '–',
+        // HTML: the rating plus its trend arrow
+        'html' => true,
+        'value' => fn($p) => $p->rating !== null
+            ? $this->Layout->trendArrow($p->rating_trend ?? null, 'mr-1 text-[10px]') . number_format($p->rating, 1)
+            : '–',
         'title' => 'CTF rating 0-10 (last 100 CTF games, from 20 on) - see About',
     ],
     'kd' => [
