@@ -637,10 +637,8 @@ $gamesDataGlobal = [];        // games inside lastGameIds
                     'game_id'   => $stat->game->id,
                     'map_name'  => $stat->game->map->name,
                     'played_at' => $stat->game->started_at->format('D, dS M'),
-                    'map_image' => file_exists(
-                        WWW_ROOT . 'img/maps/' . $stat->game->map->name . '.jpg'
-                    )
-                        ? '/img/maps/' . $stat->game->map->name . '.jpg'
+                    'map_image' => ($picture = \App\View\Helper\LayoutHelper::mapPicture($stat->game->map->name, (string)$stat->game->id)) !== null
+                        ? '/img/maps/' . rawurlencode($picture)
                         : '/img/bullet.jpg',
                     'score'     => $stat->total_score,
                     'kills'     => $stat->kills,

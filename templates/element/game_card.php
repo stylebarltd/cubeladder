@@ -16,7 +16,7 @@ $compact = $compact ?? false;
 $highlight = $highlight ?? null;
 $extra = $extra ?? null;
 
-$mapUrl = $this->Layout->mapImage($game->map->name); // bullet artwork when there is no screenshot
+$mapUrl = $this->Layout->mapImage($game->map->name, (string)$game->id); // picture 1 or 2 per game, bullet artwork when there is none
 
 // Literal class names so Tailwind keeps them
 $teamStyle = [

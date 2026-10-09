@@ -12,13 +12,28 @@ class LayoutHelper extends Helper
     public const NO_MAP_THUMB = '/img/bullet-thumb.jpg';
 
     /**
-     * URL of the map's screenshot, or the bullet artwork.
+     * URL of the map's screenshot, or the bullet artwork. Maps can have a
+     * second picture (<map>-2.jpg): with a $seed (a game id) the game shows
+     * picture 1 or 2 - always the same one for the same game.
      */
-    public function mapImage(?string $mapName): string
+    public function mapImage(?string $mapName, ?string $seed = null): string
     {
-        return $mapName && is_file(WWW_ROOT . 'img/maps/' . $mapName . '.jpg')
-            ? '/img/maps/' . rawurlencode($mapName) . '.jpg'
-            : self::NO_MAP_IMAGE;
+        $file = $mapName ? self::mapPicture($mapName, $seed) : null;
+
+        return $file !== null ? '/img/maps/' . rawurlencode($file) : self::NO_MAP_IMAGE;
+    }
+
+    /**
+     * File name (in webroot/img/maps) of the map's picture - picture 1, or
+     * for a seed (game id) picture 1 or 2 when the map has two - or null.
+     */
+    public static function mapPicture(string $mapName, ?string $seed = null): ?string
+    {
+        if ($seed !== null && crc32($seed) % 2 === 1 && is_file(WWW_ROOT . 'img/maps/' . $mapName . '-2.jpg')) {
+            return $mapName . '-2.jpg';
+        }
+
+        return is_file(WWW_ROOT . 'img/maps/' . $mapName . '.jpg') ? $mapName . '.jpg' : null;
     }
 
     /**

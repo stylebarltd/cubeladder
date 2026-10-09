@@ -32,6 +32,9 @@ class LiveScoreboardImage
     private string $bold;
     private GdImage $im;
 
+    /** A finished game's picture (1 or 2) instead of picture 1 */
+    private ?string $backgroundFile = null;
+
     public function __construct()
     {
         $this->regular = $this->font('DejaVuSansMono.ttf');
@@ -41,7 +44,7 @@ class LiveScoreboardImage
     /**
      * @param array $s one polled server (DiscordLiveService::poll()); a
      *   finished game (DiscordResultsCommand) may override 'meta' (second
-     *   header line), 'badge' ([big, small] top right), 'footer', 'team_scores'
+     *   header line), 'badge' ([big, small] top right), 'footer', 'background' (file), 'team_scores'
      *   (final score per team) and 'winner' (team)
      * @return string JPEG bytes
      */
@@ -73,6 +76,7 @@ class LiveScoreboardImage
         $tableTop = 150;
         $height = max(600, $tableTop + 64 + 36 + max(1, $rows) * self::ROW + ($more ? self::ROW : 0) + 70);
 
+        $this->backgroundFile = !empty($s['background']) && is_file($s['background']) ? $s['background'] : null;
         $this->im = imagecreatetruecolor(self::WIDTH, $height);
         imagealphablending($this->im, true);
         $this->background((string)$s['map'], $height);
@@ -183,9 +187,9 @@ class LiveScoreboardImage
      */
     private function background(string $map, int $height): void
     {
-        $file = is_file(WWW_ROOT . 'img/maps/' . $map . '.jpg')
+        $file = $this->backgroundFile ?? (is_file(WWW_ROOT . 'img/maps/' . $map . '.jpg')
             ? WWW_ROOT . 'img/maps/' . $map . '.jpg'
-            : WWW_ROOT . 'img/bullet-wide.jpg';
+            : WWW_ROOT . 'img/bullet-wide.jpg');
         $src = is_file($file) ? @imagecreatefromjpeg($file) : false;
         if ($src) {
             $sw = imagesx($src);

@@ -73,6 +73,8 @@ class GameResultPicture
             'badge' => [(string)count($players), 'players'],
             'host' => null,
             'footer' => 'cubeladder.ovh',
+            // picture 1 or 2 of the map, the same one as on the game page
+            'background' => ($file = LayoutHelper::mapPicture($mapName, (string)$game->id)) !== null ? WWW_ROOT . 'img/maps/' . $file : null,
         ];
         if ($teamGame) {
             $picture['team_scores'] = ['CLA' => $score('CLA'), 'RVSF' => $score('RVSF')];
