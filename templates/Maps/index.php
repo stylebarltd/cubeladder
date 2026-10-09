@@ -17,7 +17,7 @@ if (!$map): ?>
     <?php return; endif;
 
 $mapUrl = fn(string $name) => $this->Url->build(['controller' => 'Maps', 'action' => 'index', '?' => ['map' => $name]]);
-$panel = 'rounded-lg border border-white/15 bg-black/60 p-4 backdrop-blur-[2px]';
+$panel = 'rounded-lg border border-white/15 bg-black/60 p-3 sm:p-4 backdrop-blur-[2px]';
 $panelTitle = 'mb-3 text-[11px] font-bold uppercase tracking-wider';
 
 $leaderDefs = [
@@ -40,10 +40,10 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
     <div class="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-7xl flex-col gap-4 px-4 py-5 md:px-16 md:py-8">
 
         <!-- Title + map picker -->
-        <div class="flex flex-wrap items-start justify-between gap-4 pr-24 md:pr-0">
-            <div class="drop-shadow-lg">
-                <h2 class="text-3xl md:text-5xl font-extrabold tracking-wide"><?= $this->Layout->cleanMapName($map->name) ?></h2>
-                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-200">
+        <div class="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
+            <div class="min-w-0 pr-24 drop-shadow-lg md:pr-0">
+                <h2 class="break-words text-3xl md:text-5xl font-extrabold tracking-wide"><?= $this->Layout->cleanMapName($map->name) ?></h2>
+                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm text-zinc-200">
                     <span class="font-mono"><?= h($map->name) ?></span>
                     <span><i class="fa-solid fa-ranking-star mr-1"></i>#<?= $rank ?> most played</span>
                     <span><i class="fa-solid fa-gamepad mr-1"></i><?= number_format((int)$map->games_count) ?> games</span>
@@ -87,7 +87,7 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
         </div>
 
         <!-- Sections -->
-        <div class="mt-auto grid gap-4 lg:grid-cols-3">
+        <div class="mt-auto grid gap-3 sm:gap-4 lg:grid-cols-3">
 
             <!-- Single-game records on this map -->
             <section class="<?= $panel ?>">
@@ -147,6 +147,7 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
                             $weekEnd = is_string($achievement->week_end) ? $achievement->week_end : $achievement->week_end->format('Y-m-d');
                             $weeks = (int)floor((time() - strtotime($weekEnd)) / (7 * 86400));
                             $weeksLabel = $weeks <= 0 ? 'this week' : ($weeks === 1 ? '1 week ago' : $weeks . ' weeks ago');
+                            $weeksShort = $weeks <= 0 ? 'now' : $weeks . 'w ago';
                             ?>
                             <li class="flex items-center gap-2 text-sm">
                                 <span class="shrink-0">🏆</span>
@@ -155,7 +156,7 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
                                     <?= $this->Layout->flag($achievement->player->country) ?>
                                 </span>
                                 <span class="shrink-0 font-bold text-yellow-200 tabular-nums"><?= number_format((float)$achievement->count) ?></span>
-                                <span class="w-20 shrink-0 text-right text-[11px] text-zinc-400"><?= h($weeksLabel) ?></span>
+                                <span class="w-14 shrink-0 text-right text-[11px] text-zinc-400 sm:w-20"><span class="sm:hidden"><?= h($weeksShort) ?></span><span class="hidden sm:inline"><?= h($weeksLabel) ?></span></span>
                             </li>
                         <?php endforeach; ?>
                     </ul>
