@@ -48,7 +48,6 @@
 .lg-teams { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
 @media (min-width: 1100px) { .lg-teams { grid-template-columns: 1fr 1fr; } }
 
-.js-connect { word-break: break-all; }
 /* Phones: keep ping / player / flags / frags / deaths / acc, drop # / TK / damage */
 @media (max-width: 640px) {
   .lg-in { padding: 1rem; }
@@ -81,7 +80,6 @@
             </div>
             <div class="js-game text-zinc-300 text-sm"></div>
             <div class="text-xs text-zinc-400">
-                <code class="bg-zinc-900/70 px-1.5 py-0.5 rounded js-connect"></code>
                 <span class="js-gamelink"></span>
             </div>
 
@@ -241,7 +239,6 @@ window.initLiveMatch = function (root, key) {
         const s = data.server;
         $('.js-updated').textContent = new Date(data.fetched_at).toLocaleTimeString();
         $('.js-title').textContent = s.name || key;
-        $('.js-connect').textContent = '/connect ' + s.host + ' ' + s.port;
         const st = $('.js-status');
         st.classList.remove('lg-pulse');
 

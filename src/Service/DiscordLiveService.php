@@ -198,12 +198,10 @@ class DiscordLiveService
             $state['notified'][$key] = $now;
 
             $text = sprintf(
-                '🔔 **%d players** are now on **%s**%s · `/connect %s %d`',
+                '🔔 **%d players** are now on **%s**%s',
                 $n,
                 $s['name'],
-                $s['map'] ? sprintf(' — %s · %s', $s['map'], $s['mode_name'] ?? '?') : '',
-                $s['host'],
-                (int)$s['port']
+                $s['map'] ? sprintf(' — %s · %s', $s['map'], $s['mode_name'] ?? '?') : ''
             );
             if (!empty($cfg['mention'])) {
                 $text = $cfg['mention'] . ' ' . $text;
@@ -519,13 +517,11 @@ class DiscordLiveService
      */
     private function serverEmbed(array $s): array
     {
-        $connect = sprintf('`/connect %s %d`', $s['host'], $s['port']);
-
         if (!$s['online']) {
             $why = str_starts_with((string)$s['error'], 'outgoing UDP blocked') ? 'cannot be polled from here' : 'offline / no reply';
             return [
                 'author' => $this->serverAuthor($s, $s['name'] . ' — offline'),
-                'description' => $why . ' · ' . $connect,
+                'description' => $why,
                 'color' => self::COLOR_OFFLINE,
             ];
         }
@@ -539,7 +535,7 @@ class DiscordLiveService
 
         if ($n === 0 && empty($s['map'])) {
             // idle server: AC reports no map until somebody joins
-            $embed['description'] = 'empty · ' . $connect;
+            $embed['description'] = 'empty';
             return $embed;
         }
 
@@ -582,7 +578,6 @@ class DiscordLiveService
         if (isset($this->images[$s['key']])) {
             // the scoreboard picture already shows the map and both teams
             $embed['image'] = ['url' => 'attachment://' . $this->images[$s['key']]['filename']];
-            $embed['footer'] = ['text' => sprintf('/connect %s %d', $s['host'], $s['port'])];
 
             return $embed;
         }
@@ -594,8 +589,6 @@ class DiscordLiveService
             $embed['image'] = ['url' => $this->site() . $path];
         }
 
-        // footer is the only embed part rendered below the image
-        $embed['footer'] = ['text' => sprintf('/connect %s %d', $s['host'], $s['port'])];
         if (!$plist) {
             return $embed;
         }

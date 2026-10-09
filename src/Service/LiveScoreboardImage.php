@@ -103,9 +103,6 @@ class LiveScoreboardImage
         // shows "updated …" itself), so it is not uploaded again
         $foot = $s['footer'] ?? 'cubeladder.ovh/live';
         $this->text($foot, self::WIDTH - self::PAD - $this->width($foot, 15, $this->regular), $height - 24, 15, $this->regular, [161, 161, 170]);
-        if (!empty($s['host'])) {
-            $this->text(sprintf('/connect %s %d', $s['host'], (int)$s['port']), self::PAD, $height - 24, 15, $this->regular, [161, 161, 170]);
-        }
 
         ob_start();
         imagejpeg($this->im, null, 85);
