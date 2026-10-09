@@ -51,10 +51,10 @@ $features = [
 
         <!-- Branding -->
         <div class="text-center lg:text-left">
-            <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-4 py-1 text-[11px] font-bold uppercase tracking-[0.3em] text-zinc-200 backdrop-blur-[2px]">
+            <div class="mb-5 inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-black/50 px-3 sm:px-4 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.12em] sm:tracking-[0.3em] text-zinc-200 backdrop-blur-[2px]">
                 <span class="h-2 w-2 rounded-full bg-blue-500"></span> AssaultCube ranking &amp; live stats
             </div>
-            <h1 class="flex items-end justify-center lg:justify-start text-6xl sm:text-8xl xl:text-9xl font-bold tracking-tight leading-none drop-shadow-[0_6px_30px_rgba(0,0,0,.9)]">
+            <h1 class="flex items-end justify-center lg:justify-start text-5xl sm:text-8xl xl:text-9xl font-bold tracking-tight leading-none drop-shadow-[0_6px_30px_rgba(0,0,0,.9)]">
                 <span class="bg-gradient-to-b from-sky-300 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(59,130,246,.55)]">cube</span><span class="text-white">Ladder</span>
             </h1>
             <p class="mx-auto lg:mx-0 mt-6 max-w-2xl text-lg md:text-2xl font-semibold text-white drop-shadow">
@@ -65,25 +65,25 @@ $features = [
             </p>
 
             <?php if (!empty($heroStats)): ?>
-                <div class="mt-7 flex flex-wrap justify-center lg:justify-start gap-3">
+                <div class="mt-7 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center lg:justify-start sm:gap-3">
                     <?php foreach ([['games', 'fa-gamepad', 'games tracked'], ['players', 'fa-users', 'players'], ['maps', 'fa-map', 'maps played']] as [$k, $icon, $label]): ?>
-                        <div class="min-w-[7.5rem] rounded-xl border border-white/15 bg-black/55 backdrop-blur-[2px] px-4 py-2.5">
-                            <div class="font-mono text-2xl md:text-3xl font-extrabold text-white"><?= number_format((int)$heroStats[$k]) ?></div>
-                            <div class="text-[11px] uppercase tracking-wider text-zinc-400"><i class="fa-solid <?= $icon ?> mr-1"></i><?= $label ?></div>
+                        <div class="sm:min-w-[7.5rem] rounded-xl border border-white/15 bg-black/55 backdrop-blur-[2px] px-2 py-2 sm:px-4 sm:py-2.5">
+                            <div class="font-mono text-xl sm:text-2xl md:text-3xl font-extrabold text-white"><?= number_format((int)$heroStats[$k]) ?></div>
+                            <div class="text-[9px] sm:text-[11px] uppercase tracking-wide sm:tracking-wider text-zinc-400"><span class="hidden sm:inline"><i class="fa-solid <?= $icon ?> mr-1"></i></span><?= $label ?></div>
                         </div>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
 
-            <div class="mt-7 flex flex-wrap justify-center lg:justify-start gap-3">
-                <a href="/players" class="rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 transition">
-                    <i class="fa-solid fa-ranking-star mr-1"></i> Rankings
+            <div class="mt-7 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center lg:justify-start sm:gap-3 text-xs sm:text-base">
+                <a href="/players" class="rounded-lg bg-blue-600 px-1 py-3 sm:px-5 whitespace-nowrap text-center font-semibold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 transition">
+                    <span class="hidden sm:inline"><i class="fa-solid fa-ranking-star mr-1"></i></span> Rankings
                 </a>
-                <a href="/players/hall_of_fame" class="rounded-lg border border-yellow-300/50 bg-black/50 px-5 py-3 font-semibold text-yellow-200 backdrop-blur-[2px] hover:bg-yellow-500/20 transition">
-                    <i class="fa-solid fa-crown mr-1"></i> Hall of Fame
+                <a href="/players/hall_of_fame" class="rounded-lg border border-yellow-300/50 bg-black/50 px-1 py-3 sm:px-5 whitespace-nowrap text-center font-semibold text-yellow-200 backdrop-blur-[2px] hover:bg-yellow-500/20 transition">
+                    <span class="hidden sm:inline"><i class="fa-solid fa-crown mr-1"></i></span> Hall of Fame
                 </a>
-                <a href="https://discord.gg/tVX7FKCtK3" target="_blank" rel="noopener" class="rounded-lg bg-[#5865F2] px-5 py-3 font-semibold text-white shadow-lg hover:bg-[#4752c4] transition">
-                    <i class="fa-brands fa-discord mr-1"></i> Discord
+                <a href="https://discord.gg/tVX7FKCtK3" target="_blank" rel="noopener" class="rounded-lg bg-[#5865F2] px-1 py-3 sm:px-5 whitespace-nowrap text-center font-semibold text-white shadow-lg hover:bg-[#4752c4] transition">
+                    <span class="hidden sm:inline"><i class="fa-brands fa-discord mr-1"></i></span> Discord
                 </a>
             </div>
         </div>
@@ -111,10 +111,11 @@ $features = [
     <!-- What's new -->
     <div class="relative mx-auto w-full max-w-7xl px-4 pb-14 md:px-6">
         <div class="mb-3 text-xs font-bold uppercase tracking-[0.3em] text-zinc-400 drop-shadow">What&rsquo;s new</div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <!-- phones: one row to swipe through; larger screens: grid -->
+        <div class="nice-scroll -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-7">
             <?php foreach ($features as [$href, $icon, $color, $title, $sub]): $external = str_starts_with($href, 'http'); ?>
                 <a href="<?= h($href) ?>" <?= $external ? 'target="_blank" rel="noopener"' : '' ?>
-                   class="group rounded-xl border border-white/15 bg-black/55 backdrop-blur-[2px] p-3 hover:border-white/30 hover:bg-black/70 transition">
+                   class="group w-40 shrink-0 snap-start sm:w-auto rounded-xl border border-white/15 bg-black/55 backdrop-blur-[2px] p-3 hover:border-white/30 hover:bg-black/70 transition">
                     <i class="<?= str_contains($icon, 'fa-brands') ? $icon : 'fa-solid ' . $icon ?> <?= $color ?> text-xl"></i>
                     <div class="mt-2 text-sm font-bold text-white"><?= $title ?></div>
                     <div class="mt-0.5 text-[11px] leading-snug text-zinc-400"><?= $sub ?></div>

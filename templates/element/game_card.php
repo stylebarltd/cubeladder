@@ -32,24 +32,24 @@ $playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight) {
     $mine = $highlight !== null && (string)$row['player']->id === (string)$highlight;
     ob_start(); ?>
     <tr class="<?= $mine ? 'bg-sky-500/25 font-bold outline outline-1 -outline-offset-1 outline-sky-400' : ($row['is_mvp'] ? 'bg-yellow-400/10' : '') ?>">
-        <td class="px-2 py-1 max-w-0 w-full">
-            <div class="flex items-center gap-1.5 min-w-0">
+        <td class="whitespace-nowrap px-1.5 py-1 sm:max-w-0 sm:w-full sm:px-2">
+            <div class="flex items-center gap-1.5 sm:min-w-0">
                 <?= $this->Html->link(
                     h($row['player']->name),
                     ['controller' => 'Players', 'action' => 'view', $row['player']->id],
-                    ['class' => 'truncate hover:text-blue-300', 'escape' => false]
+                    ['class' => 'sm:truncate hover:text-blue-300', 'escape' => false]
                 ) ?>
-                <span class="shrink-0"><?= $this->Layout->flag($row['player']->country) ?></span>
+                <span class="hidden shrink-0 sm:inline"><?= $this->Layout->flag($row['player']->country) ?></span>
                 <?= $row['is_mvp'] ? '<span class="shrink-0" title="Most points">🏆</span>' : '' ?>
             </div>
         </td>
-        <?php if ($flagMode): ?><td class="px-2 py-1 text-right"><?= $row['flags'] ?></td><?php endif; ?>
-        <td class="px-2 py-1 text-right"><?= $row['kills'] ?></td>
-        <td class="px-2 py-1 text-right"><?= $row['deaths'] ?></td>
-        <td class="px-2 py-1 text-right <?= $ratioClass($row['kd_ratio']) ?>"><?= number_format($row['kd_ratio'], 2) ?></td>
-        <td class="px-2 py-1 text-right font-bold text-sky-300"><?= $row['score'] ?></td>
+        <?php if ($flagMode): ?><td class="px-1 py-1 sm:px-2 text-right"><?= $row['flags'] ?></td><?php endif; ?>
+        <td class="px-1 py-1 sm:px-2 text-right"><?= $row['kills'] ?></td>
+        <td class="px-1 py-1 sm:px-2 text-right"><?= $row['deaths'] ?></td>
+        <td class="px-1 py-1 sm:px-2 text-right <?= $ratioClass($row['kd_ratio']) ?>"><?= number_format($row['kd_ratio'], 2) ?></td>
+        <td class="px-1 py-1 sm:px-2 text-right font-bold text-sky-300"><?= $row['score'] ?></td>
         <?php $short = $row['minutes'] !== null && $row['minutes'] < \App\Model\Table\PlayerStatsPerGameTable::MIN_MINUTES; ?>
-        <td class="px-2 py-1 text-right <?= $short ? 'text-zinc-500' : 'text-zinc-300' ?>"
+        <td class="px-1 py-1 sm:px-2 text-right <?= $short ? 'text-zinc-500' : 'text-zinc-300' ?>"
             title="<?= $row['minutes'] === null ? 'minutes unknown' : ($short ? 'played under ' . \App\Model\Table\PlayerStatsPerGameTable::MIN_MINUTES . ' min: not counted as a game played' : (int)$row['minutes'] . ' minutes played') ?>"><?= $row['minutes'] ?? '–' ?></td>
     </tr>
     <?php return ob_get_clean();
@@ -58,13 +58,13 @@ $playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight) {
 $head = function () use ($flagMode) {
     ob_start(); ?>
     <tr class="text-zinc-400">
-        <th class="px-2 py-1 text-left font-normal">name</th>
-        <?php if ($flagMode): ?><th class="px-2 py-1 text-right font-normal">flags</th><?php endif; ?>
-        <th class="px-2 py-1 text-right font-normal">frags</th>
-        <th class="px-2 py-1 text-right font-normal">deaths</th>
-        <th class="px-2 py-1 text-right font-normal">ratio</th>
-        <th class="px-2 py-1 text-right font-normal">pts</th>
-        <th class="px-2 py-1 text-right font-normal" title="minutes played">min</th>
+        <th class="px-1.5 py-1 sm:px-2 text-left font-normal">name</th>
+        <?php if ($flagMode): ?><th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">fl</span><span class="hidden sm:inline">flags</span></th><?php endif; ?>
+        <th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">k</span><span class="hidden sm:inline">frags</span></th>
+        <th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">d</span><span class="hidden sm:inline">deaths</span></th>
+        <th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">k/d</span><span class="hidden sm:inline">ratio</span></th>
+        <th class="px-1 py-1 sm:px-2 text-right font-normal">pts</th>
+        <th class="px-1 py-1 sm:px-2 text-right font-normal" title="minutes played">min</th>
     </tr>
     <?php return ob_get_clean();
 };
