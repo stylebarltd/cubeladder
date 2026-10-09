@@ -274,6 +274,19 @@ $features = [
                     Ladder games and inters live in your Discord: who is playing, map, score and flags &ndash;
                     updated every few seconds, with a ping when a server fills up.
                 </p>
+                <?php if (!empty($discord['online'])): ?>
+                    <!-- who is on our Discord right now (public server widget) -->
+                    <div class="mt-4 flex items-center gap-3">
+                        <div class="flex -space-x-2">
+                            <?php foreach (array_slice($discord['avatars'], 0, 6) as $avatar): ?>
+                                <img src="<?= h($avatar) ?>" alt="" loading="lazy" class="h-7 w-7 rounded-full border-2 border-[#3b3f8f] bg-zinc-800">
+                            <?php endforeach; ?>
+                        </div>
+                        <span class="flex items-center gap-1.5 text-sm font-semibold text-white">
+                            <span class="h-2 w-2 rounded-full bg-green-400"></span><?= number_format($discord['online']) ?> online
+                        </span>
+                    </div>
+                <?php endif; ?>
                 <span class="mt-4 self-start rounded-lg bg-[#5865F2] px-4 py-2 text-sm font-semibold text-white group-hover:bg-[#4752c4] transition">
                     Join our Discord <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-xs"></i>
                 </span>

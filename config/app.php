@@ -598,6 +598,10 @@ return [
                 ],
             ],
 
+            // cubeLadder Discord server: its widget (online members) on the
+            // front page and /about – "Server Widget" must be enabled in Discord
+            'guild' => '1558032547034963988',
+
             // welcome channel: bin/cake discord_welcome (posted once, re-run edits it)
             'welcome' => [
                 'webhook' => env('DISCORD_WELCOME_WEBHOOK'),

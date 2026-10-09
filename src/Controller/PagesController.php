@@ -16,6 +16,7 @@ declare(strict_types=1);
  */
 namespace App\Controller;
 
+use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\Http\Exception\ForbiddenException;
 use Cake\Http\Exception\NotFoundException;
@@ -125,7 +126,9 @@ class PagesController extends AppController
             ], 'rankings');
 
 
-            $this->set(compact('lastLogs', 'bestPlayersByScore', 'hofRecords', 'achievementPlayers', 'lastGameDateRange', 'recordStreak', 'heroStats'));
+            $discord = $this->discordWidget();
+
+            $this->set(compact('lastLogs', 'bestPlayersByScore', 'hofRecords', 'achievementPlayers', 'lastGameDateRange', 'recordStreak', 'heroStats', 'discord'));
         }
 
 
@@ -250,12 +253,35 @@ class PagesController extends AppController
 
     }
 
+    /**
+     * Online members of the cubeLadder Discord (its public widget.json),
+     * cached 30 s; null when the widget is off or Discord does not answer.
+     *
+     * @return array{online:int, avatars:array<int, string>}|null
+     */
+    private function discordWidget(): ?array
+    {
+        $guild = Configure::read('Ladder.discord.guild');
+        if (!$guild) {
+            return null;
+        }
 
+        return Cache::remember('discord_widget', function () use ($guild) {
+            try {
+                $res = (new \Cake\Http\Client(['timeout' => 3]))
+                    ->get('https://discord.com/api/guilds/' . rawurlencode((string)$guild) . '/widget.json');
+            } catch (\Throwable $e) {
+                return null;
+            }
+            $json = $res->isOk() ? $res->getJson() : null;
+            if (!is_array($json)) {
+                return null;
+            }
 
-
-
-
-
-
-
+            return [
+                'online' => (int)($json['presence_count'] ?? count($json['members'] ?? [])),
+                'avatars' => array_values(array_filter(array_column(array_slice($json['members'] ?? [], 0, 8), 'avatar_url'))),
+            ];
+        }, 'live_slow');
+    }
 }

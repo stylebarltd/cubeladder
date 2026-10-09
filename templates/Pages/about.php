@@ -176,6 +176,16 @@ $rules = [
         </section>
 
         <div class="flex flex-col gap-6">
+            <?php if ($guild = \Cake\Core\Configure::read('Ladder.discord.guild')): ?>
+            <!-- Discord server widget: who is online, join button -->
+            <section class="rounded-xl border border-[#5865F2]/60 bg-[#5865F2]/25 p-4 backdrop-blur-[2px]">
+                <h2 class="mb-3 px-2 text-lg font-bold"><i class="fa-brands fa-discord mr-2 text-indigo-300"></i>Community</h2>
+                <iframe src="https://discord.com/widget?id=<?= h(rawurlencode((string)$guild)) ?>&amp;theme=dark" title="cubeLadder on Discord"
+                        class="block h-[420px] w-full rounded-lg" loading="lazy" allowtransparency="true" frameborder="0"
+                        sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
+            </section>
+            <?php endif; ?>
+
             <!-- Credits -->
             <section class="rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px]">
                 <h2 class="mb-4 text-lg font-bold"><i class="fa-solid fa-handshake mr-2 text-orange-300"></i>Credits</h2>
