@@ -149,15 +149,23 @@ shuffle($playerImages);
                                             <?php endif; ?>
                                         </div>
 
-                                        <div class="text-xs text-zinc-400 truncate">
+                                        <div class="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-zinc-400">
                                             <a href="<?= $this->Url->build([
                                                 'controller' => 'Games',
                                                 'action' => 'view',
                                                 $player->game_id
                                             ]) ?>"
-                                               class="hover:underline text-blue-500">
+                                               class="truncate hover:underline text-blue-500">
                                                 <?= h($player->map_name) ?>
                                             </a>
+                                            <?php if ($pr = $playerRatings[(string)$player->player_id] ?? null): ?>
+                                                <!-- the player's CTF rating, rank among rated players and type -->
+                                                <span class="whitespace-nowrap" title="CTF rating · rank among <?= h('rated players') ?>">
+                                                    <b class="font-mono <?= $this->Layout->ratingClass((float)$pr['rating']) ?>"><?= number_format((float)$pr['rating'], 1) ?></b>
+                                                    <span class="text-zinc-500">#<?= (int)$pr['rank'] ?></span>
+                                                </span>
+                                                <?= $this->element('player_type_badge', ['type' => $pr['type'], 'label' => $pr['label']]) ?>
+                                            <?php endif; ?>
                                         </div>
 
                                         <!-- Achievements -->

@@ -50,6 +50,23 @@ class LayoutHelper extends Helper
     }
 
     /**
+     * Text color class of a CTF rating (as on the player page): light blue
+     * from 8.0, green from 7.0, lime, yellow, orange, red below 4.0.
+     */
+    public function ratingClass(?float $rating): string
+    {
+        return match (true) {
+            $rating === null => 'text-zinc-500',
+            $rating >= 8.0 => 'text-sky-300',
+            $rating >= 7.0 => 'text-green-400',
+            $rating >= 6.0 => 'text-lime-300',
+            $rating >= 5.0 => 'text-yellow-300',
+            $rating >= 4.0 => 'text-orange-400',
+            default => 'text-red-400',
+        };
+    }
+
+    /**
      * URL of the map's small thumbnail (bin/cake map_thumbs) - the full
      * screenshot when the thumb was not built yet, else the bullet thumb.
      */

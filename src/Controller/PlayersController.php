@@ -67,6 +67,21 @@ class PlayersController extends AppController
             $achievementPlayers[$player->player_id][$player->event_type] = $player->count;
         }
 
+        // CTF rating, rank and type of everyone on the lists
+        $ids = [];
+        foreach ($top as $list) {
+            foreach ($list as $row) {
+                $ids[(string)$row->player_id] = true;
+            }
+        }
+        $playerRatings = [];
+        if ($ids) {
+            foreach ($this->fetchTable('PlayerRatings')->find()->where(['player_id IN' => array_keys($ids)])->disableHydration() as $r) {
+                $r['label'] = \App\Command\CalculateRatingsCommand::typeLabel($r['type'], (int)$r['attack_pct'], (int)$r['defense_pct'], (int)$r['combat_pct']);
+                $playerRatings[$r['player_id']] = $r;
+            }
+        }
+
         $this->set(compact(
             'topHeadshots',
             'topSlashes',
@@ -75,7 +90,8 @@ class PlayersController extends AppController
             'topFlags',
             'topStreaks',
             'bestFlagHelpers',
-            'achievementPlayers'
+            'achievementPlayers',
+            'playerRatings'
         ));
     }
     /**

@@ -87,20 +87,8 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                                         <?= $this->Html->link(h($player->name), ['controller' => 'Players', 'action' => 'view', $player->id],
                                             ['escape' => false, 'class' => 'truncate font-semibold hover:text-blue-300']) ?>
                                         <span class="shrink-0"><?= $this->Layout->flag($player->country) ?></span>
-                                        <?php if (!empty($player->player_type)):
-                                            // CTF player type (bin/cake CalculateRatings), as on the player page
-                                            [$typeIcon, $typeColor] = match ($player->player_type) {
-                                                'All-Rounder' => ['fa-star', 'bg-yellow-400/20 text-yellow-300'],
-                                                'Flag Runner' => ['fa-person-running', 'bg-red-500/20 text-red-300'],
-                                                'Defender' => ['fa-shield-halved', 'bg-blue-500/20 text-blue-300'],
-                                                'Fragger' => ['fa-crosshairs', 'bg-orange-500/20 text-orange-300'],
-                                                'Offensive Team Player' => ['fa-angles-right', 'bg-white/10 text-zinc-300'],
-                                                default => ['fa-shield', 'bg-white/10 text-zinc-300'],
-                                            };
-                                            ?>
-                                            <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-1 py-0.5 text-[10px] sm:px-1.5 font-semibold <?= $typeColor ?>" title="<?= h($player->player_type_label ?? $player->player_type) ?>">
-                                                <i class="fa-solid <?= $typeIcon ?>"></i><span class="hidden md:inline"><?= h($player->player_type_label ?? $player->player_type) ?></span>
-                                            </span>
+                                        <?php if (!empty($player->player_type)): ?>
+                                            <?= $this->element('player_type_badge', ['type' => $player->player_type, 'label' => $player->player_type_label ?? null]) ?>
                                         <?php endif; ?>
                                     </div>
                                     <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-zinc-400 sm:gap-x-3">
