@@ -19,15 +19,17 @@
 .lg-cla  .lg-team-bar { background: linear-gradient(90deg, #7f1d1d, #b91c1c); }
 .lg-rvsf .lg-team-bar { background: linear-gradient(90deg, #172554, #1d4ed8); }
 .lg-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.lg-table th { font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: rgb(161 161 170); text-align: right; padding: .5rem .75rem; }
-.lg-table td { padding: .45rem .75rem; text-align: right; color: rgb(212 212 216); border-top: 1px solid rgb(63 63 70 / .5); }
+.lg-table th { font-size: .68rem; letter-spacing: .05em; text-transform: uppercase; color: rgb(161 161 170); text-align: right; padding: .5rem .45rem; white-space: nowrap; }
+.lg-table td { padding: .45rem .45rem; text-align: right; color: rgb(212 212 216); border-top: 1px solid rgb(63 63 70 / .5); white-space: nowrap; }
 /* columns: 1 # | 2 player | 3 ping | 4+ flags frags deaths tk damage acc */
-.lg-table th:first-child, .lg-table td:first-child { width: 2rem; text-align: left; }
+.lg-table th:first-child, .lg-table td:first-child { width: 1.6rem; text-align: left; padding-left: .75rem; }
 .lg-table td:first-child { color: rgb(113 113 122); }
-.lg-table th:nth-child(2), .lg-table td:nth-child(2) { text-align: left; min-width: 9rem; }
-.lg-table th:nth-child(3), .lg-table td:nth-child(3) { width: 2.6rem; text-align: center; }
+/* the player column takes all the room the (narrow) number columns leave */
+.lg-table th:nth-child(2), .lg-table td:nth-child(2) { text-align: left; width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lg-table th:nth-child(3), .lg-table td:nth-child(3) { width: 2.2rem; text-align: center; }
+.lg-table th:last-child, .lg-table td:last-child { padding-right: .75rem; }
 .lg-table tr.top td { background: rgb(255 255 255 / .04); }
-.lg-table th:nth-child(n+4), .lg-table td:nth-child(n+4) { width: 2.9rem; }
+.lg-table th:nth-child(n+4), .lg-table td:nth-child(n+4) { width: 1%; }
 .lg-s { display: none; }
 @media (max-width: 640px) { .lg-s { display: inline; text-transform: none; } .lg-l { display: none; } }
 .lg-decider { font-weight: 800; color: #fff; }
@@ -45,7 +47,7 @@
 .lg-chat .empty { color: rgb(113 113 122); font-style: italic; }
 .lg-teams { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
 @media (min-width: 1100px) { .lg-teams { grid-template-columns: 1fr 1fr; } }
-.lg-table td:nth-child(2) a, .lg-table td:nth-child(2) { word-break: break-word; }
+
 .js-connect { word-break: break-all; }
 /* Phones: keep ping / player / flags / frags / deaths / acc, drop # / TK / damage */
 @media (max-width: 640px) {
@@ -59,8 +61,8 @@
   .lg-table th:first-child, .lg-table td:first-child,
   .lg-table th:nth-child(7), .lg-table td:nth-child(7),
   .lg-table th:nth-child(8), .lg-table td:nth-child(8) { display: none; }
-  .lg-table th:nth-child(2), .lg-table td:nth-child(2) { min-width: 0; width: 100%; padding-left: .55rem; }
-  .lg-table td:nth-child(2) { white-space: nowrap; word-break: normal; }
+  /* phones: full names (no "…"), the table may scroll a little instead */
+  .lg-table th:nth-child(2), .lg-table td:nth-child(2) { min-width: 0; max-width: none; width: 100%; padding-left: .55rem; overflow: visible; }
   .lg-table td:nth-child(2) img { width: 1.25rem; height: 1.25rem; margin-right: .3rem; }
   .lg-table th:nth-child(3), .lg-table td:nth-child(3) { width: 1.4rem; padding-left: .15rem; padding-right: .15rem; }
   .lg-table th:nth-child(3) { font-size: 0; } /* the ping ball explains itself */
@@ -99,7 +101,7 @@
             <table class="lg-table">
                 <thead><tr>
                     <th>#</th><th>Player</th><th>Ping</th><th class="js-h-flags"><span class="lg-s">fl</span><span class="lg-l">Flags</span></th>
-                    <th class="js-h-frags"><span class="lg-s">k</span><span class="lg-l">Frags</span></th><th><span class="lg-s">d</span><span class="lg-l">Deaths</span></th><th>TK</th><th>Damage</th><th>Acc</th>
+                    <th class="js-h-frags"><span class="lg-s">k</span><span class="lg-l">Frags</span></th><th><span class="lg-s">d</span><span class="lg-l">Deaths</span></th><th>TK</th><th title="Damage">DMG</th><th>Acc</th>
                 </tr></thead>
                 <tbody class="js-rows"></tbody>
             </table>
@@ -111,7 +113,7 @@
         <table class="lg-table">
             <thead><tr>
                 <th>#</th><th>Player</th><th>Ping</th><th class="js-h-flags"><span class="lg-s">fl</span><span class="lg-l">Flags</span></th>
-                <th class="js-h-frags"><span class="lg-s">k</span><span class="lg-l">Frags</span></th><th><span class="lg-s">d</span><span class="lg-l">Deaths</span></th><th>TK</th><th>Damage</th><th>Acc</th>
+                <th class="js-h-frags"><span class="lg-s">k</span><span class="lg-l">Frags</span></th><th><span class="lg-s">d</span><span class="lg-l">Deaths</span></th><th>TK</th><th title="Damage">DMG</th><th>Acc</th>
             </tr></thead>
             <tbody class="js-rows"></tbody>
         </table>
