@@ -597,6 +597,11 @@ return [
                     'show_spectators' => true,
                 ],
             ],
+
+            // welcome channel: bin/cake discord_welcome (posted once, re-run edits it)
+            'welcome' => [
+                'webhook' => env('DISCORD_WELCOME_WEBHOOK'),
+            ],
         ],
     ],
 ];
