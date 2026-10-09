@@ -63,6 +63,22 @@ $achievementLabels = [
 ];
 ?>
 
+<?php
+// Link previews: the top 10 card (PreviewsController::ranking), a new picture URL every hour
+$ogSite = rtrim((string)Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh', '/');
+$this->assign('title', 'All Time Ranking · cubeLadder');
+$this->start('meta'); ?>
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="cubeLadder">
+    <meta property="og:title" content="All Time Ranking · cubeLadder">
+    <meta property="og:description" content="The AssaultCube players of <?= date('Y') ?> by CTF rating and points - every number straight from the game servers' logs.">
+    <meta property="og:url" content="<?= h($ogSite . '/players') ?>">
+    <meta property="og:image" content="<?= h($ogSite . '/previews/ranking?v=' . date('YmdH')) ?>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+<?php $this->end(); ?>
+
 <?= $this->element('ranking_board', compact('players', 'stats', 'sort', 'activeStat', 'achievementPlayers', 'achievementLabels') + [
     'title' => 'All Time Ranking',
     'meta' => [['fa-filter', 'min 5,000 pts this year']],

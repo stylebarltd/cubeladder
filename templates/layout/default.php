@@ -2,7 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title><?= h($this->fetch('title') ?: 'CubeLadder') ?></title>
+    <?php
+    // Pages without their own title: CakePHP fills in the template folder
+    // ("Pages", "Live") - use the page's name instead
+    $pageTitle = $this->fetch('title');
+    if ($pageTitle === '' || $pageTitle === $this->getTemplatePath()) {
+        $template = $this->getTemplate();
+        $pageTitle = $template === 'home' ? 'cubeLadder'
+            : \Cake\Utility\Inflector::humanize(\Cake\Utility\Inflector::underscore(in_array($template, ['index', 'display'], true) ? $this->getTemplatePath() : $template)) . ' · cubeLadder';
+    }
+    ?>
+    <title><?= h($pageTitle) ?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?= $this->Html->meta('csrfToken', $this->request->getAttribute('csrfToken')) ?>
 
@@ -20,6 +30,22 @@
 
     <!-- Additional head content -->
     <?= $this->fetch('meta') ?>
+    <?php if (!str_contains($this->fetch('meta'), 'og:image')):
+        // pages without their own link preview share the site card (PreviewsController::site)
+        $ogSite = rtrim((string)(\Cake\Core\Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh'), '/');
+        $ogText = 'Rankings, CTF ratings, Hall of Fame and live games for AssaultCube - every number straight from the game servers\' logs.';
+        ?>
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="cubeLadder">
+    <meta property="og:title" content="<?= h($pageTitle) ?>">
+    <meta property="og:description" content="<?= h($ogText) ?>">
+    <meta property="og:url" content="<?= h($ogSite . $this->request->getRequestTarget()) ?>">
+    <meta property="og:image" content="<?= h($ogSite . '/previews/site?v=' . date('Ymd')) ?>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="description" content="<?= h($ogText) ?>">
+    <?php endif; ?>
     <?= $this->fetch('css') ?>
     <?= $this->fetch('script') ?>
 

@@ -58,6 +58,7 @@ $achievementLabels = [
 ];
 ?>
 
+<?php $this->assign('title', 'the last 100 · cubeLadder'); ?>
 <?= $this->element('ranking_board', compact('players', 'stats', 'sort', 'activeStat', 'achievementPlayers', 'achievementLabels') + [
     'title' => 'the last 100 games',
     'titleClass' => 'font-rubik',
