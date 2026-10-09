@@ -5,7 +5,7 @@
  *
  * @var \App\View\AppView $this
  * @var iterable $players
- * @var array $stats key => [label, value(fn)] (key = ?sort= value)
+ * @var array $stats key => [label, value(fn), title?] (key = ?sort= value)
  * @var string $sort
  * @var array $activeStat
  * @var array $achievementPlayers
@@ -21,8 +21,8 @@ $shown = array_values(array_filter(
     is_array($players) ? $players : iterator_to_array($players),
     fn($p) => !empty($p->total_score) && $p->total_score > 0 && ($p->stats['kills'] ?? 0) >= 1
 ));
-// On phones only Points / KDR / Kills (plus the sorted stat) fit
-$mobileStats = array_unique(['points', 'kd', 'kills', $sort]);
+// On phones only Points / Rating (where shown) / KDR (plus the sorted stat) fit
+$mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', 'kd', $sort] : ['points', 'kd', 'kills', $sort]);
 ?>
 <div class="relative min-h-[calc(100svh-4rem)] bg-zinc-900 bg-cover bg-center bg-fixed text-white"
      style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.25) 40%, rgba(0,0,0,.7)), url('/img/bullet.jpg');">
@@ -63,7 +63,7 @@ $mobileStats = array_unique(['points', 'kd', 'kills', $sort]);
                     <th class="px-2 py-2 text-left font-normal">name</th>
                     <?php foreach ($stats as $key => $stat): ?>
                         <th class="px-2 py-2 text-right font-normal <?= in_array($key, $mobileStats, true) ? '' : 'hidden sm:table-cell' ?>">
-                            <a href="<?= $sortUrl($key) ?>"
+                            <a href="<?= $sortUrl($key) ?>" <?= !empty($stat['title']) ? 'title="' . h($stat['title']) . '"' : '' ?>
                                class="lowercase hover:text-white <?= $sort === $key ? 'font-bold text-sky-300' : '' ?>">
                                 <?= $stat['label'] ?><?= $sort === $key ? ' ▾' : '' ?>
                             </a>
