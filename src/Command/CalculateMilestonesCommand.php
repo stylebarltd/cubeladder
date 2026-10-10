@@ -10,6 +10,7 @@ use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
 use Cake\Core\Configure;
 use Cake\Http\Client;
+use Cake\Http\Client\FormData;
 use Cake\I18n\DateTime;
 use Throwable;
 
@@ -17,7 +18,7 @@ use Throwable;
  * Rebuilds player_milestones and player_milestone_progress (MilestoneService)
  * after every import, and announces new Gold-and-up milestones of tracked
  * players in the Discord achievements channel, one embed per player with
- * their preview card (Ladder.discord.achievements.webhook,
+ * their preview card as an attachment (Ladder.discord.achievements.webhook,
  * the results channel when there is none).
  *
  * "New" = not in the table before this run; the very first run (empty
@@ -139,9 +140,21 @@ class CalculateMilestonesCommand extends Command
                 'url' => $url,
                 'description' => implode("\n", array_slice($lines, 0, self::MAX_LINES)),
                 'color' => 0xEAB308,
-                // a new picture URL per day, so Discord doesn't show an old card
-                'image' => ['url' => $site . '/players/card/' . $playerId . '?v=' . date('Ymd')],
             ];
+        }
+        // the cards go up as attachments: Discord shows linked webhook images unreliably
+        $http = new Client(['timeout' => 15]);
+        $files = [];
+        foreach (array_slice(array_keys($byPlayer), 0, self::MAX_EMBEDS) as $i => $playerId) {
+            try {
+                $res = $http->get($site . '/players/card/' . $playerId);
+                if ($res->isOk() && str_starts_with($res->getHeaderLine('Content-Type'), 'image/')) {
+                    $files[$i] = ['card-' . $i . '.jpg', $res->getStringBody()];
+                    $embeds[$i]['image'] = ['url' => 'attachment://card-' . $i . '.jpg'];
+                }
+            } catch (Throwable $e) {
+                $io->err('Card of ' . $playerId . ': ' . $e->getMessage());
+            }
         }
         if ($more > 0) {
             $embeds[count($embeds) - 1]['footer'] = ['text' => "… and {$more} more players"];
@@ -149,13 +162,23 @@ class CalculateMilestonesCommand extends Command
         $count = array_sum(array_map('count', $byPlayer));
 
         try {
-            $res = (new Client(['timeout' => 15]))->post($webhook . '?wait=true', (string)json_encode([
+            $form = new FormData();
+            $json = $form->newPart('payload_json', (string)json_encode([
                 'username' => 'cubeLadder Milestones',
                 'avatar_url' => $site . '/img/brand/cubeladder-discord-icon-512.png',
                 'content' => $count === 1 ? '**New milestone**' : '**New milestones**',
                 'embeds' => $embeds,
                 'allowed_mentions' => ['parse' => []],
-            ]), ['type' => 'json']);
+            ]));
+            $json->type('application/json');
+            $form->add($json);
+            foreach ($files as $i => [$filename, $jpeg]) {
+                $part = $form->newPart('files[' . $i . ']', $jpeg);
+                $part->filename($filename);
+                $part->type('image/jpeg');
+                $form->add($part);
+            }
+            $res = $http->post($webhook . '?wait=true', (string)$form, ['headers' => ['Content-Type' => $form->contentType()]]);
             $io->out($res->isOk() ? 'Announced ' . $count . ' milestone(s)' : 'Discord: HTTP ' . $res->getStatusCode());
         } catch (Throwable $e) {
             $io->err('Discord: ' . $e->getMessage());
