@@ -88,7 +88,6 @@ endif;
                         ['controller' => 'Games', 'action' => 'view', $lastSeen['id']],
                         ['escape' => false, 'title' => 'Last game: ' . $seenAt->format('j M Y, H:i'), 'class' => 'hover:text-blue-300']) ?>
                 <?php endif; ?>
-                <?php if ($player->country): ?><span><?= h($player->country) ?></span><?php endif; ?>
             </div>
             <div class="mt-3 flex flex-wrap items-center gap-3">
                 <?php if (!empty($canEdit)): ?>
