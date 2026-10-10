@@ -16,7 +16,8 @@ use Throwable;
 /**
  * Rebuilds player_milestones and player_milestone_progress (MilestoneService)
  * after every import, and announces new Gold-and-up milestones of tracked
- * players in the Discord achievements channel (Ladder.discord.achievements.webhook,
+ * players in the Discord achievements channel, one embed per player with
+ * their preview card (Ladder.discord.achievements.webhook,
  * the results channel when there is none).
  *
  * "New" = not in the table before this run; the very first run (empty
@@ -27,6 +28,7 @@ class CalculateMilestonesCommand extends Command
 {
     private const ANNOUNCE_DAYS = 3;
     private const MAX_LINES = 15;
+    private const MAX_EMBEDS = 10;
 
     public static function defaultName(): string
     {
@@ -107,7 +109,7 @@ class CalculateMilestonesCommand extends Command
         // highest tiers first; a player who jumped two tiers at once only gets the top one
         usort($big, fn($a, $b) => $b['tier'] <=> $a['tier']);
         $seen = [];
-        $lines = [];
+        $byPlayer = [];
         $site = rtrim((string)(Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh'), '/');
         foreach ($big as $m) {
             if (!isset($players[$m['player_id']]) || isset($seen[$m['player_id'] . $m['milestone']])) {
@@ -115,38 +117,46 @@ class CalculateMilestonesCommand extends Command
             }
             $seen[$m['player_id'] . $m['milestone']] = true;
             $def = MilestoneService::MILESTONES[$m['milestone']];
-            $lines[] = sprintf(
-                '%s **[%s](%s/players/view/%s)** reached **%s %s** · %s',
+            $byPlayer[$m['player_id']][] = sprintf(
+                '%s reached **%s %s** · %s',
                 $m['tier'] >= 5 ? '💎' : '🏆',
-                strtr($players[$m['player_id']], ['[' => '(', ']' => ')', '*' => "\u{2217}", '`' => "\u{2CB}"]),
-                $site,
-                $m['player_id'],
                 number_format((int)$m['threshold']),
                 $def['unit'],
                 MilestoneService::TIER_NAMES[$m['tier']] ?? ''
             );
         }
-        if (!$lines) {
+        if (!$byPlayer) {
             return;
         }
-        $more = count($lines) - self::MAX_LINES;
-        $lines = array_slice($lines, 0, self::MAX_LINES);
-        if ($more > 0) {
-            $lines[] = "… and {$more} more";
+
+        // one embed per player (Discord allows 10) with their preview card under it
+        $embeds = [];
+        $more = count($byPlayer) - self::MAX_EMBEDS;
+        foreach (array_slice($byPlayer, 0, self::MAX_EMBEDS, true) as $playerId => $lines) {
+            $url = $site . '/players/view/' . $playerId;
+            $embeds[] = [
+                'title' => strtr($players[$playerId], ['*' => "\u{2217}", '`' => "\u{2CB}"]),
+                'url' => $url,
+                'description' => implode("\n", array_slice($lines, 0, self::MAX_LINES)),
+                'color' => 0xEAB308,
+                // a new picture URL per day, so Discord doesn't show an old card
+                'image' => ['url' => $site . '/players/card/' . $playerId . '?v=' . date('Ymd')],
+            ];
         }
+        if ($more > 0) {
+            $embeds[count($embeds) - 1]['footer'] = ['text' => "… and {$more} more players"];
+        }
+        $count = array_sum(array_map('count', $byPlayer));
 
         try {
             $res = (new Client(['timeout' => 15]))->post($webhook . '?wait=true', (string)json_encode([
                 'username' => 'cubeLadder Milestones',
                 'avatar_url' => $site . '/img/brand/cubeladder-discord-icon-512.png',
-                'embeds' => [[
-                    'title' => count($lines) === 1 ? 'New milestone' : 'New milestones',
-                    'description' => implode("\n", $lines),
-                    'color' => 0xEAB308,
-                ]],
+                'content' => $count === 1 ? '**New milestone**' : '**New milestones**',
+                'embeds' => $embeds,
                 'allowed_mentions' => ['parse' => []],
             ]), ['type' => 'json']);
-            $io->out($res->isOk() ? 'Announced ' . count($lines) . ' milestone(s)' : 'Discord: HTTP ' . $res->getStatusCode());
+            $io->out($res->isOk() ? 'Announced ' . $count . ' milestone(s)' : 'Discord: HTTP ' . $res->getStatusCode());
         } catch (Throwable $e) {
             $io->err('Discord: ' . $e->getMessage());
         }
