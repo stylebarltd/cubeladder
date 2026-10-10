@@ -17,6 +17,7 @@ return [
                 'Points, K/D and your CTF rating are now one chart, oldest to newest game - kills and flags can be switched on in its legend, and a click on a game opens it in the recent games below.',
                 'Last week\'s best (Best K/D, Most flags, Top scorer ...) now show as blue badges next to the player\'s flag in the rankings and the Hall of Fame.',
                 'Maps: your own stats now show your average CTF rating on that map, compared with your overall rating - and hovering any player on a map page shows the same for them, with their CTF rating and type.',
+                'Maps: the top 12 is now ranked by CTF rating on that map (from 10 rated games) instead of total points.',
                 'Calmer, darker backgrounds on player pages, the front page, the rankings and the Hall of Fame - easier to read.',
                 'Player pages show your weapons of choice with big icons and their share of your kills, and the link preview card shows them too - with the cubeLadder logo.',
             ],

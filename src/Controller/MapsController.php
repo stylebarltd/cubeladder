@@ -36,6 +36,8 @@ class MapsController extends AppController
         $nextMap = $allMaps[($index + 1) % $count]->name;
 
         $map->top_players = $this->getTopPlayersByMap([$map->id])[$map->id] ?? [];
+        // the best 12 by their average CTF rating on this map
+        $map->top_rated = $this->getTopRatedByMap((string)$map->id);
         // Last 10 weekly "best on map" winners for this map (newest first)
         $map->best_on_map = $this->getBestOnMapByMap([$map->id])[$map->id] ?? [];
         // Per-map single-game records
@@ -55,6 +57,33 @@ class MapsController extends AppController
      *
      * @return array<string, array<int, \Cake\ORM\Entity>>
      */
+    /** Rated CTF games a player needs on a map for its rating ranking */
+    public const MAP_RATING_MIN_GAMES = 10;
+
+    /**
+     * The 12 tracked players with the best average per-game CTF rating
+     * (player_game_ratings) on a map, from MAP_RATING_MIN_GAMES rated games.
+     *
+     * @return array<array{id: string, name: string, country: string|null, rating: float, games: int}>
+     */
+    private function getTopRatedByMap(string $mapId): array
+    {
+        $rows = $this->fetchTable('PlayerStatsPerGame')->getConnection()->execute(
+            'SELECT pl.id, pl.name, pl.country, AVG(r.rating) AS rating, COUNT(*) AS games
+             FROM player_game_ratings r
+             INNER JOIN games g ON g.id = r.game_id
+             INNER JOIN players pl ON pl.id = r.player_id
+             WHERE g.map_id = ? AND pl.track = 1
+             GROUP BY pl.id, pl.name, pl.country
+             HAVING COUNT(*) >= ?
+             ORDER BY rating DESC, games DESC
+             LIMIT 12',
+            [$mapId, self::MAP_RATING_MIN_GAMES]
+        )->fetchAll('assoc');
+
+        return array_map(fn($r) => ['rating' => (float)$r['rating'], 'games' => (int)$r['games']] + $r, $rows);
+    }
+
     private function getTopPlayersByMap(array $mapIds): array
     {
         if (empty($mapIds)) {

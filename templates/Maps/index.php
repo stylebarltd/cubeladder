@@ -193,24 +193,27 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
                 </div>
             </section>
 
-            <!-- Top players by summed points -->
+            <!-- The best 12 by their average CTF rating on this map (MapsController::getTopRatedByMap) -->
             <section class="<?= $panel ?>">
-                <h3 class="<?= $panelTitle ?> text-green-300"><i class="fa-solid fa-users mr-1"></i> Top players by total points</h3>
-                <?php if ($map->top_players): ?>
+                <h3 class="<?= $panelTitle ?> text-green-300" title="Average CTF rating of each player's rated CTF games on this map, from <?= \App\Controller\MapsController::MAP_RATING_MIN_GAMES ?> games">
+                    <i class="fa-solid fa-ranking-star mr-1"></i> Best CTF rating on this map
+                </h3>
+                <?php if ($map->top_rated): ?>
                     <ol class="space-y-1.5">
-                        <?php foreach ($map->top_players as $i => $player): ?>
+                        <?php foreach ($map->top_rated as $i => $player): ?>
                             <li class="flex items-center gap-2 text-sm">
                                 <span class="w-5 shrink-0 text-right font-bold <?= $i === 0 ? 'text-yellow-300' : 'text-zinc-400' ?>"><?= $i + 1 ?></span>
                                 <span class="min-w-0 flex-1 truncate">
-                                    <?= $this->Html->link(h($player->player->name), ['controller' => 'Players', 'action' => 'view', $player->player->id], ['class' => 'font-semibold hover:text-blue-300', 'escape' => false, 'data-map-player' => $player->player->id]) ?>
-                                    <?= $this->Layout->flag($player->player->country) ?>
+                                    <?= $this->Html->link(h($player['name']), ['controller' => 'Players', 'action' => 'view', $player['id']], ['class' => 'font-semibold hover:text-blue-300', 'escape' => false, 'data-map-player' => $player['id']]) ?>
+                                    <?= $this->Layout->flag($player['country']) ?>
                                 </span>
-                                <span class="shrink-0 font-bold text-sky-300 tabular-nums"><?= number_format((int)$player->score) ?></span>
+                                <span class="shrink-0 text-[10px] text-zinc-500 tabular-nums"><?= $player['games'] ?> games</span>
+                                <span class="w-8 shrink-0 text-right font-mono font-bold tabular-nums <?= $this->Layout->ratingClass($player['rating']) ?>"><?= number_format($player['rating'], 1) ?></span>
                             </li>
                         <?php endforeach; ?>
                     </ol>
                 <?php else: ?>
-                    <p class="text-sm text-zinc-400">No ladder players yet.</p>
+                    <p class="text-sm text-zinc-400">Nobody has <?= \App\Controller\MapsController::MAP_RATING_MIN_GAMES ?> rated CTF games on this map yet.</p>
                 <?php endif; ?>
             </section>
 
