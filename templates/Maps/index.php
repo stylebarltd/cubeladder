@@ -164,7 +164,23 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
                         ['Headshots', number_format($myStats['headshots']), null],
                     ];
                     ?>
-                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+                        <?php if ($myStats['rating'] !== null):
+                            $diff = $myStats['overallRating'] !== null ? $myStats['rating'] - $myStats['overallRating'] : null; ?>
+                            <!-- average per-game CTF rating on this map, against the player's overall rating -->
+                            <div class="min-w-0 rounded bg-white/5 p-2"
+                                 title="Average CTF rating of your <?= $myStats['ratedGames'] ?> rated CTF game<?= $myStats['ratedGames'] === 1 ? '' : 's' ?> on this map<?= $myStats['overallRating'] !== null ? ' (overall ' . number_format($myStats['overallRating'], 1) . ')' : '' ?>">
+                                <div class="text-[10px] uppercase tracking-wide text-zinc-400">CTF rating</div>
+                                <div class="text-lg font-extrabold leading-tight tabular-nums <?= $this->Layout->ratingClass($myStats['rating']) ?>"><?= number_format($myStats['rating'], 1) ?></div>
+                                <div class="truncate text-[10px] text-zinc-400">
+                                    <?php if ($diff !== null && abs($diff) >= 0.05): ?>
+                                        <span class="<?= $diff > 0 ? 'text-green-400' : 'text-red-400' ?>"><?= $diff > 0 ? '▲ +' : '▼ −' ?><?= number_format(abs($diff), 1) ?></span> vs <?= number_format($myStats['overallRating'], 1) ?>
+                                    <?php else: ?>
+                                        <?= $myStats['ratedGames'] ?> rated game<?= $myStats['ratedGames'] === 1 ? '' : 's' ?>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                         <?php foreach ($tiles as [$label, $value, $sub]): ?>
                             <div class="min-w-0 rounded bg-white/5 p-2">
                                 <div class="text-[10px] uppercase tracking-wide text-zinc-400"><?= $label ?></div>

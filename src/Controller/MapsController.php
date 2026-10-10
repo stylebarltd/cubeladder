@@ -287,6 +287,16 @@ class MapsController extends AppController
             [$playerId, $mapId]
         )->fetch('assoc');
 
+        // average of the per-game CTF ratings (player_game_ratings) on this map, and the overall rating
+        $mapRating = $connection->execute(
+            "SELECT AVG(r.rating) AS rating, COUNT(*) AS games
+             FROM player_game_ratings r
+             INNER JOIN games g ON g.id = r.game_id
+             WHERE r.player_id = ? AND g.map_id = ?",
+            [$playerId, $mapId]
+        )->fetch('assoc');
+        $overall = $connection->execute('SELECT rating FROM player_ratings WHERE player_id = ?', [$playerId])->fetchColumn(0);
+
         $kills = (int)$totals['kills'];
         $deaths = (int)$totals['deaths'];
 
@@ -300,6 +310,9 @@ class MapsController extends AppController
             'kd' => $deaths > 0 ? $kills / $deaths : (float)$kills,
             'flags' => (int)$totals['flags'],
             'headshots' => (int)$totals['headshots'],
+            'rating' => $mapRating && (int)$mapRating['games'] > 0 ? (float)$mapRating['rating'] : null,
+            'ratedGames' => (int)($mapRating['games'] ?? 0),
+            'overallRating' => $overall !== false && $overall !== null ? (float)$overall : null,
             'lastPlayed' => $totals['last_played'] ? new \Cake\I18n\DateTime($totals['last_played']) : null,
             'best' => $best ? [
                 'points' => (int)$best['points'],
