@@ -65,14 +65,15 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
         </div>
 
         <!-- Scoreboard -->
-        <div class="overflow-x-auto rounded-lg border border-white/15 bg-black/60 font-mono text-xs md:text-sm backdrop-blur-[2px]">
+        <!-- the header row sticks under the nav while scrolling (needs no overflow box from md up) -->
+        <div class="overflow-x-auto rounded-lg border border-white/15 bg-black/60 font-mono text-xs md:overflow-visible md:text-sm backdrop-blur-[2px]">
             <table class="w-full tabular-nums">
                 <thead class="text-zinc-400">
                 <tr class="border-b border-white/10">
-                    <th class="px-1.5 py-2 sm:px-2 text-right font-normal">#</th>
-                    <th class="px-1.5 py-2 sm:px-2 text-left font-normal">name</th>
+                    <th class="px-1.5 py-2 sm:px-2 text-right font-normal md:sticky md:top-16 md:z-20 md:bg-zinc-950/95 md:rounded-tl-lg">#</th>
+                    <th class="px-1.5 py-2 sm:px-2 text-left font-normal md:sticky md:top-16 md:z-20 md:bg-zinc-950/95">name</th>
                     <?php foreach ($stats as $key => $stat): ?>
-                        <th class="px-1.5 py-2 sm:px-2 text-right font-normal <?= in_array($key, $mobileStats, true) ? '' : 'hidden sm:table-cell' ?>">
+                        <th class="px-1.5 py-2 sm:px-2 text-right font-normal md:sticky md:top-16 md:z-20 md:bg-zinc-950/95 last:md:rounded-tr-lg <?= in_array($key, $mobileStats, true) ? '' : 'hidden sm:table-cell' ?>">
                             <a href="<?= $sortUrl($key) ?>" <?= !empty($stat['title']) ? 'title="' . h($stat['title']) . '"' : '' ?>
                                class="lowercase hover:text-white <?= $sort === $key ? 'font-bold text-sky-300' : '' ?>">
                                 <?= $stat['label'] ?><?= $sort === $key ? ' ▾' : '' ?>
