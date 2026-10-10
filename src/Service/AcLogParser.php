@@ -427,6 +427,9 @@ class AcLogParser
 //            $ip = $m[1];
 //            $killerName = trim($m[2]);
 //            $verb = strtolower($m[3]);
+            if (str_starts_with($verb, 'scored, carrying')) {
+                $verb = 'scored with the flag'; // a keep-the-flag score
+            }
 //            $victimRaw = trim($m[4]);
 //
 //
@@ -1134,7 +1137,8 @@ class AcLogParser
             . '(sprayed|headshot|punctured|busted|shredded|peppered|gibbed|splattered|slashed|picked off)'
             . '\s+(.+)$~i';
 
-        $this->specialRegex = '~^\[([0-9a-f:\.]+)\]\s+(.+?)\s+(suicided|stole the flag|scored with the flag|lost the flag|returned the flag)(?: for (\w+),.*)?$~i';
+        // (team) keep the flag scores every 15 s of carrying: "X scored, carrying for 15 seconds, new score 1"
+        $this->specialRegex = '~^\[([0-9a-f:\.]+)\]\s+(.+?)\s+(suicided|stole the flag|scored with the flag|scored, carrying for \d+ seconds|lost the flag|returned the flag)(?: for (\w+),.*|, new score \d+)?$~i';
         $this->gameFinishedRegex = '~Game status: .*game finished,.* (\d+) clients~i';
         //$this->changeNameRegex = '~^\[([0-9a-f:\.]+)\]\s+([^\s]+)\s+changed name\s+(.+)$/';
     }
