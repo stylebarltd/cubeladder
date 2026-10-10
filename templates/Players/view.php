@@ -33,7 +33,7 @@ if ((int)$player->track === 1):
         $ogText .= ' · ' . $this->Layout->duration((int)$timePlayed['all']) . ' played';
     }
     // a new picture URL whenever the rating changes, so previews don't stay stale
-    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $rating?->trend, $player->name, $player->picture, array_column($weapons['choice'] ?? [], 'pct', 'key')])), 0, 8);
+    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $rating?->trend, $player->name, $player->picture, array_column($weapons['choice'] ?? [], 'pct', 'key'), 'card-v2'])), 0, 8);
     $this->assign('title', $ogTitle);
     $this->start('meta'); ?>
     <meta property="og:type" content="profile">

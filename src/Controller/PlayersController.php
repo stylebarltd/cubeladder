@@ -1225,9 +1225,12 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $card = [
             'name' => (string)$player->name,
             'country' => (string)$player->country,
-            'subtitle' => $progress
-                ? sprintf('%s h played  ·  %s games', number_format((float)($progress['hours'] ?? 0)), number_format((int)($progress['games'] ?? 0)))
-                : '',
+            'hours' => (float)($progress['hours'] ?? 0),
+            'games' => (int)($progress['games'] ?? 0),
+            'played' => $progress ? sprintf('%d h %d min', (int)$progress['hours'], (int)round(fmod((float)$progress['hours'], 1) * 60)) : '',
+            'inactive' => !\App\Utility\Activity::isActive($this->Players->PlayerStatsPerGame->find()
+                ->innerJoinWith('Games')->select(['at' => 'MAX(Games.started_at)'])
+                ->where(['PlayerStatsPerGame.player_id' => $id])->disableHydration()->first()['at'] ?? null),
             'background' => !empty($map['name']) && is_file(WWW_ROOT . 'img/maps/' . $map['name'] . '.jpg')
                 ? WWW_ROOT . 'img/maps/' . $map['name'] . '.jpg'
                 : WWW_ROOT . 'img/bullet.jpg',
@@ -1244,18 +1247,16 @@ $gamesDataGlobal = [];        // games inside lastGameIds
                 'win_rate' => $rating->win_rate !== null ? (float)$rating->win_rate : null,
                 'attack_pct' => (int)$rating->attack_pct, 'defense_pct' => (int)$rating->defense_pct, 'combat_pct' => (int)$rating->combat_pct,
             ] : null,
-            'stats' => $progress ? array_filter([
-                'kills' => number_format((int)($progress['kills'] ?? 0)),
-                'flags scored' => number_format((int)($progress['flags'] ?? 0)),
-                'wins' => number_format((int)($progress['wins'] ?? 0)),
-                'times MVP' => number_format((int)($progress['mvp'] ?? 0)),
-            ], fn($v) => $v !== '0') : [],
+            'totals' => [
+                'kills' => (int)($progress['kills'] ?? 0), 'flags' => (int)($progress['flags'] ?? 0),
+                'wins' => (int)($progress['wins'] ?? 0), 'mvp' => (int)($progress['mvp'] ?? 0),
+            ],
             'weapons' => array_map(fn($w) => [$w['key'], $w['name'], $w['pct']], $this->weaponsOfChoice($id)['choice']),
         ];
 
         $dir = CACHE . 'cards' . DS;
         // avatar and drawing code dates too, so a new picture or layout redraws the card
-        $file = $dir . $id . '-' . md5(json_encode($card) . filemtime($card['avatar']) . filemtime(ROOT . '/src/Service/PlayerCardImage.php')) . '.jpg';
+        $file = $dir . $id . '-' . md5(json_encode($card) . filemtime($card['avatar']) . filemtime(ROOT . '/src/Service/PlayerCardImage.php') . 'v2') . '.jpg';
         if (!is_file($file)) {
             if (!is_dir($dir)) {
                 mkdir($dir, 0775, true);
