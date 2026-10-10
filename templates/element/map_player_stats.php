@@ -29,8 +29,12 @@ $tiles = [
              title="Average CTF rating of <?= $stats['ratedGames'] ?> rated CTF game<?= $stats['ratedGames'] === 1 ? '' : 's' ?> on this map<?= $stats['overallRating'] !== null ? ' (overall ' . number_format($stats['overallRating'], 1) . ')' : '' ?>">
             <div class="text-[10px] uppercase tracking-wide text-zinc-400">CTF rating</div>
             <div class="text-lg font-extrabold leading-tight tabular-nums <?= $this->Layout->ratingClass($stats['rating']) ?>"><?= number_format($stats['rating'], 1) ?></div>
-            <div class="truncate text-[10px] text-zinc-400">
-                <?php if ($diff !== null && abs($diff) >= 0.05): ?>
+            <div class="text-[10px] leading-tight text-zinc-400">
+                <?php $minGames = \App\Controller\MapsController::MAP_RATING_MIN_GAMES; ?>
+                <?php if ($stats['ratedGames'] < $minGames): ?>
+                    <!-- not in the map's rating list yet -->
+                    <span class="text-amber-300"><?= $stats['ratedGames'] ?> of <?= $minGames ?> games to be ranked</span>
+                <?php elseif ($diff !== null && abs($diff) >= 0.05): ?>
                     <span class="<?= $diff > 0 ? 'text-green-400' : 'text-red-400' ?>"><?= $diff > 0 ? '▲ +' : '▼ −' ?><?= number_format(abs($diff), 1) ?></span> vs <?= number_format($stats['overallRating'], 1) ?>
                 <?php else: ?>
                     <?= $stats['ratedGames'] ?> rated game<?= $stats['ratedGames'] === 1 ? '' : 's' ?>

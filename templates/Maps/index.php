@@ -198,6 +198,7 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
                 <h3 class="<?= $panelTitle ?> text-green-300" title="Average CTF rating of each player's rated CTF games on this map, from <?= \App\Controller\MapsController::MAP_RATING_MIN_GAMES ?> games">
                     <i class="fa-solid fa-ranking-star mr-1"></i> Best CTF rating on this map
                 </h3>
+                <p class="-mt-1 mb-2 text-[10px] text-zinc-400">ranked from <?= \App\Controller\MapsController::MAP_RATING_MIN_GAMES ?> rated CTF games on this map</p>
                 <?php if ($map->top_rated): ?>
                     <ol class="space-y-1.5">
                         <?php foreach ($map->top_rated as $i => $player): ?>
