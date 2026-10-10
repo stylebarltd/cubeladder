@@ -34,6 +34,7 @@
 <?php
 $onAir = !empty($liveNow['live']);
 $features = [
+    ['/players?continent=europe', 'fa-earth-americas', 'text-lime-300', 'Best by country', 'rankings per continent &amp; country &ndash; who rules Brazil?'],
     ['/live', 'fa-tower-broadcast', 'text-green-400', 'Live scoreboards', 'every server, map in the background, 5 s updates'],
     ['/players/hall_of_fame', 'fa-crown', 'text-yellow-300', 'Hall of Fame', 'best single game in 7 categories'],
     ['/maps', 'fa-map', 'text-sky-300', 'Maps', 'records, top players &amp; weekly winners per map'],
@@ -112,7 +113,7 @@ $features = [
     <div class="relative mx-auto w-full max-w-7xl px-4 pb-14 md:px-6">
         <div class="mb-3 text-xs font-bold uppercase tracking-[0.3em] text-zinc-400 drop-shadow">What&rsquo;s new</div>
         <!-- phones: one row to swipe through; larger screens: grid -->
-        <div class="nice-scroll -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-7">
+        <div class="nice-scroll -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-8">
             <?php foreach ($features as [$href, $icon, $color, $title, $sub]): $external = str_starts_with($href, 'http'); ?>
                 <a href="<?= h($href) ?>" <?= $external ? 'target="_blank" rel="noopener"' : '' ?>
                    class="group w-40 shrink-0 snap-start sm:w-auto rounded-xl border border-white/15 bg-black/55 backdrop-blur-[2px] p-3 hover:border-white/30 hover:bg-black/70 transition">
