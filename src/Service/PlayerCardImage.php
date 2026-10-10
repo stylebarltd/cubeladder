@@ -271,8 +271,8 @@ class PlayerCardImage
         for ($i = 0; $i < $w; $i++) {
             $alpha = (int)min(127, 127 * $i / ($w * 0.6));
             if ($alpha < 127) {
-                imageline($this->im, $x + $i, $y, $x + $i, $y + $h - 1,
-                    imagecolorallocatealpha($this->im, self::PANEL[0], self::PANEL[1], self::PANEL[2], $alpha));
+                // a 1 px rectangle, not imageline: anti-aliased lines ignore the alpha on some GD builds
+                $this->rect($x + $i, $y, 1, $h, self::PANEL, $alpha);
             }
         }
     }
