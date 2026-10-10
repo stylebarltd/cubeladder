@@ -7,6 +7,15 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-10',
+            'title' => 'A quieter Discord',
+            'items' => [
+                'Only one post still makes a sound: when a game starts while all ladder servers were empty - time to join!',
+                'Game results, milestones, Hall of Fame news, weekly achievements and site updates now arrive silently.',
+                'Milestone posts now show the player\'s card.',
+            ],
+        ],
+        [
+            'date' => '2026-10-10',
             'title' => 'Only active players in the rankings',
             'items' => [
                 'Players without a game in the last 90 days are inactive: they leave the All Time Ranking, the CTF rating and the map ratings, and are back with their next game.',
