@@ -402,11 +402,11 @@ endif;
         <div id="pg-box" class="relative overflow-hidden rounded-xl border border-white/15 bg-black/40 select-none">
             <div id="pg-card" class="min-h-[560px]"></div>
             <button type="button" id="pg-prev" aria-label="Previous game" title="Previous (newer) game"
-                    class="absolute top-4 right-16 md:right-auto md:top-1/2 md:left-2 md:-translate-y-1/2 z-20 h-11 w-11 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white transition disabled:opacity-30">
+                    class="absolute top-4 right-16 md:right-auto md:top-[256px] md:left-2 z-20 h-11 w-11 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white transition disabled:opacity-30">
                 <i class="fas fa-chevron-left"></i>
             </button>
             <button type="button" id="pg-next" aria-label="Next game" title="Next (older) game"
-                    class="absolute top-4 right-2 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white transition disabled:opacity-30">
+                    class="absolute top-4 right-2 md:top-[256px] z-20 h-11 w-11 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white transition disabled:opacity-30">
                 <i class="fas fa-chevron-right"></i>
             </button>
         </div>
@@ -500,7 +500,11 @@ endif;
         prevBtn.disabled = index <= 0;
         nextBtn.disabled = index >= games.length - 1;
         const html = await load(index);
-        if (games[index] === g) card.innerHTML = html;
+        if (games[index] === g) {
+            card.innerHTML = html;
+            // never shrink while browsing, so the page and the arrows stay put
+            card.style.minHeight = Math.max(card.offsetHeight, parseFloat(card.style.minHeight) || 0) + 'px';
+        }
         load(index + 1); load(index - 1); // preload neighbours
     }
 
