@@ -7,6 +7,14 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-10',
+            'title' => 'Map rankings explained',
+            'items' => [
+                'Map pages: the best CTF rating list counts players with 10 rated CTF games on that map - your own stats show how many you have, e.g. "5 of 10 games to be ranked".',
+                'About: the points table shows the weapon of every kill type.',
+            ],
+        ],
+        [
+            'date' => '2026-10-10',
             'title' => 'Fairer games and a quieter Discord',
             'items' => [
                 'Fairer stats: team games where a team had one player or none for half of the game no longer count - 362 earlier games are marked "not counted".',
