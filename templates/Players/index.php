@@ -95,7 +95,7 @@ $this->start('rankingFilter'); ?>
         <i class="fa-solid fa-earth-europe text-zinc-400"></i>
         <select onchange="location.href = this.value" aria-label="Continent or country"
                 class="flex-1 bg-transparent font-semibold text-white focus:outline-none [&>optgroup]:bg-zinc-900 [&_option]:bg-zinc-900">
-            <option value="<?= h($regionUrl([])) ?>">Everywhere</option>
+            <option value="<?= h($regionUrl([])) ?>">Global</option>
             <optgroup label="Continents">
                 <?php foreach ($regionCounts['continents'] as $code => $n):
                     $slug = strtolower(str_replace(' ', '-', Continents::NAMES[$code])); ?>
