@@ -154,52 +154,8 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
                         <span class="text-[11px] text-zinc-400">last played <?= h($myStats['lastPlayed']->format('d M Y')) ?></span>
                     <?php endif; ?>
                 </div>
-                <?php if ($myStats):
-                    $tiles = [
-                        ['Place', '#' . number_format($myStats['place']), 'by points'],
-                        ['Points', number_format($myStats['points']), null],
-                        ['Games', number_format($myStats['games']), $this->Layout->duration($myStats['minutes'])],
-                        ['K/D', number_format($myStats['kd'], 2), number_format($myStats['kills']) . ' / ' . number_format($myStats['deaths'])],
-                        ['Flags', number_format($myStats['flags']), null],
-                        ['Headshots', number_format($myStats['headshots']), null],
-                    ];
-                    ?>
-                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-                        <?php if ($myStats['rating'] !== null):
-                            $diff = $myStats['overallRating'] !== null ? $myStats['rating'] - $myStats['overallRating'] : null; ?>
-                            <!-- average per-game CTF rating on this map, against the player's overall rating -->
-                            <div class="min-w-0 rounded bg-white/5 p-2"
-                                 title="Average CTF rating of your <?= $myStats['ratedGames'] ?> rated CTF game<?= $myStats['ratedGames'] === 1 ? '' : 's' ?> on this map<?= $myStats['overallRating'] !== null ? ' (overall ' . number_format($myStats['overallRating'], 1) . ')' : '' ?>">
-                                <div class="text-[10px] uppercase tracking-wide text-zinc-400">CTF rating</div>
-                                <div class="text-lg font-extrabold leading-tight tabular-nums <?= $this->Layout->ratingClass($myStats['rating']) ?>"><?= number_format($myStats['rating'], 1) ?></div>
-                                <div class="truncate text-[10px] text-zinc-400">
-                                    <?php if ($diff !== null && abs($diff) >= 0.05): ?>
-                                        <span class="<?= $diff > 0 ? 'text-green-400' : 'text-red-400' ?>"><?= $diff > 0 ? '▲ +' : '▼ −' ?><?= number_format(abs($diff), 1) ?></span> vs <?= number_format($myStats['overallRating'], 1) ?>
-                                    <?php else: ?>
-                                        <?= $myStats['ratedGames'] ?> rated game<?= $myStats['ratedGames'] === 1 ? '' : 's' ?>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                        <?php foreach ($tiles as [$label, $value, $sub]): ?>
-                            <div class="min-w-0 rounded bg-white/5 p-2">
-                                <div class="text-[10px] uppercase tracking-wide text-zinc-400"><?= $label ?></div>
-                                <div class="text-lg font-extrabold leading-tight text-fuchsia-200 tabular-nums"><?= $value ?></div>
-                                <?php if ($sub): ?><div class="truncate text-[10px] text-zinc-400"><?= h($sub) ?></div><?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                        <?php if ($myStats['best']): ?>
-                            <div class="col-span-3 min-w-0 rounded bg-white/5 p-2 sm:col-span-1">
-                                <div class="text-[10px] uppercase tracking-wide text-zinc-400">Best game</div>
-                                <div class="text-lg font-extrabold leading-tight text-fuchsia-200 tabular-nums"><?= number_format($myStats['best']['points']) ?> pts</div>
-                                <?= $this->Html->link(
-                                    $myStats['best']['playedAt'] ? h($myStats['best']['playedAt']->format('d M Y')) : 'view game',
-                                    ['controller' => 'Games', 'action' => 'view', $myStats['best']['gameId']],
-                                    ['class' => 'block truncate text-[10px] text-zinc-400 hover:text-fuchsia-200 hover:underline']
-                                ) ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                <?php if ($myStats): ?>
+                    <?= $this->element('map_player_stats', ['stats' => $myStats, 'grid' => 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-8', 'bestClass' => 'col-span-3 sm:col-span-1']) ?>
                 <?php else: ?>
                     <p class="text-sm text-zinc-400">You haven't played a counted game on this map yet.</p>
                 <?php endif; ?>
@@ -219,7 +175,7 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
                             <?php if ($leader && !empty($leader->player)): ?>
                                 <div class="text-lg font-extrabold leading-tight text-sky-300 tabular-nums"><?= $def['fmt']($leader->val) ?></div>
                                 <div class="truncate text-sm font-semibold">
-                                    <?= $this->Html->link(h($leader->player->name), ['controller' => 'Players', 'action' => 'view', $leader->player->id], ['class' => 'hover:text-blue-300', 'escape' => false]) ?>
+                                    <?= $this->Html->link(h($leader->player->name), ['controller' => 'Players', 'action' => 'view', $leader->player->id], ['class' => 'hover:text-blue-300', 'escape' => false, 'data-map-player' => $leader->player->id]) ?>
                                     <?= $this->Layout->flag($leader->player->country) ?>
                                 </div>
                                 <?php if (!empty($leader->game_id)): ?>
@@ -246,7 +202,7 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
                             <li class="flex items-center gap-2 text-sm">
                                 <span class="w-5 shrink-0 text-right font-bold <?= $i === 0 ? 'text-yellow-300' : 'text-zinc-400' ?>"><?= $i + 1 ?></span>
                                 <span class="min-w-0 flex-1 truncate">
-                                    <?= $this->Html->link(h($player->player->name), ['controller' => 'Players', 'action' => 'view', $player->player->id], ['class' => 'font-semibold hover:text-blue-300', 'escape' => false]) ?>
+                                    <?= $this->Html->link(h($player->player->name), ['controller' => 'Players', 'action' => 'view', $player->player->id], ['class' => 'font-semibold hover:text-blue-300', 'escape' => false, 'data-map-player' => $player->player->id]) ?>
                                     <?= $this->Layout->flag($player->player->country) ?>
                                 </span>
                                 <span class="shrink-0 font-bold text-sky-300 tabular-nums"><?= number_format((int)$player->score) ?></span>
@@ -272,7 +228,7 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
                             <li class="flex items-center gap-2 text-sm">
                                 <span class="shrink-0">🏆</span>
                                 <span class="min-w-0 flex-1 truncate">
-                                    <?= $this->Html->link(h($achievement->player->name), ['controller' => 'Players', 'action' => 'view', $achievement->player->id], ['class' => 'font-semibold hover:text-yellow-200', 'escape' => false]) ?>
+                                    <?= $this->Html->link(h($achievement->player->name), ['controller' => 'Players', 'action' => 'view', $achievement->player->id], ['class' => 'font-semibold hover:text-yellow-200', 'escape' => false, 'data-map-player' => $achievement->player->id]) ?>
                                     <?= $this->Layout->flag($achievement->player->country) ?>
                                 </span>
                                 <span class="shrink-0 font-bold text-yellow-200 tabular-nums"><?= number_format((float)$achievement->count) ?></span>
@@ -335,6 +291,52 @@ $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex ite
         const a = document.getElementById(e.key === 'ArrowLeft' ? 'map-prev' : e.key === 'ArrowRight' ? 'map-next' : '');
         if (a) location.href = a.href;
     });
+})();
+</script>
+<script>
+// Hover card: a player's CTF rating and their stats on this map (MapsController::playerStats), desktop only
+(function () {
+    if (!window.matchMedia('(hover: hover)').matches) return;
+    const mapName = <?= json_encode($map->name, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const card = document.createElement('div');
+    card.className = 'fixed z-50 hidden rounded-xl border border-white/15 bg-zinc-950/95 p-4 text-white shadow-2xl backdrop-blur';
+    card.style.width = 'min(32rem, calc(100vw - 2rem))';
+    document.body.appendChild(card);
+    const cache = {};
+    let timer = null, current = null;
+
+    function place(link) {
+        const r = link.getBoundingClientRect();
+        const w = card.offsetWidth, h = card.offsetHeight;
+        let left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+        let top = r.bottom + 8;
+        if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 8); // above when there is no room below
+        card.style.left = left + 'px';
+        card.style.top = top + 'px';
+    }
+    async function open(link) {
+        const id = link.dataset.mapPlayer;
+        current = link;
+        if (!(id in cache)) {
+            cache[id] = fetch('/maps/player-stats?map=' + encodeURIComponent(mapName) + '&player=' + encodeURIComponent(id))
+                .then(r => r.ok ? r.text() : '');
+        }
+        const html = await cache[id];
+        if (current !== link || !html) return;
+        card.innerHTML = html;
+        card.classList.remove('hidden');
+        place(link);
+    }
+    function close() {
+        clearTimeout(timer);
+        current = null;
+        card.classList.add('hidden');
+    }
+    document.querySelectorAll('[data-map-player]').forEach(link => {
+        link.addEventListener('mouseenter', () => { clearTimeout(timer); timer = setTimeout(() => open(link), 200); });
+        link.addEventListener('mouseleave', close);
+    });
+    window.addEventListener('scroll', close, {passive: true});
 })();
 </script>
 <?php $this->end(); ?>

@@ -241,6 +241,30 @@ class MapsController extends AppController
      * place among all players by summed points and their best single game.
      * Null when they never played the map.
      */
+    /**
+     * Hover card of a player on /maps: GET /maps/player-stats?map=<name>&player=<id>.
+     * Their CTF rating (overall, type, rank) and their stats on this map,
+     * as an HTML fragment; nothing for players who opted out of tracking.
+     */
+    public function playerStats()
+    {
+        $this->request->allowMethod(['get']);
+        $map = $this->fetchTable('Maps')->find()->where(['name' => (string)$this->request->getQuery('map')])->first();
+        $player = $this->fetchTable('Players')->find()
+            ->select(['id', 'name', 'country', 'picture'])
+            ->where(['id' => (string)$this->request->getQuery('player'), 'track' => 1])
+            ->first();
+        if (!$map || !$player) {
+            throw new \Cake\Http\Exception\NotFoundException();
+        }
+        $rating = $this->fetchTable('PlayerRatings')->find()->where(['player_id' => $player->id])->first();
+        $stats = $this->getPlayerMapStats((string)$player->id, (string)$map->id);
+
+        $this->viewBuilder()->disableAutoLayout();
+        $this->set(compact('map', 'player', 'rating', 'stats'));
+        $this->response = $this->response->withHeader('Cache-Control', 'private, max-age=300');
+    }
+
     private function getPlayerMapStats(string $playerId, string $mapId): ?array
     {
         $connection = $this->fetchTable('PlayerStatsPerGame')->getConnection();
