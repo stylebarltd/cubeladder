@@ -7,6 +7,13 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-10',
+            'title' => 'New player cards',
+            'items' => [
+                'Sharing a player page in Discord, WhatsApp & co. now shows a new card: CTF rating and trend, type, rank, weapons of choice on the favourite map, attack / defense / combat and the totals - kills, flags, wins and MVPs.',
+            ],
+        ],
+        [
+            'date' => '2026-10-10',
             'title' => 'Map rankings explained',
             'items' => [
                 'Map pages: the best CTF rating list counts players with 10 rated CTF games on that map - your own stats show how many you have, e.g. "5 of 10 games to be ranked".',
