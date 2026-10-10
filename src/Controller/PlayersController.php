@@ -677,6 +677,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
                     'kills'     => $stat->kills,
                     'deaths'    => $stat->deaths,
                     'kd_ratio'  => $stat->kd_ratio,
+                    'flags'     => (int)$stat->scored_with_the_flag,
                 ];
 
                 // charts: no inaccurate games and no short appearances
