@@ -710,6 +710,17 @@ $gamesDataGlobal = [];        // games inside lastGameIds
 
         }
 
+        // per-game CTF rating (player_game_ratings, only counted CTF games) for the form chart
+        if ($gamesData) {
+            $gameRatings = array_column(\Cake\Datasource\ConnectionManager::get('default')->selectQuery(['game_id', 'rating'], 'player_game_ratings')
+                ->where(['player_id' => $player->id, 'game_id IN' => array_column($gamesData, 'game_id')])
+                ->execute()->fetchAll('assoc'), 'rating', 'game_id');
+            foreach ($gamesData as &$gameData) {
+                $gameData['rating'] = isset($gameRatings[$gameData['game_id']]) ? round((float)$gameRatings[$gameData['game_id']], 1) : null;
+            }
+            unset($gameData);
+        }
+
         // Derived stat
         $kdRatio = $totalDeaths ? $totalKills / $totalDeaths : $totalKills;
 

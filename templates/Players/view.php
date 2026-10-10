@@ -376,7 +376,7 @@ endif;
     <!-- Form chart: points (bars) and K/D (line) per game, oldest to newest; a click opens the game below -->
     <section class="<?= $panel ?> mb-6 p-5">
         <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <h2 class="text-lg font-bold">Points &amp; K/D per game</h2>
+            <h2 class="text-lg font-bold">Your form, game by game</h2>
             <span class="text-xs text-zinc-400">click a game to open it below</span>
         </div>
         <div class="relative h-72 md:h-80"><canvas id="formChart"></canvas></div>
@@ -435,6 +435,29 @@ endif;
                 tension: 0.25,
                 order: 0
             }, {
+                type: 'line',
+                label: 'CTF rating',
+                data: formGames.map(g => g.rating),
+                yAxisID: 'rating',
+                borderColor: '#4ade80',
+                backgroundColor: '#4ade80',
+                pointRadius: 2,
+                tension: 0.25,
+                spanGaps: true, // no rating in non-CTF or short games
+                order: 0
+            }, {
+                type: 'line',
+                label: 'Kills',
+                data: formGames.map(g => g.kills),
+                yAxisID: 'points',
+                borderColor: 'rgba(255,255,255,.75)',
+                backgroundColor: 'rgba(255,255,255,.75)',
+                borderDash: [4, 3],
+                borderWidth: 1.5,
+                pointRadius: 0,
+                tension: 0.25,
+                order: 0
+            }, {
                 type: 'bar',
                 label: 'Points',
                 data: formGames.map(g => g.score),
@@ -455,9 +478,11 @@ endif;
             scales: {
                 x: {ticks: {color: '#a1a1aa', maxRotation: 0, autoSkip: true, maxTicksLimit: 8}, grid: {display: false}},
                 points: {position: 'left', beginAtZero: true, ticks: {color: '#7dd3fc'}, grid: {color: 'rgba(255,255,255,.06)'},
-                    title: {display: true, text: 'points', color: '#7dd3fc'}},
+                    title: {display: true, text: 'points · kills', color: '#7dd3fc'}},
                 kd: {position: 'right', beginAtZero: true, ticks: {color: '#fb923c'}, grid: {display: false},
-                    title: {display: true, text: 'K/D', color: '#fb923c'}}
+                    title: {display: true, text: 'K/D', color: '#fb923c'}},
+                rating: {position: 'right', min: 0, max: 10, ticks: {color: '#4ade80', stepSize: 2}, grid: {display: false},
+                    title: {display: true, text: 'rating', color: '#4ade80'}}
             },
             onClick: (e, items, chart) => {
                 const hit = chart.getElementsAtEventForMode(e, 'index', {intersect: false}, false)[0];
