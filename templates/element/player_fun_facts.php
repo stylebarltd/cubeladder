@@ -44,12 +44,17 @@ if (!$facts) {
     return;
 }
 ?>
-<!-- Fun facts -->
-<section class="<?= $panel ?> mb-6 px-5 py-4">
-    <h2 class="mb-3 text-[10px] uppercase tracking-wider text-zinc-400"><i class="fa-solid fa-face-grin-stars mr-1 text-green-300"></i>Fun facts</h2>
-    <ul class="grid grid-cols-1 gap-x-6 gap-y-2 text-sm text-zinc-200 sm:grid-cols-2 lg:grid-cols-4">
-        <?php foreach ($facts as [$factIcon, $html]): ?>
-            <li class="flex gap-2.5"><i class="fa-solid <?= $factIcon ?> mt-1 w-4 shrink-0 text-green-300"></i><span><?= $html ?></span></li>
+<!-- Fun facts: two columns with thin lines between them -->
+<section class="<?= $panel ?> p-5 md:p-6">
+    <h2 class="flex items-center gap-3 border-b border-white/10 pb-4 text-sm uppercase tracking-[0.2em] text-zinc-300">
+        <i class="fa-solid fa-users text-emerald-300"></i>Fun facts
+    </h2>
+    <ul class="grid grid-cols-1 text-sm text-zinc-300 sm:grid-cols-2">
+        <?php foreach (array_slice($facts, 0, 8) as $i => [$factIcon, $html]): ?>
+            <li class="flex items-center gap-4 border-white/10 py-4 <?= $i > 0 ? 'border-t' : '' ?> <?= $i === 1 ? 'sm:border-t-0' : '' ?> <?= $i % 2 ? 'sm:border-l sm:pl-5' : 'sm:pr-5' ?>">
+                <i class="fa-solid <?= $factIcon ?> w-6 shrink-0 text-center text-xl text-emerald-300"></i>
+                <span class="leading-relaxed [&_b]:text-white"><?= $html ?></span>
+            </li>
         <?php endforeach; ?>
     </ul>
 </section>

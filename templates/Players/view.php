@@ -55,16 +55,17 @@ endif;
 <div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-8">
 
     <!-- Header -->
-    <div class="mb-6 flex flex-wrap items-center gap-5 drop-shadow-lg lg:flex-nowrap">
-        <a href="<?= $this->Layout->playerPicture($player) ?>">
+    <div class="<?= $panel ?> mb-6 flex flex-col gap-6 p-5 md:p-6 lg:flex-row lg:items-center">
+        <div class="flex min-w-0 flex-wrap items-center gap-5 sm:flex-nowrap lg:flex-1">
+        <a href="<?= $this->Layout->playerPicture($player) ?>" class="shrink-0">
             <img src="<?= $this->Layout->playerPicture($player) ?>" alt="<?= h($player->name) ?>"
-                 class="h-24 w-24 md:h-32 md:w-32 rounded-full object-cover ring-2 ring-white/30">
+                 class="h-24 w-24 md:h-36 md:w-36 rounded-full object-cover ring-2 ring-white/25">
         </a>
-        <div class="min-w-0 lg:flex-1">
+        <div class="min-w-0">
             <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide">
                 <?= h($player->name) ?> <?= $this->Layout->flag($player->country) ?>
             </h1>
-            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-200">
+            <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-zinc-200">
                 <?php if ($player->rankAllTime > 0): ?>
                     <span><i class="fa-solid fa-ranking-star mr-1"></i>#<?= (int)$player->rankAllTime ?> all time</span>
                 <?php endif; ?>
@@ -107,19 +108,20 @@ endif;
                 <?php endif; ?>
             </div>
         </div>
+        </div>
 
-        <!-- right side: weapons of choice over the CTF rating -->
-        <div class="flex w-full shrink-0 flex-col gap-3 sm:ml-auto sm:w-auto">
+        <!-- right side: weapons of choice -->
+        <div class="w-full lg:w-[44%] lg:shrink-0">
         <?php if (!empty($weapons['choice'])): ?>
             <!-- Weapons of choice (all counted games), the same pick as the icons in the rankings -->
-            <div class="<?= $panel ?> w-full p-4">
-                <div class="mb-2 text-[10px] uppercase tracking-wider text-zinc-400">Weapons of choice</div>
-                <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div class="rounded-xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
+                <div class="mb-4 border-b border-white/10 pb-3 text-xs uppercase tracking-[0.2em] text-zinc-400">Weapons of choice</div>
+                <div class="flex flex-wrap items-center gap-y-3 divide-white/10 sm:flex-nowrap sm:divide-x">
                     <?php foreach ($weapons['choice'] as $i => $weapon): ?>
-                        <div class="flex items-center gap-2" title="<?= number_format($weapon['kills']) ?> kills with the <?= h($weapon['name']) ?>">
-                            <img src="/img/weapons/<?= h($weapon['key']) ?>.svg" alt="" class="<?= $i === 0 ? 'h-12 w-12' : 'h-9 w-9 opacity-90' ?> shrink-0">
-                            <div class="leading-tight">
-                                <div class="<?= $i === 0 ? 'text-base' : 'text-sm' ?> font-bold"><?= h($weapon['name']) ?></div>
+                        <div class="flex min-w-0 items-center gap-3 pr-5 <?= $i > 0 ? 'sm:pl-5' : '' ?>" title="<?= number_format($weapon['kills']) ?> kills with the <?= h($weapon['name']) ?>">
+                            <img src="/img/weapons/<?= h($weapon['key']) ?>.svg" alt="" class="h-10 w-10 shrink-0 md:h-12 md:w-12">
+                            <div class="min-w-0 leading-snug">
+                                <div class="truncate text-sm font-bold md:text-base"><?= h($weapon['name']) ?></div>
                                 <div class="text-xs text-zinc-400"><?= $weapon['pct'] ?>% of kills</div>
                             </div>
                         </div>
@@ -128,7 +130,7 @@ endif;
                 <!-- every weapon's share of the kills -->
                 <?php $weaponColors = ['rifle' => 'bg-yellow-400', 'smg' => 'bg-lime-400', 'sniper' => 'bg-sky-400', 'shotgun' => 'bg-orange-400',
                     'carabine' => 'bg-teal-400', 'pistol' => 'bg-zinc-300', 'knife' => 'bg-purple-400', 'grenade' => 'bg-red-400']; ?>
-                <div class="mt-3 flex h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <div class="mt-5 flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-white/10">
                     <?php foreach ($weapons['all'] as $key => $kills): ?>
                         <span class="<?= $weaponColors[$key] ?>" style="width: <?= round($kills * 100 / $weapons['kills'], 2) ?>%"
                               title="<?= h(\App\Controller\PlayersController::WEAPON_NAMES[$key]) ?>: <?= number_format($kills) ?> kills (<?= round($kills * 100 / $weapons['kills']) ?>%)"></span>
@@ -137,6 +139,11 @@ endif;
             </div>
         <?php endif; ?>
 
+        </div>
+    </div>
+
+    <!-- CTF rating | fun facts -->
+    <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <?php if (!empty($rating)):
             $ratingValue = (float)$rating->rating;
             $ratingColor = match (true) {
@@ -158,14 +165,15 @@ endif;
             ?>
             <!-- CTF rating and player type (bin/cake CalculateRatings) -->
             <a href="/about#rating" title="How the rating works"
-               class="<?= $panel ?> flex w-full items-center gap-5 p-4 hover:border-white/30 transition">
-                <div class="shrink-0 text-center">
-                    <div class="font-mono text-5xl font-extrabold tabular-nums leading-none <?= $ratingColor ?>"><?= number_format($ratingValue, 1) ?><?= $this->Layout->trendArrow($rating->trend !== null ? (float)$rating->trend : null, 'ml-1 align-top text-lg') ?></div>
-                    <div class="mt-1 text-[10px] uppercase tracking-wider text-zinc-400">CTF rating</div>
-                </div>
-                <div class="min-w-0 space-y-2">
+               class="<?= $panel ?> block p-5 transition hover:border-white/30 md:p-6">
+                <h2 class="mb-5 flex items-center gap-3 border-b border-white/10 pb-4 text-sm uppercase tracking-[0.2em] text-zinc-300">
+                    <i class="fa-solid fa-crosshairs text-zinc-400"></i>CTF rating
+                </h2>
+                <div class="flex flex-wrap items-center gap-x-6 gap-y-3 sm:flex-nowrap">
+                    <div class="shrink-0 font-mono text-6xl font-extrabold tabular-nums leading-none md:text-7xl <?= $ratingColor ?>"><?= number_format($ratingValue, 1) ?><?= $this->Layout->trendArrow($rating->trend !== null ? (float)$rating->trend : null, 'ml-1 align-top text-xl') ?></div>
+                    <div class="min-w-0 space-y-3 sm:border-l sm:border-white/10 sm:pl-6">
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-semibold <?= $typeColor ?>">
+                        <span class="inline-flex items-center gap-2 rounded-full border border-current/30 px-4 py-1 text-base font-semibold <?= $typeColor ?>">
                             <i class="fa-solid <?= $typeIcon ?> text-xs"></i><?= h(\App\Command\CalculateRatingsCommand::typeLabel($rating->type, (int)$rating->attack_pct, (int)$rating->defense_pct, (int)$rating->combat_pct)) ?>
                         </span>
                     </div>
@@ -175,23 +183,22 @@ endif;
                         <?php if ($rating->win_rate !== null): ?> · <?= round((float)$rating->win_rate * 100) ?>% won<?php endif; ?>
                         · last <?= (int)$rating->games ?> CTF games
                     </div>
-                    <div class="grid grid-cols-[4.5rem_1fr] items-center gap-x-2 gap-y-1 text-[10px] uppercase tracking-wide text-zinc-400">
-                        <?php foreach (['Attack' => [$rating->attack_pct, 'bg-red-400'], 'Defense' => [$rating->defense_pct, 'bg-blue-400'], 'Combat' => [$rating->combat_pct, 'bg-orange-400']] as $label => [$value, $bar]): ?>
+                    </div>
+                </div>
+                    <div class="mt-6 grid grid-cols-[5.5rem_1fr] items-center gap-x-4 gap-y-4 text-xs uppercase tracking-[0.15em] text-zinc-400">
+                        <?php foreach (['Attack' => [$rating->attack_pct, 'bg-red-400'], 'Defense' => [$rating->defense_pct, 'bg-blue-400'], 'Combat' => [$rating->combat_pct, 'bg-amber-400']] as $label => [$value, $bar]): ?>
                             <span><?= $label ?></span>
-                            <span class="h-1.5 w-24 overflow-hidden rounded-full bg-white/10 sm:w-32" title="better than <?= (int)$value ?>% of rated players">
+                            <span class="h-2.5 w-full overflow-hidden rounded-full bg-white/10" title="better than <?= (int)$value ?>% of rated players">
                                 <span class="block h-full rounded-full <?= $bar ?>" style="width: <?= max(2, (int)$value) ?>%"></span>
                             </span>
                         <?php endforeach; ?>
                     </div>
-                </div>
             </a>
         <?php endif; ?>
-        </div>
+        <?php if (!empty($funFacts) || !empty($timePlayed['all'])): ?>
+            <?= $this->element('player_fun_facts', compact('player', 'funFacts', 'timePlayed', 'panel')) ?>
+        <?php endif; ?>
     </div>
-
-    <?php if (!empty($funFacts) || !empty($timePlayed['all'])): ?>
-        <?= $this->element('player_fun_facts', compact('player', 'funFacts', 'timePlayed', 'panel')) ?>
-    <?php endif; ?>
 
     <!-- Tabs: the rest of the page in three parts (#overview, #awards, #games) -->
     <?php $tabs = ['overview' => ['fa-chart-simple', 'Overview'], 'awards' => ['fa-medal', 'Milestones & awards'], 'games' => ['fa-gamepad', 'Games']]; ?>
