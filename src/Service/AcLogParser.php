@@ -428,7 +428,12 @@ class AcLogParser
 //            $killerName = trim($m[2]);
 //            $verb = strtolower($m[3]);
             if (str_starts_with($verb, 'scored, carrying')) {
-                $verb = 'scored with the flag'; // a keep-the-flag score
+                // keep the flag scores every 15 s of carrying: one flag per carry (its
+                // first score), else holding it for minutes would be dozens of "flags"
+                if ((int)preg_replace('~\D~', '', $verb) > 15) {
+                    return;
+                }
+                $verb = 'scored with the flag';
             }
 //            $victimRaw = trim($m[4]);
 //

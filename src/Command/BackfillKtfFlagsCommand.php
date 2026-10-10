@@ -12,8 +12,9 @@ use Cake\Console\ConsoleOptionParser;
  * One-off: flags of (team) keep the flag games imported before the parser
  * knew KTF scores ("X scored, carrying for 15 seconds, new score 1").
  * Reads the raw server logs still in tmp/, finds each KTF / TKTF game by
- * server and start time, counts every player's scores and sets
- * scored_with_the_flag (and total_score, 5 points each) of the game.
+ * server and start time, counts every player's carries (the first score of
+ * each, "carrying for 15 seconds") and sets scored_with_the_flag (and
+ * total_score, 5 points each) of the game.
  * Idempotent: it sets the counts, it doesn't add to them.
  *
  *   bin/cake backfill_ktf_flags --dry-run
@@ -129,7 +130,8 @@ class BackfillKtfFlagsCommand extends Command
                     }
                     continue;
                 }
-                if ($current && preg_match('~^\[[0-9a-f:.]+\]\s+(.+?)\s+scored, carrying for \d+ seconds~i', $rest, $sm)) {
+                // one flag per carry: its first score (as AcLogParser)
+                if ($current && preg_match('~^\[[0-9a-f:.]+\]\s+(.+?)\s+scored, carrying for (\d+) seconds~i', $rest, $sm) && (int)$sm[2] <= 15) {
                     $current['scores'][$sm[1]] = ($current['scores'][$sm[1]] ?? 0) + 1;
                 }
             }
