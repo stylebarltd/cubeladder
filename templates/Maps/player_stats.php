@@ -25,7 +25,7 @@
 </div>
 <?php if ($rating): ?>
     <div class="mb-3">
-        <?= $this->element('player_type_badge', ['type' => $rating->type, 'label' => \App\Command\CalculateRatingsCommand::typeLabel($rating->type, (int)$rating->attack_pct, (int)$rating->defense_pct, (int)$rating->combat_pct)]) ?>
+        <?= $this->element('player_type_badge', ['type' => $rating->type, 'label' => \App\Command\CalculateRatingsCommand::typeLabel($rating->type, (int)$rating->attack_pct, (int)$rating->defense_pct, (int)$rating->combat_pct), 'full' => true]) ?>
     </div>
 <?php endif; ?>
 <?php if ($stats): ?>

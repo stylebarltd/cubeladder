@@ -43,7 +43,7 @@ if ($lastSeen) {
             <?= $this->element('achievement_badge', ['event' => $event, 'title' => ($labels[$event] ?? $event) . ' last week', 'large' => true]) ?>
         <?php endforeach; ?>
         <?php if ($rating): ?>
-            <?= $this->element('player_type_badge', ['type' => $rating->type, 'label' => \App\Command\CalculateRatingsCommand::typeLabel($rating->type, (int)$rating->attack_pct, (int)$rating->defense_pct, (int)$rating->combat_pct)]) ?>
+            <?= $this->element('player_type_badge', ['type' => $rating->type, 'label' => \App\Command\CalculateRatingsCommand::typeLabel($rating->type, (int)$rating->attack_pct, (int)$rating->defense_pct, (int)$rating->combat_pct), 'full' => true]) ?>
         <?php endif; ?>
     </div>
 <?php endif; ?>
