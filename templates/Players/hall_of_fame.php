@@ -139,6 +139,10 @@ shuffle($playerImages);
                                                 <?= $this->Html->link($player->name, ['controller' => 'Players', 'action' => 'view', $player->player_id], ['class' => 'hover:text-blue-400']) ?>
                                                 <?= $this->Layout->flag($player->country) ?>
                                             </span>
+                                            <!-- last week's best, as in the rankings -->
+                                            <?php foreach ($medals as $ach => $count): ?>
+                                                <?= $this->element('achievement_badge', ['event' => $ach, 'title' => $achievementLabels[$ach] ?? null]) ?>
+                                            <?php endforeach; ?>
                                             <?php if (!empty($weapons['weapons'])): ?>
                                                 <span class="flex items-center gap-1 shrink-0">
                                                     <?php foreach ($weapons['weapons'] as $weapon): ?>
@@ -160,19 +164,6 @@ shuffle($playerImages);
                                             <?php endif; ?>
                                         </div>
 
-                                        <!-- Achievements -->
-                                        <?php if (!empty($medals)): ?>
-                                            <div class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1.5">
-                                                <span class="flex items-center gap-1">
-                                                    <?php foreach ($medals as $ach => $count): ?>
-                                                        <img src="/img/achievements/<?= $ach ?>.svg"
-                                                             alt="<?= h($achievementLabels[$ach] ?? $ach) ?>"
-                                                             title="<?= h($achievementLabels[$ach] ?? $ach) ?>"
-                                                             class="w-5 h-5">
-                                                    <?php endforeach; ?>
-                                                </span>
-                                            </div>
-                                        <?php endif; ?>
                                     </div>
 
                                     <div class="text-right shrink-0">
