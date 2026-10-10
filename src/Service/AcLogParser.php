@@ -1200,8 +1200,10 @@ class AcLogParser
             $placeholders[] = '(?,?,?,?,?,?)';
             array_push($bindings, $row['game_id'], $row['event_time'], $row['event_hash'], $row['type'], $row['actor_id'], $row['details']);
         }
-        $sql = 'INSERT IGNORE INTO events (game_id, event_time, event_hash, type, actor_id, details) VALUES '
-            . implode(',', $placeholders);
+        // a re-parsed running game gets a new id: its chat moves along to it
+        $sql = 'INSERT INTO events (game_id, event_time, event_hash, type, actor_id, details) VALUES '
+            . implode(',', $placeholders)
+            . ' ON DUPLICATE KEY UPDATE game_id = VALUES(game_id)';
         try {
             $conn->execute($sql, $bindings);
         } catch (\Exception $e) {

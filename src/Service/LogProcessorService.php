@@ -74,7 +74,13 @@ class LogProcessorService
                     //'started_at <' => new \DateTime('-40 minutes'),
                 ]);
 
+            // running games are parsed again (with a new id) on the next run: drop what
+            // hangs on them too (their chat moves to the new id, see AcLogParser)
+            $conn = $gamesTable->getConnection();
             foreach ($games as $game) {
+                foreach (['kill_pairs', 'player_stats_per_game', 'player_game_ratings'] as $table) {
+                    $conn->execute("DELETE FROM $table WHERE game_id = ?", [$game->id]);
+                }
                 $gamesTable->delete($game);
             }
         }
