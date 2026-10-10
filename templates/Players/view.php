@@ -62,9 +62,20 @@ endif;
                  class="h-24 w-24 md:h-36 md:w-36 rounded-full object-cover ring-2 ring-white/25">
         </a>
         <div class="min-w-0">
-            <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide">
-                <?= h($player->name) ?> <?= $this->Layout->flag($player->country) ?>
-            </h1>
+            <?php
+            // last week's best (not "best on map"), as badges like in the rankings
+            $lastWeek = date('Y-m-d', strtotime('last week sunday'));
+            $weekBadges = array_filter($player->achievements ?? [], fn($a) => $a->event_type !== 'best_on_map'
+                && (is_string($a->week_end) ? $a->week_end : $a->week_end->format('Y-m-d')) === $lastWeek);
+            ?>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide">
+                    <?= h($player->name) ?> <?= $this->Layout->flag($player->country) ?>
+                </h1>
+                <?php foreach ($weekBadges as $a): ?>
+                    <?= $this->element('achievement_badge', ['event' => $a->event_type, 'title' => ($achievementLabels[$a->event_type] ?? $a->event_type) . ' last week', 'large' => true]) ?>
+                <?php endforeach; ?>
+            </div>
             <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-zinc-200">
                 <?php if ($player->rankAllTime > 0): ?>
                     <span><i class="fa-solid fa-ranking-star mr-1"></i>#<?= (int)$player->rankAllTime ?> all time</span>
