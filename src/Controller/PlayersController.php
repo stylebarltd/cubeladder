@@ -82,6 +82,18 @@ class PlayersController extends AppController
             }
         }
 
+        // players without a game in the last Activity::ACTIVE_DAYS: their records stay, marked inactive
+        $inactivePlayers = [];
+        if ($ids) {
+            $active = $this->Players->PlayerStatsPerGame->find()
+                ->select(['player_id' => 'PlayerStatsPerGame.player_id'])
+                ->innerJoinWith('Games')
+                ->where(['PlayerStatsPerGame.player_id IN' => array_keys($ids), 'Games.started_at >=' => \App\Utility\Activity::since()])
+                ->distinct(['PlayerStatsPerGame.player_id'])
+                ->disableHydration()->all()->extract('player_id')->toList();
+            $inactivePlayers = array_fill_keys(array_diff(array_keys($ids), array_map('strval', $active)), true);
+        }
+
         $this->set(compact(
             'topHeadshots',
             'topSlashes',
@@ -91,7 +103,8 @@ class PlayersController extends AppController
             'topStreaks',
             'bestFlagHelpers',
             'achievementPlayers',
-            'playerRatings'
+            'playerRatings',
+            'inactivePlayers'
         ));
     }
     /**
@@ -243,12 +256,14 @@ class PlayersController extends AppController
         $country = preg_match('/^[a-z]{2}$/i', (string)$this->request->getQuery('country', '')) ? strtoupper((string)$this->request->getQuery('country')) : null;
         $minPoints = $continent || $country ? self::REGION_MIN_POINTS : self::MIN_POINTS;
 
-        $players = $this->rankedPlayers($sort, $order, $minPoints);
+        // only active players (a game in the last Activity::ACTIVE_DAYS)
+        $players = array_values(array_filter($this->rankedPlayers($sort, $order, $minPoints),
+            fn($p) => \App\Utility\Activity::isActive($p->last_seen)));
 
         // the filter menu: continents and countries of everyone from REGION_MIN_POINTS, with counts
         $regionCounts = ['continents' => [], 'countries' => []];
         foreach ($this->rankedPlayers('points', ['total_score' => 'DESC'], self::REGION_MIN_POINTS) as $p) {
-            if (!$p->country) {
+            if (!$p->country || !\App\Utility\Activity::isActive($p->last_seen)) {
                 continue;
             }
             $code = strtoupper($p->country);
@@ -771,7 +786,18 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $gameIds = $this->getThisYearGameIds();
 
         $player->rankTheLast100 = $this->getPlayerRank($player->id, $theLast100GameIds);
-        $player->rankAllTime = $this->getPlayerRank($player->id, $gameIds);
+        // place in the All Time Ranking by points (active players with MIN_POINTS this year), 0 = not in it
+        $player->rankAllTime = 0;
+        $place = 0;
+        foreach ($this->rankedPlayers('points', ['total_score' => 'DESC'], self::MIN_POINTS) as $p) {
+            if (\App\Utility\Activity::isActive($p->last_seen)) {
+                $place++;
+                if ($p->id === $player->id) {
+                    $player->rankAllTime = $place;
+                    break;
+                }
+            }
+        }
 
         // Nemesis stats (kill_pairs is only filled since Sep 2026, no backfill)
         $conn = \Cake\Datasource\ConnectionManager::get('default');

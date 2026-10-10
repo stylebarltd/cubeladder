@@ -139,6 +139,13 @@ shuffle($playerImages);
                                                 <?= $this->Html->link($player->name, ['controller' => 'Players', 'action' => 'view', $player->player_id], ['class' => 'hover:text-blue-400']) ?>
                                                 <?= $this->Layout->flag($player->country) ?>
                                             </span>
+                                            <?php if (isset($inactivePlayers[(string)$player->player_id])): ?>
+                                                <!-- no game in the last Activity::ACTIVE_DAYS: the record stays -->
+                                                <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400"
+                                                      title="Inactive: no game in the last <?= \App\Utility\Activity::ACTIVE_DAYS ?> days">
+                                                    <i class="fa-solid fa-moon"></i>inactive
+                                                </span>
+                                            <?php endif; ?>
                                             <!-- last week's best, as in the rankings -->
                                             <?php foreach ($medals as $ach => $count): ?>
                                                 <?= $this->element('achievement_badge', ['event' => $ach, 'title' => $achievementLabels[$ach] ?? null]) ?>

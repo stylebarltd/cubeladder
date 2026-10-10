@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Model\Table\PlayerStatsPerGameTable;
+use App\Utility\Activity;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
@@ -26,7 +27,8 @@ use Cake\I18n\DateTime;
  * The weights follow what decides CTF games in our data: flags scored and
  * completed runs first, then K/D; headshots tell almost nothing about
  * winning and do not count. A player's rating is the average over their
- * last 100 counted CTF games (at least 20).
+ * last 100 counted CTF games (at least 20). Only active players (a game in
+ * the last Activity::ACTIVE_DAYS) are rated.
  *
  * Types compare each player's attack (scored / stolen / lost), defense
  * (returns) and combat with all rated players, as percentiles:
@@ -94,6 +96,15 @@ class CalculateRatingsCommand extends Command
             'window' => self::WINDOW,
             'min_games' => self::MIN_GAMES,
         ])->fetchAll('assoc');
+
+        // only active players (a game in the last Activity::ACTIVE_DAYS) are rated and ranked
+        if ($rows) {
+            $active = array_flip(array_column($connection->execute(
+                'SELECT DISTINCT s.player_id FROM player_stats_per_game s INNER JOIN games g ON g.id = s.game_id WHERE g.started_at >= ?',
+                [Activity::since()]
+            )->fetchAll('assoc'), 'player_id'));
+            $rows = array_values(array_filter($rows, fn($r) => isset($active[$r['player_id']])));
+        }
 
         if (!$rows) {
             $io->out('No player has enough CTF games yet.');

@@ -59,7 +59,8 @@ class PreviewsController extends AppController
             ->leftJoin(['r' => 'player_ratings'], ['r.player_id = Players.id'])
             ->where(['Players.track' => 1])
             ->groupBy(['Players.id', 'Players.name'])
-            ->having(['SUM(PlayerStatsPerGame.total_score) >=' => 5000])
+            // active players only (a game in the last Activity::ACTIVE_DAYS), as on the page
+            ->having(['SUM(PlayerStatsPerGame.total_score) >=' => 5000, 'MAX(Games.started_at) >=' => \App\Utility\Activity::since()])
             ->orderBy(['rating IS NULL' => 'ASC', 'rating' => 'DESC', 'points' => 'DESC'])
             ->limit(10)
             ->disableHydration()

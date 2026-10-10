@@ -72,13 +72,20 @@ endif;
                 <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide">
                     <?= h($player->name) ?> <?= $this->Layout->flag($player->country) ?>
                 </h1>
+                <?php if (!\App\Utility\Activity::isActive($lastSeen['started_at'] ?? null)): ?>
+                    <!-- no game in the last Activity::ACTIVE_DAYS: out of the rankings until the next one -->
+                    <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-sm font-semibold tracking-normal text-zinc-300"
+                          title="No game in the last <?= \App\Utility\Activity::ACTIVE_DAYS ?> days: not in the rankings and the CTF rating until the next game">
+                        <i class="fa-solid fa-moon text-xs"></i>Inactive
+                    </span>
+                <?php endif; ?>
                 <?php foreach ($weekBadges as $a): ?>
                     <?= $this->element('achievement_badge', ['event' => $a->event_type, 'title' => ($achievementLabels[$a->event_type] ?? $a->event_type) . ' last week', 'large' => true]) ?>
                 <?php endforeach; ?>
             </div>
             <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-zinc-200">
                 <?php if ($player->rankAllTime > 0): ?>
-                    <span><i class="fa-solid fa-ranking-star mr-1"></i>#<?= (int)$player->rankAllTime ?> all time</span>
+                    <span title="All Time Ranking by points"><i class="fa-solid fa-ranking-star mr-1"></i>#<?= (int)$player->rankAllTime ?> all time</span>
                 <?php endif; ?>
                 <?php if ($player->rankTheLast100 > 0): ?>
                     <span><i class="fa-solid fa-bolt mr-1"></i>#<?= (int)$player->rankTheLast100 ?> in the last 100</span>
@@ -190,7 +197,7 @@ endif;
                     </div>
                     <div class="text-xs text-zinc-300">
                         <span class="underline decoration-dotted decoration-zinc-500 underline-offset-2"
-                              title="Place among all <?= number_format((int)$ratedPlayers) ?> players with a CTF rating: 20+ CTF games of 3+ minutes (players who chose &quot;Don't track me&quot; are not rated)">#<?= (int)$rating->rank ?> of <?= number_format((int)$ratedPlayers) ?> rated players</span>
+                              title="Place among all <?= number_format((int)$ratedPlayers) ?> players with a CTF rating: 20+ CTF games of 3+ minutes and a game in the last <?= \App\Utility\Activity::ACTIVE_DAYS ?> days (players who chose &quot;Don't track me&quot; are not rated)">#<?= (int)$rating->rank ?> of <?= number_format((int)$ratedPlayers) ?> rated players</span>
                         <?php if ($rating->win_rate !== null): ?> · <?= round((float)$rating->win_rate * 100) ?>% won<?php endif; ?>
                         · last <?= (int)$rating->games ?> CTF games
                     </div>
@@ -205,6 +212,20 @@ endif;
                         <?php endforeach; ?>
                     </div>
             </a>
+        <?php elseif (!\App\Utility\Activity::isActive($lastSeen['started_at'] ?? null) && !empty($lastSeen)): ?>
+            <!-- inactive: the CTF rating comes back with the next game -->
+            <div class="<?= $panel ?> p-5 md:p-6">
+                <h2 class="mb-5 flex items-center gap-3 border-b border-white/10 pb-4 text-sm uppercase tracking-[0.2em] text-zinc-300">
+                    <i class="fa-solid fa-crosshairs text-zinc-400"></i>CTF rating
+                </h2>
+                <div class="flex items-center gap-4 text-zinc-300">
+                    <i class="fa-solid fa-moon text-4xl text-zinc-500"></i>
+                    <div>
+                        <div class="text-lg font-bold text-white">Inactive</div>
+                        <div class="text-sm">No game in the last <?= \App\Utility\Activity::ACTIVE_DAYS ?> days &ndash; the CTF rating and the rankings come back with the next game.</div>
+                    </div>
+                </div>
+            </div>
         <?php endif; ?>
         <?php if (!empty($funFacts) || !empty($timePlayed['all'])): ?>
             <?= $this->element('player_fun_facts', compact('player', 'funFacts', 'timePlayed', 'panel')) ?>

@@ -7,6 +7,15 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-10',
+            'title' => 'Only active players in the rankings',
+            'items' => [
+                'Players without a game in the last 90 days are inactive: they leave the All Time Ranking, the CTF rating and the map ratings, and are back with their next game.',
+                'Their Hall of Fame records stay, marked inactive - and their player pages say so too.',
+                'Keep the flag and team keep the flag games now count every score as a flag scored - earlier games got their flags filled in.',
+            ],
+        ],
+        [
+            'date' => '2026-10-10',
             'title' => 'New player pages, hover cards and the best by country',
             'items' => [
                 'All-Rounders now show their specialization - Attack (flag play), Defense (returns) or Combat (K/D and frags) - on player pages, in the All Time Ranking and in link previews.',

@@ -37,8 +37,12 @@ if ($lastSeen) {
     <?php endif; ?>
 </div>
 
-<?php if ($rating || $badges): ?>
+<?php $inactive = !\App\Utility\Activity::isActive($lastSeen); ?>
+<?php if ($rating || $badges || $inactive): ?>
     <div class="mt-3 flex flex-wrap items-center gap-1.5">
+        <?php if ($inactive): ?>
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-zinc-300"><i class="fa-solid fa-moon text-xs"></i>Inactive &ndash; no game in <?= \App\Utility\Activity::ACTIVE_DAYS ?> days</span>
+        <?php endif; ?>
         <?php foreach ($badges as $event): ?>
             <?= $this->element('achievement_badge', ['event' => $event, 'title' => ($labels[$event] ?? $event) . ' last week', 'large' => true]) ?>
         <?php endforeach; ?>

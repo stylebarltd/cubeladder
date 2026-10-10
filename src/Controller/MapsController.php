@@ -73,6 +73,7 @@ class MapsController extends AppController
              FROM player_game_ratings r
              INNER JOIN games g ON g.id = r.game_id
              INNER JOIN players pl ON pl.id = r.player_id
+             INNER JOIN player_ratings active ON active.player_id = pl.id -- rated = active (Activity)
              WHERE g.map_id = ? AND pl.track = 1
              GROUP BY pl.id, pl.name, pl.country
              HAVING COUNT(*) >= ?

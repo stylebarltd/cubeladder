@@ -213,6 +213,8 @@ $rules = [
                     <p>Every CTF game you play for 3+ minutes (with 4+ players) gets a score. Everything is counted
                         <b>per minute</b> and <b>against the other players in the same game</b>, so short games, late joins and full servers are fair.
                         Your rating is the average of your <b>last 100 CTF games</b> (from 20 games on), updated after every import.
+                        Players without a game in the last <?= \App\Utility\Activity::ACTIVE_DAYS ?> days are <b>inactive</b>: no rating and not in the rankings
+                        until their next game &ndash; their records in the Hall of Fame stay.
                         Every CTF scoreboard also shows each player&rsquo;s rating <b>for that one game</b> (<b>rtg</b>) &ndash; 5.0 is an average game.</p>
                     <table class="w-full text-sm">
                         <tbody class="divide-y divide-white/10">

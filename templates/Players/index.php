@@ -122,6 +122,7 @@ $this->start('rankingFilter'); ?>
     'meta' => array_values(array_filter([
         $regionLabel ? ['fa-earth-europe', $regionLabel] : null,
         ['fa-filter', 'min ' . number_format($minPoints) . ' pts this year'],
+        ['fa-bolt', 'played in the last ' . \App\Utility\Activity::ACTIVE_DAYS . ' days'],
     ])),
     'keepQuery' => ['continent' => $continent ? strtolower(str_replace(' ', '-', Continents::NAMES[$continent])) : null, 'country' => $country ? strtolower($country) : null],
 ]) ?>
