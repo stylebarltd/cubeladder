@@ -68,7 +68,7 @@ $features = [
             </p>
 
             <?php if (!empty($heroStats)): ?>
-                <div class="mt-7 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center lg:justify-start sm:gap-3">
+                <div class="mt-7 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center lg:justify-start sm:gap-3">
                     <?php foreach ([['games', 'fa-gamepad', 'games tracked'], ['players', 'fa-users', 'players'], ['maps', 'fa-map', 'maps played']] as [$k, $icon, $label]): ?>
                         <div class="sm:min-w-[7.5rem] rounded-xl border border-white/15 bg-black/55 backdrop-blur-[2px] px-2 py-2 sm:px-4 sm:py-2.5">
                             <div class="font-mono text-xl sm:text-2xl md:text-3xl font-extrabold text-white"><?= number_format((int)$heroStats[$k]) ?></div>
@@ -78,15 +78,12 @@ $features = [
                 </div>
             <?php endif; ?>
 
-            <div class="mt-7 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center lg:justify-start sm:gap-3 text-xs sm:text-base">
+            <div class="mt-7 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center lg:justify-start sm:gap-3 text-xs sm:text-base">
                 <a href="/players" class="rounded-lg bg-blue-600 px-1 py-3 sm:px-5 whitespace-nowrap text-center font-semibold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 transition">
                     <span class="hidden sm:inline"><i class="fa-solid fa-ranking-star mr-1"></i></span> Rankings
                 </a>
                 <a href="/players/hall_of_fame" class="rounded-lg border border-yellow-300/50 bg-black/50 px-1 py-3 sm:px-5 whitespace-nowrap text-center font-semibold text-yellow-200 backdrop-blur-[2px] hover:bg-yellow-500/20 transition">
                     <span class="hidden sm:inline"><i class="fa-solid fa-crown mr-1"></i></span> Hall of Fame
-                </a>
-                <a href="https://discord.gg/tVX7FKCtK3" target="_blank" rel="noopener" class="rounded-lg bg-[#5865F2] px-1 py-3 sm:px-5 whitespace-nowrap text-center font-semibold text-white shadow-lg hover:bg-[#4752c4] transition">
-                    <span class="hidden sm:inline"><i class="fa-brands fa-discord mr-1"></i></span> Discord
                 </a>
             </div>
         </div>
