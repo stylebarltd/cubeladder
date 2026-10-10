@@ -10,8 +10,8 @@ use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
 
 /**
- * One-off: the "uneven teams" rule of AcLogParser (one team with at most one
- * player against two or more for half of the game) applied to the games
+ * One-off: the "uneven teams" rule of AcLogParser (a team with one player or
+ * none for half of the game) applied to the games
  * imported before it, from the raw server logs still in tmp/. Such games
  * are marked inaccurate (bin/cake mark_inaccurate <id> --undo counts one
  * again).
@@ -96,7 +96,7 @@ class RecheckUnevenCommand extends Command
                         if ($game && !isset($seen[$game->id])) {
                             $seen[$game->id] = true;
                             $marked++;
-                            $reason = sprintf('uneven teams (one player or none against two or more) for %d of %d minutes',
+                            $reason = sprintf('a team with one player or none for %d of %d minutes',
                                 $current['uneven'], $current['blocks']);
                             $io->out(sprintf('%s %s %s %s: %s', $server, $game->started_at->format('Y-m-d H:i'), $game->mode, $game->id, $reason));
                             if (!$dry) {

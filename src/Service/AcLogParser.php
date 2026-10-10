@@ -87,9 +87,9 @@ class AcLogParser
     // such free flags (everyone else left) is marked inaccurate at its end.
     protected array $teamPlayers = [];
     protected int $freeFlags = 0;
-    // minute status blocks of a team game, and those where one team had at
-    // most one player while the other had more: too many of them (UNEVEN_SHARE)
-    // and the game is marked inaccurate too
+    // minute status blocks of a team game, and those where a team had one
+    // player or none: too many of them (UNEVEN_SHARE) and the game is marked
+    // inaccurate too
     protected int $statusBlocks = 0;
     protected int $unevenBlocks = 0;
 
@@ -98,7 +98,7 @@ class AcLogParser
     protected $finishedGame = null;
     protected array $finalTeamScores = [];
     public const MAX_FREE_FLAGS = 4;
-    /** Share of the minutes with uneven teams (1 vs 2+) that makes a team game inaccurate */
+    /** Share of the minutes with a team of one player or none that makes a team game inaccurate */
     public const UNEVEN_SHARE = 0.5;
     /** ...counted from this many minute status blocks on */
     public const UNEVEN_MIN_BLOCKS = 3;
@@ -553,7 +553,7 @@ class AcLogParser
                 } elseif (self::unevenGame($this->statusBlocks, $this->unevenBlocks)) {
                     $this->currentGame->inaccurate = true;
                     $this->currentGame->inaccurate_reason = sprintf(
-                        'uneven teams (one player or none against two or more) for %d of %d minutes',
+                        'a team with one player or none for %d of %d minutes',
                         $this->unevenBlocks, $this->statusBlocks);
                 }
                 $this->Games->save($this->currentGame);
@@ -1175,10 +1175,10 @@ class AcLogParser
     // -------------------------------
     // Utilities / normalization
     // -------------------------------
-    /** One team with at most one player against two or more */
+    /** A team with one player or none (1 vs 1, 1 vs 3, 0 vs 2 ...) - not a real team game */
     public static function unevenTeams(int $cla, int $rvsf): bool
     {
-        return min($cla, $rvsf) <= 1 && max($cla, $rvsf) >= 2;
+        return min($cla, $rvsf) <= 1;
     }
 
     /** Uneven for UNEVEN_SHARE of the minute status blocks (from UNEVEN_MIN_BLOCKS on) */
