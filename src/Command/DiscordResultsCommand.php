@@ -241,6 +241,7 @@ class DiscordResultsCommand extends Command
             ]],
             'attachments' => [['id' => 0, 'filename' => $filename]],
             'allowed_mentions' => ['parse' => []],
+            'flags' => 4096, // SUPPRESS_NOTIFICATIONS: posted without a ping or sound
             'components' => [[
                 'type' => 1,
                 'components' => [
