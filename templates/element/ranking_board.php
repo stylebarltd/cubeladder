@@ -87,6 +87,9 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                                         <?= $this->Html->link(h($player->name), ['controller' => 'Players', 'action' => 'view', $player->id],
                                             ['escape' => false, 'class' => 'truncate font-semibold hover:text-blue-300']) ?>
                                         <span class="shrink-0"><?= $this->Layout->flag($player->country) ?></span>
+                                        <?php foreach ($achievementPlayers[$player->id] ?? [] as $ach => $count): ?>
+                                            <?= $this->element('achievement_badge', ['event' => $ach, 'title' => $achievementLabels[$ach] ?? null]) ?>
+                                        <?php endforeach; ?>
                                         <?php if (!empty($player->player_type)): ?>
                                             <?= $this->element('player_type_badge', ['type' => $player->player_type, 'label' => $player->player_type_label ?? null]) ?>
                                         <?php endif; ?>
@@ -109,15 +112,6 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                                             <span class="flex items-center gap-1">
                                                 <?php foreach ($weapons['weapons'] as $weapon): ?>
                                                     <img src="/img/weapons/<?= $weapon ?>.svg" alt="<?= h($weapon) ?>" class="h-4 w-4">
-                                                <?php endforeach; ?>
-                                            </span>
-                                        <?php endif; ?>
-                                        <?php if (!empty($achievementPlayers[$player->id])): ?>
-                                            <span class="flex items-center gap-1">
-                                                <?php foreach ($achievementPlayers[$player->id] as $ach => $count): ?>
-                                                    <img src="/img/achievements/<?= $ach ?>.svg"
-                                                         alt="<?= h($achievementLabels[$ach] ?? $ach) ?>"
-                                                         title="<?= h($achievementLabels[$ach] ?? $ach) ?>" class="h-5 w-5">
                                                 <?php endforeach; ?>
                                             </span>
                                         <?php endif; ?>

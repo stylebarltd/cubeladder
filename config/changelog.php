@@ -15,6 +15,7 @@ return [
                 'the last 100 got the CTF rating column and the player types too, and the Hall of Fame shows each player\'s rating, rank and type.',
                 'Player pages are tidier: the header with your weapons of choice and CTF rating, fun facts right under it, and the rest in three tabs - Overview, Milestones & awards, Games.',
                 'Points, K/D and your CTF rating are now one chart, oldest to newest game - kills and flags can be switched on in its legend, and a click on a game opens it in the recent games below.',
+                'Last week\'s best (Best K/D, Most flags, Top scorer ...) now show as blue badges next to the player\'s flag in the rankings.',
                 'Calmer, darker backgrounds on player pages, the front page, the rankings and the Hall of Fame - easier to read.',
                 'Player pages show your weapons of choice with big icons and their share of your kills, and the link preview card shows them too - with the cubeLadder logo.',
             ],
