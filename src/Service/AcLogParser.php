@@ -87,12 +87,21 @@ class AcLogParser
     // such free flags (everyone else left) is marked inaccurate at its end.
     protected array $teamPlayers = [];
     protected int $freeFlags = 0;
+    // minute status blocks of a team game, and those where one team had at
+    // most one player while the other had more: too many of them (UNEVEN_SHARE)
+    // and the game is marked inaccurate too
+    protected int $statusBlocks = 0;
+    protected int $unevenBlocks = 0;
 
     // Game whose "game finished" line was just seen: the final status block
     // (team totals) follows it and is saved to its team_scores.
     protected $finishedGame = null;
     protected array $finalTeamScores = [];
     public const MAX_FREE_FLAGS = 4;
+    /** Share of the minutes with uneven teams (1 vs 2+) that makes a team game inaccurate */
+    public const UNEVEN_SHARE = 0.5;
+    /** ...counted from this many minute status blocks on */
+    public const UNEVEN_MIN_BLOCKS = 3;
 
     // Compiled regexes
     protected string $ignoreRegex;
@@ -215,6 +224,8 @@ class AcLogParser
 
             $this->teamPlayers = [];
             $this->freeFlags = 0;
+            $this->statusBlocks = 0;
+            $this->unevenBlocks = 0;
             $this->finishedGame = null;
 
             // skip tiny games
@@ -539,6 +550,11 @@ class AcLogParser
                     $this->currentGame->inaccurate = true;
                     $this->currentGame->inaccurate_reason =
                         "{$this->freeFlags} flags scored against an empty team";
+                } elseif (self::unevenGame($this->statusBlocks, $this->unevenBlocks)) {
+                    $this->currentGame->inaccurate = true;
+                    $this->currentGame->inaccurate_reason = sprintf(
+                        'uneven teams (one player or none against two or more) for %d of %d minutes',
+                        $this->unevenBlocks, $this->statusBlocks);
                 }
                 $this->Games->save($this->currentGame);
                 $this->eventsParsed++;
@@ -563,6 +579,13 @@ class AcLogParser
         // (no flags part in non-flag modes)
         if (preg_match('~^Team\s+(CLA|RVSF):\s+(\d+) players,\s+(-?\d+) frags(?:,\s+(-?\d+) flags)?~', $rest, $m)) {
             $this->teamPlayers[$m[1]] = (int)$m[2];
+            // RVSF closes a status block of a running team game: were the teams even?
+            if ($m[1] === 'RVSF' && $this->currentGame && isset($this->teamPlayers['CLA'])) {
+                $this->statusBlocks++;
+                if (self::unevenTeams($this->teamPlayers['CLA'], $this->teamPlayers['RVSF'])) {
+                    $this->unevenBlocks++;
+                }
+            }
             if ($this->finishedGame && !$this->currentGame) {
                 $this->finalTeamScores[$m[1]] = [
                     'players' => (int)$m[2],
@@ -1152,6 +1175,18 @@ class AcLogParser
     // -------------------------------
     // Utilities / normalization
     // -------------------------------
+    /** One team with at most one player against two or more */
+    public static function unevenTeams(int $cla, int $rvsf): bool
+    {
+        return min($cla, $rvsf) <= 1 && max($cla, $rvsf) >= 2;
+    }
+
+    /** Uneven for UNEVEN_SHARE of the minute status blocks (from UNEVEN_MIN_BLOCKS on) */
+    public static function unevenGame(int $blocks, int $uneven): bool
+    {
+        return $blocks >= self::UNEVEN_MIN_BLOCKS && $uneven >= $blocks * self::UNEVEN_SHARE;
+    }
+
     protected function normalizeGameMode(string $modeString): ?string
     {
         $modeString = strtolower(trim($modeString));
