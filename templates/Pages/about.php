@@ -80,95 +80,95 @@ $rules = [
             <tbody class="divide-y divide-white/10">
             <!-- Standard kills -->
             <tr class="bg-white/5">
-                <td class="px-3 py-2 font-mono">kills</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-crosshairs text-zinc-300 w-5 shrink-0 text-center"></i>kills</span></td>
                 <td class="px-3 py-2 text-center font-bold text-green-400">+1</td>
                 <td class="px-3 py-2">Any kill</td>
             </tr>
 
             <!-- Weapon kills -->
             <tr>
-                <td class="px-3 py-2 font-mono">busted</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><img src="/img/weapons/pistol.svg" alt="" class="h-5 w-5 shrink-0" title="pistol">busted</span></td>
                 <td class="px-3 py-2 text-center font-bold text-green-400">+1</td>
                 <td class="px-3 py-2">Pistol kill</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">shredded</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><img src="/img/weapons/rifle.svg" alt="" class="h-5 w-5 shrink-0" title="rifle">shredded</span></td>
                 <td class="px-3 py-2 text-center font-bold text-green-400">+1</td>
                 <td class="px-3 py-2">Rifle kill</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">sprayed</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><img src="/img/weapons/smg.svg" alt="" class="h-5 w-5 shrink-0" title="smg">sprayed</span></td>
                 <td class="px-3 py-2 text-center font-bold text-green-400">+1</td>
                 <td class="px-3 py-2">SMG kill</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">punctured</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><img src="/img/weapons/sniper.svg" alt="" class="h-5 w-5 shrink-0" title="sniper">punctured</span></td>
                 <td class="px-3 py-2 text-center font-bold text-green-400">+1</td>
                 <td class="px-3 py-2">Sniper kill</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">splattered</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><img src="/img/weapons/shotgun.svg" alt="" class="h-5 w-5 shrink-0" title="shotgun">splattered</span></td>
                 <td class="px-3 py-2 text-center font-bold text-green-400">+1</td>
                 <td class="px-3 py-2">Shotgun kill</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">peppered</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><img src="/img/weapons/shotgun.svg" alt="" class="h-5 w-5 shrink-0" title="shotgun">peppered</span></td>
                 <td class="px-3 py-2 text-center font-bold text-green-400">+1</td>
                 <td class="px-3 py-2">Shotgun kill</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">picked_off</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><img src="/img/weapons/carabine.svg" alt="" class="h-5 w-5 shrink-0" title="carabine">picked_off</span></td>
                 <td class="px-3 py-2 text-center font-bold text-green-400">+1</td>
                 <td class="px-3 py-2">Carbine kill</td>
             </tr>
 
             <!-- Skill kills -->
             <tr class="bg-white/5">
-                <td class="px-3 py-2 font-mono">headshot</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><img src="/img/weapons/sniper.svg" alt="" class="h-5 w-5 shrink-0" title="sniper">headshot</span></td>
                 <td class="px-3 py-2 text-center font-bold text-blue-400">+2</td>
                 <td class="px-3 py-2">Precision headshot</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">slashed</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><img src="/img/weapons/knife.svg" alt="" class="h-5 w-5 shrink-0" title="knife">slashed</span></td>
                 <td class="px-3 py-2 text-center font-bold text-blue-400">+2</td>
                 <td class="px-3 py-2">Knife kill</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">gibbed</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><img src="/img/weapons/grenade.svg" alt="" class="h-5 w-5 shrink-0" title="grenade">gibbed</span></td>
                 <td class="px-3 py-2 text-center font-bold text-blue-400">+2</td>
                 <td class="px-3 py-2">Grenade kill</td>
             </tr>
 
             <!-- Objective play -->
             <tr class="bg-white/5">
-                <td class="px-3 py-2 font-mono">stole_the_flag</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-flag text-orange-300 w-5 shrink-0 text-center"></i>stole_the_flag</span></td>
                 <td class="px-3 py-2 text-center font-bold text-emerald-400">+2</td>
                 <td class="px-3 py-2">Flag stolen</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">returned_the_flag</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-rotate-left text-blue-300 w-5 shrink-0 text-center"></i>returned_the_flag</span></td>
                 <td class="px-3 py-2 text-center font-bold text-emerald-400">+2</td>
                 <td class="px-3 py-2">Flag returned</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">scored_with_the_flag</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-flag-checkered text-green-400 w-5 shrink-0 text-center"></i>scored_with_the_flag</span></td>
                 <td class="px-3 py-2 text-center font-bold text-yellow-400">+5</td>
                 <td class="px-3 py-2">Flag captured</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">lost_the_flag</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-flag text-zinc-500 w-5 shrink-0 text-center"></i>lost_the_flag</span></td>
                 <td class="px-3 py-2 text-center font-bold text-red-400">-1</td>
                 <td class="px-3 py-2">Flag lost</td>
             </tr>
 
             <!-- Penalties -->
             <tr class="bg-white/5">
-                <td class="px-3 py-2 font-mono">teamkills</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-user-slash text-red-400 w-5 shrink-0 text-center"></i>teamkills</span></td>
                 <td class="px-3 py-2 text-center font-bold text-red-400">-1</td>
                 <td class="px-3 py-2">Team kill penalty</td>
             </tr>
             <tr>
-                <td class="px-3 py-2 font-mono">suicided</td>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-skull text-red-400 w-5 shrink-0 text-center"></i>suicided</span></td>
                 <td class="px-3 py-2 text-center font-bold text-red-400">-1</td>
                 <td class="px-3 py-2">Suicide</td>
             </tr>
