@@ -85,7 +85,7 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <?= $this->Html->link(h($player->name), ['controller' => 'Players', 'action' => 'view', $player->id],
-                                            ['escape' => false, 'class' => 'truncate font-semibold hover:text-blue-300']) ?>
+                                            ['escape' => false, 'class' => 'truncate font-semibold hover:text-blue-300', 'data-hover-card' => '/players/hover-card/' . $player->id]) ?>
                                         <span class="shrink-0"><?= $this->Layout->flag($player->country) ?></span>
                                         <?php foreach ($achievementPlayers[$player->id] ?? [] as $ach => $count): ?>
                                             <?= $this->element('achievement_badge', ['event' => $ach, 'title' => $achievementLabels[$ach] ?? null]) ?>
@@ -135,3 +135,4 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
         </div>
     </div>
 </div>
+<?= $this->element('hover_card_script') ?>

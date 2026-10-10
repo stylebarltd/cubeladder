@@ -978,6 +978,46 @@ $gamesDataGlobal = [];        // games inside lastGameIds
 
     }
 
+    /**
+     * Small player card for the hover on the rankings: GET /players/hover-card/{id}.
+     * HTML fragment; nothing for players who opted out of tracking.
+     */
+    public function hoverCard(string $id)
+    {
+        $this->request->allowMethod(['get']);
+        $player = $this->Players->find()
+            ->select(['id', 'name', 'country', 'picture'])
+            ->where(['id' => $id, 'track' => 1])
+            ->first();
+        if (!$player) {
+            throw new \Cake\Http\Exception\NotFoundException();
+        }
+        $PlayerRatings = $this->fetchTable('PlayerRatings');
+        $rating = $PlayerRatings->find()->where(['player_id' => $id])->first();
+        $progressRow = $this->fetchTable('PlayerMilestoneProgress')->find()->where(['player_id' => $id])->first();
+        $progress = $progressRow ? (json_decode($progressRow->progress, true) ?: []) : [];
+        $lastSeen = $this->Players->PlayerStatsPerGame->find()
+            ->innerJoinWith('Games')
+            ->select(['started_at' => 'MAX(Games.started_at)'])
+            ->where(['PlayerStatsPerGame.player_id' => $id])
+            ->disableHydration()->first()['started_at'] ?? null;
+        $badges = $this->Players->Achievements->find()
+            ->where(['player_id' => $id, 'week_end' => date('Y-m-d', strtotime('last week sunday')), 'event_type IS NOT' => 'best_on_map'])
+            ->all()->extract('event_type')->toList();
+
+        $this->set([
+            'player' => $player,
+            'rating' => $rating,
+            'ratedPlayers' => $rating ? $PlayerRatings->find()->count() : 0,
+            'progress' => $progress,
+            'lastSeen' => $lastSeen,
+            'badges' => $badges,
+            'weapons' => $this->weaponsOfChoice($id),
+        ]);
+        $this->viewBuilder()->disableAutoLayout();
+        $this->response = $this->response->withHeader('Cache-Control', 'private, max-age=300');
+    }
+
     /** Weapon names for the weapon icons (webroot/img/weapons/<key>.svg) */
     public const WEAPON_NAMES = [
         'rifle' => 'Assault Rifle', 'smg' => 'Submachine Gun', 'sniper' => 'Sniper Rifle', 'shotgun' => 'Shotgun',
