@@ -7,8 +7,10 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-10',
-            'title' => 'A quieter Discord',
+            'title' => 'Fairer games and a quieter Discord',
             'items' => [
+                'Fairer stats: team games where a team had one player or none for half of the game no longer count - 362 earlier games are marked "not counted".',
+                'Keep the flag: one flag per carry, holding the flag longer adds points but no more flags.',
                 'Only one post still makes a sound: when a game starts while all ladder servers were empty - time to join!',
                 'Game results, milestones, Hall of Fame news, weekly achievements and site updates now arrive silently.',
                 'Milestone posts now show the player\'s card.',
