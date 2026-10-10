@@ -51,7 +51,7 @@ endif;
 ?>
 <!-- Player page on their most played map (or the bullet) -->
 <div class="relative min-h-[calc(100svh-4rem)] bg-zinc-900 bg-cover bg-center bg-fixed text-white"
-     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.35) 35%, rgba(0,0,0,.8)), url('<?= $bgMap ?>');">
+     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,1) 35%, rgba(0,0,0,.8)), url('<?= $bgMap ?>');">
 <div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-8">
 
     <!-- Header -->
@@ -190,6 +190,22 @@ endif;
         </div>
     </div>
 
+    <?php if (!empty($funFacts) || !empty($timePlayed['all'])): ?>
+        <?= $this->element('player_fun_facts', compact('player', 'funFacts', 'timePlayed', 'panel')) ?>
+    <?php endif; ?>
+
+    <!-- Tabs: the rest of the page in three parts (#overview, #awards, #games) -->
+    <?php $tabs = ['overview' => ['fa-chart-simple', 'Overview'], 'awards' => ['fa-medal', 'Milestones & awards'], 'games' => ['fa-gamepad', 'Games']]; ?>
+    <nav class="mb-5 flex flex-wrap gap-1 rounded-xl border border-white/15 bg-black/60 p-1" role="tablist">
+        <?php foreach ($tabs as $key => [$tabIcon, $tabLabel]): ?>
+            <a href="#<?= $key ?>" data-tab="<?= $key ?>" role="tab"
+               class="player-tab flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-zinc-400 transition hover:text-white">
+                <i class="fa-solid <?= $tabIcon ?> text-xs"></i><?= $tabLabel ?>
+            </a>
+        <?php endforeach; ?>
+    </nav>
+
+    <div data-tab-panel="overview">
     <!-- Row 1: personal records / nemesis / prey -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <?php
@@ -269,48 +285,8 @@ endif;
         <?php endforeach; ?>
     </div>
 
-    <!-- Row 2: weekly achievements / the last 100 -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <section class="<?= $panel ?> p-5">
-            <?php
-            $achievements = collection($player->achievements ?? [])->sortBy('week_end', SORT_DESC)->toList();
-            // all of them, "best on map" wins included (many players only have those)
-            $weekly = $achievements;
-            $bestOnMap = count(array_filter($achievements, fn($a) => $a->event_type === 'best_on_map'));
-            ?>
-            <div class="mb-3 flex items-baseline justify-between gap-2">
-                <h3 class="text-lg font-bold">🥇 Weekly achievements</h3>
-                <?php if ($bestOnMap): ?>
-                    <span class="flex items-center gap-1 text-xs text-zinc-300">
-                        <img src="/img/achievements/best_on_map.svg" class="h-4 w-4" alt=""> Best on map <?= $bestOnMap ?>&times;
-                    </span>
-                <?php endif; ?>
-            </div>
-            <?php if ($weekly): ?>
-                <div class="nice-scroll max-h-96 space-y-1.5 overflow-y-auto pr-2">
-                    <?php foreach ($weekly as $a): ?>
-                        <div class="flex items-center gap-3 rounded-lg bg-white/5 px-2 py-1.5">
-                            <img src="/img/achievements/<?= h($a->event_type) ?>.svg" class="h-6 w-6 shrink-0" alt="">
-                            <div class="min-w-0 flex-1">
-                                <div class="truncate text-sm font-semibold">
-                                    <?= h($achievementLabels[$a->event_type] ?? $a->event_type) ?>
-                                    <?php if ($a->event_type === 'best_on_map' && !empty($a->map)): ?>
-                                        &middot; <?= $this->Html->link(h($this->Layout->cleanMapName($a->map->name)), ['controller' => 'Maps', 'action' => 'index', '?' => ['map' => $a->map->name]], ['class' => 'hover:text-blue-300', 'escape' => false]) ?>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="text-[11px] text-zinc-400">week ending <?= date('d M Y', strtotime((string)$a->week_end)) ?></div>
-                            </div>
-                            <div class="font-mono text-lg font-bold text-orange-300">
-                                <?= $a->event_type === 'kd_ratio' ? h($a->count) : number_format(round((float)$a->count)) ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php else: ?>
-                <p class="text-sm text-zinc-400">No weekly achievement yet.</p>
-            <?php endif; ?>
-        </section>
-
+    <!-- the last 100 -->
+    <div class="mb-6">
         <section class="<?= $panel ?> p-5">
             <div class="mb-3 flex items-baseline justify-between gap-2">
                 <h3 class="text-3xl font-rubik">the last 100</h3>
@@ -345,11 +321,58 @@ endif;
             <?php endif; ?>
         </section>
     </div>
+    </div>
 
+    <div data-tab-panel="awards" hidden>
+    <?php $this->start('weekly'); ?>
+    <section class="<?= $panel ?> p-5">
+        <?php
+        $achievements = collection($player->achievements ?? [])->sortBy('week_end', SORT_DESC)->toList();
+        // all of them, "best on map" wins included (many players only have those)
+        $weekly = $achievements;
+        $bestOnMap = count(array_filter($achievements, fn($a) => $a->event_type === 'best_on_map'));
+        ?>
+        <div class="mb-3 flex items-baseline justify-between gap-2">
+            <h3 class="text-lg font-bold">🥇 Weekly achievements</h3>
+            <?php if ($bestOnMap): ?>
+                <span class="flex items-center gap-1 text-xs text-zinc-300">
+                    <img src="/img/achievements/best_on_map.svg" class="h-4 w-4" alt=""> Best on map <?= $bestOnMap ?>&times;
+                </span>
+            <?php endif; ?>
+        </div>
+        <?php if ($weekly): ?>
+            <div class="nice-scroll max-h-96 space-y-1.5 overflow-y-auto pr-2">
+                <?php foreach ($weekly as $a): ?>
+                    <div class="flex items-center gap-3 rounded-lg bg-white/5 px-2 py-1.5">
+                        <img src="/img/achievements/<?= h($a->event_type) ?>.svg" class="h-6 w-6 shrink-0" alt="">
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate text-sm font-semibold">
+                                <?= h($achievementLabels[$a->event_type] ?? $a->event_type) ?>
+                                <?php if ($a->event_type === 'best_on_map' && !empty($a->map)): ?>
+                                    &middot; <?= $this->Html->link(h($this->Layout->cleanMapName($a->map->name)), ['controller' => 'Maps', 'action' => 'index', '?' => ['map' => $a->map->name]], ['class' => 'hover:text-blue-300', 'escape' => false]) ?>
+                                <?php endif; ?>
+                            </div>
+                            <div class="text-[11px] text-zinc-400">week ending <?= date('d M Y', strtotime((string)$a->week_end)) ?></div>
+                        </div>
+                        <div class="font-mono text-lg font-bold text-orange-300">
+                            <?= $a->event_type === 'kd_ratio' ? h($a->count) : number_format(round((float)$a->count)) ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <p class="text-sm text-zinc-400">No weekly achievement yet.</p>
+        <?php endif; ?>
+    </section>
+    <?php $this->end(); ?>
     <?php if (!empty($milestoneProgress)): ?>
-        <?= $this->element('player_milestones', compact('player', 'milestones', 'milestoneProgress', 'funFacts', 'timePlayed', 'rating', 'panel')) ?>
+        <?= $this->element('player_milestones', compact('player', 'milestones', 'milestoneProgress', 'panel')) ?>
+    <?php else: ?>
+        <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2"><?= $this->fetch('weekly') ?></div>
     <?php endif; ?>
+    </div>
 
+    <div data-tab-panel="games" hidden>
     <!-- Charts -->
 
     <div class="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -390,6 +413,7 @@ endif;
     <?php else: ?>
         <p class="rounded-xl border border-white/15 bg-black/60 p-5 text-zinc-400">No games yet.</p>
     <?php endif; ?>
+    </div>
 
 </div>
 </div>
@@ -483,7 +507,7 @@ endif;
     prevBtn.addEventListener('click', () => show(index - 1));
     nextBtn.addEventListener('click', () => show(index + 1));
     document.addEventListener('keydown', (e) => {
-        if (e.target.closest('input, textarea, select')) return;
+        if (e.target.closest('input, textarea, select') || box.offsetParent === null) return; // only on the Games tab
         if (e.key === 'ArrowLeft') show(index - 1);
         else if (e.key === 'ArrowRight') show(index + 1);
     });
@@ -498,3 +522,32 @@ endif;
 })();
 </script>
 <?php endif; ?>
+
+<script>
+// Tabs: #overview (default), #awards (#milestones too), #games - the hash keeps the tab on reload and in shared links
+(function () {
+    const tabs = document.querySelectorAll('.player-tab');
+    const panels = document.querySelectorAll('[data-tab-panel]');
+    const aliases = {milestones: 'awards'};
+    function open(name, scroll) {
+        name = aliases[name] || name;
+        if (![...panels].some(p => p.dataset.tabPanel === name)) name = 'overview';
+        panels.forEach(p => p.hidden = p.dataset.tabPanel !== name);
+        tabs.forEach(t => {
+            const on = t.dataset.tab === name;
+            t.classList.toggle('bg-blue-600', on);
+            t.classList.toggle('text-white', on);
+            t.classList.toggle('text-zinc-400', !on);
+            t.setAttribute('aria-selected', on);
+        });
+        if (scroll) document.querySelector('[role=tablist]').scrollIntoView({block: 'nearest'});
+    }
+    tabs.forEach(t => t.addEventListener('click', e => {
+        e.preventDefault();
+        history.replaceState(null, '', '#' + t.dataset.tab);
+        open(t.dataset.tab, false);
+    }));
+    window.addEventListener('hashchange', () => open(location.hash.slice(1), true));
+    open(location.hash.slice(1), !!location.hash);
+})();
+</script>

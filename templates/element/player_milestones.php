@@ -1,14 +1,12 @@
 <?php
 /**
- * Milestone wall + fun facts on the player page (bin/cake CalculateMilestones).
+ * Milestone wall and specials on the player page (bin/cake CalculateMilestones),
+ * next to the weekly achievements (view block 'weekly').
  *
  * @var \App\View\AppView $this
  * @var \App\Model\Entity\Player $player
  * @var array $milestones player_milestones rows (reached_at ascending)
  * @var array $milestoneProgress current totals
- * @var array $funFacts
- * @var array $timePlayed
- * @var \Cake\Datasource\EntityInterface|null $rating
  * @var string $panel
  */
 
@@ -123,53 +121,6 @@ $totalTiers = array_sum(array_map(fn($d) => count($d['tiers']), MilestoneService
         </div>
     </section>
 
-    <!-- Fun facts -->
-    <section class="<?= $panel ?> p-5">
-        <h2 class="mb-4 text-lg font-bold"><i class="fa-solid fa-face-grin-stars mr-2 text-green-300"></i>Fun facts</h2>
-        <ul class="space-y-2.5 text-sm text-zinc-200">
-            <?php
-            $minutes = (int)($timePlayed['all'] ?? 0);
-            if ($minutes >= 60):
-                $d = intdiv($minutes, 1440);
-                $h = intdiv($minutes % 1440, 60);
-                ?>
-                <li class="flex gap-3"><i class="fa-solid fa-hourglass-half mt-1 w-4 text-green-300"></i>
-                    <span><?= $this->Layout->duration($minutes) ?> on our servers &ndash; that&rsquo;s
-                        <b><?= $d > 0 ? $d . ' day' . ($d === 1 ? '' : 's') . ' and ' : '' ?><?= $h ?> hour<?= $h === 1 ? '' : 's' ?></b> non-stop.</span></li>
-            <?php endif; ?>
-            <?php if (!empty($funFacts['players'])): ?>
-                <li class="flex gap-3"><i class="fa-solid fa-users mt-1 w-4 text-green-300"></i>
-                    <span>Played with or against <b><?= number_format($funFacts['players']) ?></b> different players
-                        from <b><?= (int)$funFacts['countries'] ?></b> countries.</span></li>
-            <?php endif; ?>
-            <?php if (!empty($funFacts['teammate'])): ?>
-                <li class="flex gap-3"><i class="fa-solid fa-handshake mt-1 w-4 text-green-300"></i>
-                    <span>Most played teammate:
-                        <?= $this->Html->link(h($funFacts['teammate']['name']), ['controller' => 'Players', 'action' => 'view', $funFacts['teammate']['id']], ['class' => 'font-bold hover:text-blue-300', 'escape' => false]) ?>
-                        &ndash; on the same team <b><?= number_format((int)$funFacts['teammate']['n']) ?></b> times.</span></li>
-            <?php endif; ?>
-            <?php if (!empty($funFacts['server']) || ($rating && $rating->weapon !== 'Mixed')): ?>
-                <li class="flex gap-3"><i class="fa-solid fa-heart mt-1 w-4 text-green-300"></i>
-                    <span>
-                        <?php if (!empty($funFacts['server'])): ?>Favourite server <b><?= h($funFacts['server']['name']) ?></b> (<?= number_format($funFacts['server']['n']) ?> games)<?php endif; ?><?php if ($rating && $rating->weapon !== 'Mixed'): ?><?= !empty($funFacts['server']) ? ', favourite' : 'Favourite' ?> weapon <b><?= h($rating->weapon) ?></b><?php endif; ?>.
-                    </span></li>
-            <?php endif; ?>
-            <?php if (!empty($funFacts['weekday'])): ?>
-                <li class="flex gap-3"><i class="fa-solid fa-calendar-week mt-1 w-4 text-green-300"></i>
-                    <span>Plays most on <b><?= h($funFacts['weekday']['day']) ?>s</b>.</span></li>
-            <?php endif; ?>
-            <?php if (!empty($funFacts['gg'])): ?>
-                <li class="flex gap-3"><i class="fa-solid fa-comment mt-1 w-4 text-green-300"></i>
-                    <span>Said <b>gg</b> <?= number_format($funFacts['gg']) ?> time<?= $funFacts['gg'] === 1 ? '' : 's' ?> in the chat.</span></li>
-            <?php endif; ?>
-            <?php if (($funFacts['names'] ?? 0) > 1): ?>
-                <li class="flex gap-3"><i class="fa-solid fa-masks-theater mt-1 w-4 text-green-300"></i>
-                    <span>Played under <b><?= (int)$funFacts['names'] ?></b> different names.</span></li>
-            <?php endif; ?>
-            <?php if (!empty($funFacts['since'])): ?>
-                <li class="flex gap-3"><i class="fa-solid fa-seedling mt-1 w-4 text-green-300"></i>
-                    <span>On cubeLadder since <b><?= h((new \Cake\I18n\DateTime($funFacts['since']))->format('j M Y')) ?></b>.</span></li>
-            <?php endif; ?>
-        </ul>
-    </section>
+    <!-- weekly achievements (from the player page) -->
+    <?= $this->fetch('weekly') ?>
 </div>

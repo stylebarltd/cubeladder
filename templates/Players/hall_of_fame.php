@@ -83,7 +83,7 @@ shuffle($playerImages);
             ?>
             <!-- Slide: full screen, player photo as background -->
             <div class="hof-slide relative w-full flex-shrink-0 bg-cover bg-center"
-                 style="background-image: linear-gradient(to right, rgba(0,0,0,.75), rgba(0,0,0,.35) 55%, rgba(0,0,0,.6)), url('<?= h($bgImg) ?>');">
+                 style="background-image: linear-gradient(to right, rgba(0,0,0,.9), rgba(0,0,0,.7) 55%, rgba(0,0,0,.8)), url('<?= h($bgImg) ?>');">
                 <div class="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-16 md:py-10 lg:flex-row lg:items-center lg:justify-between">
 
                     <!-- Category -->

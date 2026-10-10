@@ -25,7 +25,7 @@ $shown = array_values(array_filter(
 $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort] : ['points', 'kd', 'kills', $sort]);
 ?>
 <div class="relative min-h-[calc(100svh-4rem)] bg-zinc-900 bg-cover bg-center bg-fixed text-white"
-     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.25) 40%, rgba(0,0,0,.7)), url('/img/bullet.jpg');">
+     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.65), rgba(0,0,0,1) 30%, rgba(0,0,0,.9)), url('/img/bullet.jpg');">
 
     <div class="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6 md:px-16 md:py-8">
 

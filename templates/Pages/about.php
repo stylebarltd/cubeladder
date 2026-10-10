@@ -20,7 +20,7 @@ $rules = [
 ?>
 <!-- About on the bullet artwork -->
 <div class="relative min-h-[calc(100svh-4rem)] bg-zinc-900 bg-cover bg-center bg-fixed text-white"
-     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.4) 40%, rgba(0,0,0,.8)), url('/img/bullet.jpg');">
+     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,1) 35%, rgba(0,0,0,.85)), url('/img/bullet.jpg');">
 <div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-10">
 
     <h1 class="mb-8 text-3xl md:text-5xl font-extrabold tracking-wide drop-shadow-lg">

@@ -13,6 +13,8 @@ return [
                 'Every game and every map can now have two pictures: games show one or the other, new pictures for Casa, Favela, Kasa, Rapier, Syria, Village and VM Village.',
                 'Maps show how often CLA and RVSF win there - on Favela RVSF wins two of three games.',
                 'the last 100 got the CTF rating column and the player types too, and the Hall of Fame shows each player\'s rating, rank and type.',
+                'Player pages are tidier: the header with your weapons of choice and CTF rating, fun facts right under it, and the rest in three tabs - Overview, Milestones & awards, Games.',
+                'Calmer, darker backgrounds on player pages, the front page, the rankings and the Hall of Fame - easier to read.',
                 'Player pages show your weapons of choice with big icons and their share of your kills, and the link preview card shows them too - with the cubeLadder logo.',
             ],
         ],

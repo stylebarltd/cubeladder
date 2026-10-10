@@ -1,6 +1,6 @@
 <!-- Whole front page on the bullet artwork (fixed while scrolling) -->
 <div class="relative bg-zinc-900 bg-cover bg-center bg-fixed text-white"
-     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.35), rgba(0,0,0,.55) 45%, rgba(0,0,0,.8)), url('/img/bullet.jpg');">
+     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,1) 40%, rgba(0,0,0,.85)), url('/img/bullet.jpg');">
 
 <?php if (!empty($recordStreak)): ?>
 <!-- Longest streak record banner (values overlaid on the artwork) -->
