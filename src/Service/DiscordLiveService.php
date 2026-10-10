@@ -51,6 +51,9 @@ class DiscordLiveService
     /** Seconds until the next run (looping command), for the countdown */
     private ?int $nextIn = null;
 
+    /** Discord message flag SUPPRESS_NOTIFICATIONS: posted without a ping or sound */
+    private const SILENT = 4096;
+
     public function __construct(?array $cfg = null, ?Client $http = null)
     {
         $this->cfg = $cfg ?? (Configure::read('Ladder.discord') ?: []);
@@ -93,6 +96,8 @@ class DiscordLiveService
         }
 
         if ($messageId === null) {
+            // a fresh scoreboard message makes no sound - only join notices may (notifyJoins)
+            $payload['flags'] = self::SILENT;
             $res = $this->send('POST', $this->cfg['webhook'] . '?wait=true', $payload);
             if (!$res->isOk()) {
                 throw new RuntimeException('Discord post failed: HTTP ' . $res->getStatusCode() . ' ' . $res->getStringBody());
@@ -163,7 +168,8 @@ class DiscordLiveService
      * A quiet server filling up is worth a ping: when a server goes from
      * below Ladder.discord.notify.threshold players to at/above it, post a
      * NEW message (edits never notify anyone) – optionally mentioning a
-     * role – limited by a per-server cooldown. Previous player counts and
+     * role – limited by a per-server cooldown. It only makes a sound when
+     * no other ladder server had a game; otherwise it is posted silently. Previous player counts and
      * notification times live in the state file.
      */
     private function notifyJoins(array $servers, array &$state): void
@@ -183,6 +189,9 @@ class DiscordLiveService
             }
         }
         $state['join_msgs'] = array_values($state['join_msgs'] ?? []);
+
+        // was any ladder server busy before this poll? Then a new busy server is no news worth a sound
+        $busyBefore = array_filter($state['counts'] ?? [], fn($c) => $c >= $threshold);
 
         foreach ($servers as $key => $s) {
             $n = $s['online'] ? (int)$s['numplayers'] : 0;
@@ -211,7 +220,10 @@ class DiscordLiveService
                 'avatar_url' => $this->avatarUrl(),
                 'content' => $text,
                 'allowed_mentions' => ['parse' => empty($cfg['mention']) ? [] : ['roles', 'everyone', 'users']],
+                // sound only for the first game while all ladder servers were quiet
+                'flags' => $busyBefore ? self::SILENT : 0,
             ]), ['type' => 'json']);
+            $busyBefore[$key] = $n;
             if (!$res->isOk()) {
                 Log::warning('discord_live: join notification failed: HTTP ' . $res->getStatusCode());
             } elseif (($id = (string)($res->getJson()['id'] ?? '')) !== '') {

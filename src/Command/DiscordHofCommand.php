@@ -165,6 +165,7 @@ class DiscordHofCommand extends Command
                     'avatar_url' => $site . '/img/brand/cubeladder-discord-icon-512.png',
                     'embeds' => $chunk,
                     'allowed_mentions' => ['parse' => []],
+                    'flags' => 4096, // SUPPRESS_NOTIFICATIONS: no sound in the achievements channel
                 ]), ['type' => 'json']);
                 $io->out($res->isOk() ? 'Posted ' . count($chunk) . ' Hall of Fame change(s)' : 'Discord: HTTP ' . $res->getStatusCode());
             } catch (Throwable $e) {

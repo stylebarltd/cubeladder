@@ -169,6 +169,7 @@ class CalculateMilestonesCommand extends Command
                 'content' => $count === 1 ? '**New milestone**' : '**New milestones**',
                 'embeds' => $embeds,
                 'allowed_mentions' => ['parse' => []],
+                'flags' => 4096, // SUPPRESS_NOTIFICATIONS: no sound in the achievements channel
             ]));
             $json->type('application/json');
             $form->add($json);

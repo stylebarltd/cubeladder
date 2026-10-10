@@ -371,6 +371,7 @@ class CalculateAchievementsCommand extends Command
                 'avatar_url' => $site . '/img/brand/cubeladder-discord-icon-512.png',
                 'embeds' => $embeds,
                 'allowed_mentions' => ['parse' => []],
+                'flags' => 4096, // SUPPRESS_NOTIFICATIONS: no sound in the achievements channel
             ]), ['type' => 'json']);
             $io->out($res->isOk() ? 'Posted the week to Discord' : 'Discord: HTTP ' . $res->getStatusCode() . ' ' . $res->getStringBody());
         } catch (Throwable $e) {
