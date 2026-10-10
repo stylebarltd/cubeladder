@@ -373,19 +373,14 @@ endif;
     </div>
 
     <div data-tab-panel="games" hidden>
-    <!-- Charts -->
-
-    <div class="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section class="rounded-xl border border-white/15 bg-black/60 p-5 backdrop-blur-[2px]">
-            <h2 class="text-lg font-bold mb-3">Kill / Death Ratio</h2>
-            <canvas id="kdChart"></canvas>
-        </section>
-        <section class="rounded-xl border border-white/15 bg-black/60 p-5 backdrop-blur-[2px]">
-            <h2 class="text-lg font-bold mb-3">Points</h2>
-            <canvas id="scoreChart"></canvas>
-        </section>
-    </div>
-
+    <!-- Form chart: points (bars) and K/D (line) per game, oldest to newest; a click opens the game below -->
+    <section class="<?= $panel ?> mb-6 p-5">
+        <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 class="text-lg font-bold">Points &amp; K/D per game</h2>
+            <span class="text-xs text-zinc-400">click a game to open it below</span>
+        </div>
+        <div class="relative h-72 md:h-80"><canvas id="formChart"></canvas></div>
+    </section>
 
     <!-- Recent games: one game at a time, like the game pages -->
     <?php
@@ -424,48 +419,53 @@ endif;
 
     const gamesData = <?= json_encode($gamesData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
-    // K/D chart
-    new Chart(document.getElementById('kdChart'), {
-        type: 'line',
+    // one chart: points as bars (left axis), K/D as a line (right axis)
+    const formGames = gamesData.slice().reverse(); // oldest first
+    new Chart(document.getElementById('formChart'), {
         data: {
-            labels: gamesData.map(g => g.map_name + ' ' + g.played_at),
+            labels: formGames.map(g => g.played_at),
             datasets: [{
-                label: 'K/D Ratio',
-                data: gamesData.map(g => g.kd_ratio),
-                borderColor: 'rgba(255,255,255,1)',
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                tension: 0.2
+                type: 'line',
+                label: 'K/D',
+                data: formGames.map(g => g.kd_ratio),
+                yAxisID: 'kd',
+                borderColor: '#fb923c',
+                backgroundColor: '#fb923c',
+                pointRadius: 2,
+                tension: 0.25,
+                order: 0
+            }, {
+                type: 'bar',
+                label: 'Points',
+                data: formGames.map(g => g.score),
+                yAxisID: 'points',
+                backgroundColor: 'rgba(125,211,252,0.45)',
+                hoverBackgroundColor: 'rgba(125,211,252,0.8)',
+                order: 1
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
+            interaction: {mode: 'index', intersect: false},
+            plugins: {
+                legend: {labels: {color: '#d4d4d8', boxWidth: 12}},
+                tooltip: {callbacks: {title: items => formGames[items[0].dataIndex].map_name + ' · ' + items[0].label}}
+            },
             scales: {
-                y: { beginAtZero: true }
-            }
+                x: {ticks: {color: '#a1a1aa', maxRotation: 0, autoSkip: true, maxTicksLimit: 8}, grid: {display: false}},
+                points: {position: 'left', beginAtZero: true, ticks: {color: '#7dd3fc'}, grid: {color: 'rgba(255,255,255,.06)'},
+                    title: {display: true, text: 'points', color: '#7dd3fc'}},
+                kd: {position: 'right', beginAtZero: true, ticks: {color: '#fb923c'}, grid: {display: false},
+                    title: {display: true, text: 'K/D', color: '#fb923c'}}
+            },
+            onClick: (e, items, chart) => {
+                const hit = chart.getElementsAtEventForMode(e, 'index', {intersect: false}, false)[0];
+                if (hit && window.showRecentGame) window.showRecentGame(formGames[hit.index].game_id);
+            },
+            onHover: (e, items) => { e.native.target.style.cursor = items.length ? 'pointer' : 'default'; }
         }
     });
-
-    // Score chart
-    new Chart(document.getElementById('scoreChart'), {
-        type: 'bar',
-        data: {
-            labels: gamesData.map(g => g.map_name + ' ' + g.played_at),
-            datasets: [{
-                label: 'Score',
-                data: gamesData.map(g => g.score),
-                backgroundColor: 'rgba(255,255,255,1)',
-                borderColor: 'rgba(255,255,255,0.6)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true }
-            }
-        }
-    });
-
 
 </script>
 
@@ -507,6 +507,14 @@ endif;
         }
         load(index + 1); load(index - 1); // preload neighbours
     }
+
+    // the form chart opens a game here
+    window.showRecentGame = (id) => {
+        const i = games.findIndex(g => g.id === id);
+        if (i < 0) return;
+        show(i);
+        box.scrollIntoView({behavior: 'smooth', block: 'start'});
+    };
 
     prevBtn.addEventListener('click', () => show(index - 1));
     nextBtn.addEventListener('click', () => show(index + 1));
