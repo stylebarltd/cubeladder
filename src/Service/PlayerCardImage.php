@@ -61,9 +61,10 @@ class PlayerCardImage
         $white = [255, 255, 255];
         $grey = [161, 161, 170];
 
-        // brand, top left
-        $this->text('cube', $pad, 74, 30, $this->bold, [59, 130, 246]);
-        $this->text('Ladder', $pad + $this->width('cube', 30, $this->bold), 74, 30, $this->bold, $white);
+        // brand, top left: the cube mark and the name
+        $this->logo(WWW_ROOT . 'img/brand/cubeladder-mark-transparent.png', $pad - 6, 22, 72);
+        $this->text('cube', $pad + 78, 72, 30, $this->bold, [59, 130, 246]);
+        $this->text('Ladder', $pad + 78 + $this->width('cube', 30, $this->bold), 72, 30, $this->bold, $white);
 
         // avatar + name
         $avatar = 180;
@@ -79,6 +80,20 @@ class PlayerCardImage
         $sub = trim(($card['country'] ? strtoupper($card['country']) . '  ·  ' : '') . ($card['subtitle'] ?? ''), ' ·');
         if ($sub !== '') {
             $this->text($sub, $nameX, $top + 130, 24, $this->regular, [212, 212, 216]);
+        }
+
+        // weapons of choice, under the name: icon, name and share of kills
+        $wx = $nameX;
+        foreach (array_slice($card['weapons'] ?? [], 0, 4) as $i => [$key, $label, $pct]) {
+            $icon = $i === 0 ? 56 : 44;
+            if ($wx + $icon > $w - $pad) {
+                break;
+            }
+            $this->icon(ROOT . '/resources/weapons/' . $key . '.png', $wx, $top + 152 + (56 - $icon) / 2, $icon);
+            $tx = $wx + $icon + 10;
+            $this->text(strtoupper($label), $tx, $top + 176, $i === 0 ? 20 : 17, $this->bold, $i === 0 ? $white : [228, 228, 231]);
+            $this->text($pct . '% of kills', $tx, $top + 202, 16, $this->regular, $grey);
+            $wx = $tx + max($this->width(strtoupper($label), $i === 0 ? 20 : 17, $this->bold), $this->width($pct . '% of kills', 16, $this->regular)) + 32;
         }
 
         // rating box
@@ -106,8 +121,12 @@ class PlayerCardImage
 
             $x = $pad + 360;
             $typeColor = self::TYPE_COLORS[$r['type']] ?? [228, 228, 231];
-            $type = ($r['type_label'] ?? $r['type']) . ($r['weapon'] !== 'Mixed' ? '  ·  ' . $r['weapon'] : '');
-            $this->text($type, $x, $boxY + 58, 32, $this->bold, $typeColor);
+            $type = $r['type_label'] ?? $r['type'];
+            $typeSize = 32;
+            while ($typeSize > 20 && $this->width($type, $typeSize, $this->bold) > $w - $pad - 40 - $x) {
+                $typeSize -= 2;
+            }
+            $this->text($type, $x, $boxY + 58, $typeSize, $this->bold, $typeColor);
             $line = sprintf('#%d of %s rated players', (int)$r['rank'], number_format((int)$r['rated']))
                 . ($r['win_rate'] !== null ? sprintf('  ·  %d%% won', round((float)$r['win_rate'] * 100)) : '');
             $this->text($line, $x, $boxY + 98, 22, $this->regular, [212, 212, 216]);
@@ -160,6 +179,29 @@ class PlayerCardImage
             $this->rect(0, 0, self::WIDTH, self::HEIGHT, [24, 24, 27], 0);
         }
         $this->rect(0, 0, self::WIDTH, self::HEIGHT, [0, 0, 0], 50);
+    }
+
+    /** The cube mark (transparent PNG), height $h */
+    private function logo(string $file, int $x, int $y, int $h): void
+    {
+        $src = is_file($file) ? @imagecreatefrompng($file) : false;
+        if (!$src) {
+            return;
+        }
+        $w = (int)round(imagesx($src) * $h / imagesy($src));
+        imagecopyresampled($this->im, $src, $x, $y, 0, 0, $w, $h, imagesx($src), imagesy($src));
+        imagedestroy($src);
+    }
+
+    /** A white weapon icon (transparent PNG, resources/weapons), $size square */
+    private function icon(string $file, int $x, int $y, int $size): void
+    {
+        $src = is_file($file) ? @imagecreatefrompng($file) : false;
+        if (!$src) {
+            return;
+        }
+        imagecopyresampled($this->im, $src, $x, (int)$y, 0, 0, $size, $size, imagesx($src), imagesy($src));
+        imagedestroy($src);
     }
 
     /** Round avatar (the cube logo when the player has none) */

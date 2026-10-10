@@ -33,7 +33,7 @@ if ((int)$player->track === 1):
         $ogText .= ' · ' . $this->Layout->duration((int)$timePlayed['all']) . ' played';
     }
     // a new picture URL whenever the rating changes, so previews don't stay stale
-    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $rating?->trend, $player->name, $player->picture])), 0, 8);
+    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $rating?->trend, $player->name, $player->picture, array_column($weapons['choice'] ?? [], 'pct', 'key')])), 0, 8);
     $this->assign('title', $ogTitle);
     $this->start('meta'); ?>
     <meta property="og:type" content="profile">
@@ -109,6 +109,35 @@ endif;
             </div>
         </div>
 
+        <!-- right side: weapons of choice over the CTF rating -->
+        <div class="flex w-full shrink-0 flex-col gap-3 sm:ml-auto sm:w-auto">
+        <?php if (!empty($weapons['choice'])): ?>
+            <!-- Weapons of choice (all counted games), the same pick as the icons in the rankings -->
+            <div class="<?= $panel ?> w-full p-4">
+                <div class="mb-2 text-[10px] uppercase tracking-wider text-zinc-400">Weapons of choice</div>
+                <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                    <?php foreach ($weapons['choice'] as $i => $weapon): ?>
+                        <div class="flex items-center gap-2" title="<?= number_format($weapon['kills']) ?> kills with the <?= h($weapon['name']) ?>">
+                            <img src="/img/weapons/<?= h($weapon['key']) ?>.svg" alt="" class="<?= $i === 0 ? 'h-12 w-12' : 'h-9 w-9 opacity-90' ?> shrink-0">
+                            <div class="leading-tight">
+                                <div class="<?= $i === 0 ? 'text-base' : 'text-sm' ?> font-bold"><?= h($weapon['name']) ?></div>
+                                <div class="text-xs text-zinc-400"><?= $weapon['pct'] ?>% of kills</div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <!-- every weapon's share of the kills -->
+                <?php $weaponColors = ['rifle' => 'bg-yellow-400', 'smg' => 'bg-lime-400', 'sniper' => 'bg-sky-400', 'shotgun' => 'bg-orange-400',
+                    'carabine' => 'bg-teal-400', 'pistol' => 'bg-zinc-300', 'knife' => 'bg-purple-400', 'grenade' => 'bg-red-400']; ?>
+                <div class="mt-3 flex h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                    <?php foreach ($weapons['all'] as $key => $kills): ?>
+                        <span class="<?= $weaponColors[$key] ?>" style="width: <?= round($kills * 100 / $weapons['kills'], 2) ?>%"
+                              title="<?= h(\App\Controller\PlayersController::WEAPON_NAMES[$key]) ?>: <?= number_format($kills) ?> kills (<?= round($kills * 100 / $weapons['kills']) ?>%)"></span>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <?php if (!empty($rating)):
             $ratingValue = (float)$rating->rating;
             $ratingColor = match (true) {
@@ -130,7 +159,7 @@ endif;
             ?>
             <!-- CTF rating and player type (bin/cake CalculateRatings) -->
             <a href="/about#rating" title="How the rating works"
-               class="<?= $panel ?> flex w-full shrink-0 items-center gap-5 p-4 hover:border-white/30 transition sm:ml-auto sm:w-auto">
+               class="<?= $panel ?> flex w-full items-center gap-5 p-4 hover:border-white/30 transition">
                 <div class="shrink-0 text-center">
                     <div class="font-mono text-5xl font-extrabold tabular-nums leading-none <?= $ratingColor ?>"><?= number_format($ratingValue, 1) ?><?= $this->Layout->trendArrow($rating->trend !== null ? (float)$rating->trend : null, 'ml-1 align-top text-lg') ?></div>
                     <div class="mt-1 text-[10px] uppercase tracking-wider text-zinc-400">CTF rating</div>
@@ -140,9 +169,6 @@ endif;
                         <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-semibold <?= $typeColor ?>">
                             <i class="fa-solid <?= $typeIcon ?> text-xs"></i><?= h(\App\Command\CalculateRatingsCommand::typeLabel($rating->type, (int)$rating->attack_pct, (int)$rating->defense_pct, (int)$rating->combat_pct)) ?>
                         </span>
-                        <?php if ($rating->weapon !== 'Mixed'): ?>
-                            <span class="rounded-full bg-white/10 px-2 py-0.5 text-xs text-zinc-200"><?= h($rating->weapon) ?></span>
-                        <?php endif; ?>
                     </div>
                     <div class="text-xs text-zinc-300">
                         <span class="underline decoration-dotted decoration-zinc-500 underline-offset-2"
@@ -161,6 +187,7 @@ endif;
                 </div>
             </a>
         <?php endif; ?>
+        </div>
     </div>
 
     <!-- Row 1: personal records / nemesis / prey -->

@@ -792,9 +792,10 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $progressRow = $this->fetchTable('PlayerMilestoneProgress')->find()->where(['player_id' => $player->id])->first();
         $milestoneProgress = $progressRow ? (json_decode($progressRow->progress, true) ?: []) : [];
         $funFacts = $milestoneProgress ? $this->funFacts((string)$player->id) : [];
+        $weapons = $this->weaponsOfChoice((string)$player->id);
 
         $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
-            'milestones', 'milestoneProgress', 'funFacts', 'lastSeen'));
+            'milestones', 'milestoneProgress', 'funFacts', 'lastSeen', 'weapons'));
         $this->set(compact(
             'player',
             'totalKills',
@@ -965,6 +966,46 @@ $gamesDataGlobal = [];        // games inside lastGameIds
 
     }
 
+    /** Weapon names for the weapon icons (webroot/img/weapons/<key>.svg) */
+    public const WEAPON_NAMES = [
+        'rifle' => 'Assault Rifle', 'smg' => 'Submachine Gun', 'sniper' => 'Sniper Rifle', 'shotgun' => 'Shotgun',
+        'carabine' => 'Carbine', 'pistol' => 'Pistol', 'knife' => 'Knife', 'grenade' => 'Grenade',
+    ];
+
+    /**
+     * The player's weapons of choice over all counted games, picked like the
+     * icons in the rankings (LayoutHelper::weapon): 'choice' => [[key, name,
+     * kills, pct]], 'all' => [key => kills] (most first), 'kills' => total.
+     */
+    private function weaponsOfChoice(string $playerId): array
+    {
+        $cols = ['shredded', 'sprayed', 'punctured', 'headshot', 'splattered', 'peppered', 'picked_off', 'busted', 'slashed', 'gibbed'];
+        $sums = $this->Players->PlayerStatsPerGame->find()
+            ->select(array_combine($cols, array_map(fn($c) => $this->Players->PlayerStatsPerGame->find()->func()->sum('PlayerStatsPerGame.' . $c), $cols)))
+            ->where(['PlayerStatsPerGame.player_id' => $playerId])
+            ->disableHydration()
+            ->first() ?: [];
+        $sums = array_map('intval', $sums);
+        $all = [
+            'rifle' => $sums['shredded'] ?? 0, 'smg' => $sums['sprayed'] ?? 0,
+            'sniper' => ($sums['punctured'] ?? 0) + ($sums['headshot'] ?? 0),
+            'shotgun' => ($sums['splattered'] ?? 0) + ($sums['peppered'] ?? 0),
+            'carabine' => $sums['picked_off'] ?? 0, 'pistol' => $sums['busted'] ?? 0,
+            'knife' => $sums['slashed'] ?? 0, 'grenade' => $sums['gibbed'] ?? 0,
+        ];
+        $kills = array_sum($all);
+        if ($kills === 0) {
+            return ['choice' => [], 'all' => [], 'kills' => 0];
+        }
+        arsort($all);
+        $choice = [];
+        foreach ((new \App\View\Helper\LayoutHelper(new \Cake\View\View()))->weapon($sums)['weapons'] as $key) {
+            $choice[] = ['key' => $key, 'name' => self::WEAPON_NAMES[$key], 'kills' => $all[$key], 'pct' => (int)round($all[$key] * 100 / $kills)];
+        }
+
+        return ['choice' => $choice, 'all' => array_filter($all), 'kills' => $kills];
+    }
+
     /**
      * Fun facts for the player page (inaccurate games left out), cached
      * until the next import clears 'rankings'.
@@ -1093,6 +1134,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
                 'wins' => number_format((int)($progress['wins'] ?? 0)),
                 'times MVP' => number_format((int)($progress['mvp'] ?? 0)),
             ], fn($v) => $v !== '0') : [],
+            'weapons' => array_map(fn($w) => [$w['key'], $w['name'], $w['pct']], $this->weaponsOfChoice($id)['choice']),
         ];
 
         $dir = CACHE . 'cards' . DS;
