@@ -67,7 +67,7 @@ class HallOfFameService
             ->where([
                 'PlayerStatsPerGame.game_id IN' => $gameIds
             ])
-            ->group(['PlayerStatsPerGame.player_id']);
+            ->groupBy(['PlayerStatsPerGame.player_id']);
 
         $query = $this->fetchTable('PlayerStatsPerGame')->find()
             ->select([
@@ -106,11 +106,11 @@ class HallOfFameService
                 'PlayerStatsPerGame.game_id IN' => $gameIds,
                 'Players.track' => 1,
             ])
-            ->order([
+            ->orderBy([
                 'value' => 'DESC',
                 'Games.started_at' => 'DESC'
             ])
-            ->group(['Players.id'])
+            ->groupBy(['Players.id'])
             ->limit($limit);
 
         return $query->all()->toArray();
