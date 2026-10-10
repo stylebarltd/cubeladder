@@ -619,6 +619,11 @@ return [
             'welcome' => [
                 'webhook' => env('DISCORD_WELCOME_WEBHOOK'),
             ],
+
+            // updates channel: bin/cake discord_update, by hand (a changelog entry, silent)
+            'updates' => [
+                'webhook' => env('DISCORD_UPDATES_WEBHOOK'),
+            ],
         ],
     ],
 ];
