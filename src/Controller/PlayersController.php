@@ -236,7 +236,64 @@ class PlayersController extends AppController
         // The ranking only changes when new games are imported, so the whole
         // (fairly expensive) aggregate is cached per sort and rebuilt on
         // demand. ProcessLogsCommand clears the 'rankings' cache after ingest.
-        $players = Cache::remember('players_index_' . $sort, function () use ($order, $sort) {
+        // region filter: ?continent=europe or ?country=th (the best of a smaller pool:
+        // from REGION_MIN_POINTS this year instead of MIN_POINTS)
+        $continentSlugs = array_combine(array_map(fn($n) => strtolower(str_replace(' ', '-', $n)), \App\Utility\Continents::NAMES), array_keys(\App\Utility\Continents::NAMES));
+        $continent = $continentSlugs[strtolower((string)$this->request->getQuery('continent', ''))] ?? null;
+        $country = preg_match('/^[a-z]{2}$/i', (string)$this->request->getQuery('country', '')) ? strtoupper((string)$this->request->getQuery('country')) : null;
+        $minPoints = $continent || $country ? self::REGION_MIN_POINTS : self::MIN_POINTS;
+
+        $players = $this->rankedPlayers($sort, $order, $minPoints);
+
+        // the filter menu: continents and countries of everyone from REGION_MIN_POINTS, with counts
+        $regionCounts = ['continents' => [], 'countries' => []];
+        foreach ($this->rankedPlayers('points', ['total_score' => 'DESC'], self::REGION_MIN_POINTS) as $p) {
+            if (!$p->country) {
+                continue;
+            }
+            $code = strtoupper($p->country);
+            $regionCounts['countries'][$code] = ($regionCounts['countries'][$code] ?? 0) + 1;
+            if ($c = \App\Utility\Continents::of($code)) {
+                $regionCounts['continents'][$c] = ($regionCounts['continents'][$c] ?? 0) + 1;
+            }
+        }
+        arsort($regionCounts['continents']);
+        arsort($regionCounts['countries']);
+
+        if ($continent || $country) {
+            $players = array_values(array_filter($players, fn($p) => $country
+                ? strtoupper((string)$p->country) === $country
+                : \App\Utility\Continents::of($p->country) === $continent));
+        }
+
+        // CTF rating (bin/cake CalculateRatings) - looked up per request, as
+        // it is recalculated after the import that clears the cache above
+        $this->attachRatings($players, $sort);
+
+        $achievePlayers = $this->Players->Achievements->find()
+            ->contain(['Players'])
+            ->where([
+                'week_end'=>date('Y-m-d', strtotime('last week sunday')),
+                'event_type IS NOT' => 'best_on_map'
+            ]);
+        $achievementPlayers=[];
+        foreach($achievePlayers as $player){
+            $achievementPlayers[$player->player_id][$player->event_type]=$player->count;
+        }
+
+        $this->set(compact('players', 'sort', 'achievementPlayers', 'continent', 'country', 'minPoints', 'regionCounts'));
+    }
+
+    /** Points this year to be in the All Time Ranking, and in a continent / country filter of it */
+    public const MIN_POINTS = 5000;
+    public const REGION_MIN_POINTS = 1000;
+
+    /**
+     * Everyone with $minPoints this year and their summed stats, sorted.
+     */
+    private function rankedPlayers(string $sort, array $order, int $minPoints): array
+    {
+        return Cache::remember('players_index_' . $sort . '_' . $minPoints, function () use ($order, $sort, $minPoints) {
             // players who participated in this year's games + aggregated stats.
             //
             // All sums are computed in SQL. We used to eager-load every
@@ -279,7 +336,7 @@ class PlayersController extends AppController
                 ->where(['Players.track' => 1])
                 ->group(['Players.id'])
                 ->having([
-                    'SUM(PlayerStatsPerGame.total_score) >=' => 5000
+                    'SUM(PlayerStatsPerGame.total_score) >=' => $minPoints
                 ])
                 ->order($order)
                 ->all();
@@ -314,25 +371,6 @@ class PlayersController extends AppController
 
             return $players->toList();
         }, 'rankings');
-
-        // CTF rating (bin/cake CalculateRatings) - looked up per request, as
-        // it is recalculated after the import that clears the cache above
-        $this->attachRatings($players, $sort);
-
-        //$lastGameDateRange = $this->getGameDateRange(800);
-
-        $achievePlayers = $this->Players->Achievements->find()
-            ->contain(['Players'])
-            ->where([
-                'week_end'=>date('Y-m-d', strtotime('last week sunday')),
-                'event_type IS NOT' => 'best_on_map'
-            ]);
-        $achievementPlayers=[];
-        foreach($achievePlayers as $player){
-            $achievementPlayers[$player->player_id][$player->event_type]=$player->count;
-        }
-
-        $this->set(compact('players', 'sort',  'achievementPlayers'));
     }
     /**
      * CTF rating and type (bin/cake CalculateRatings) for the ranking boards -

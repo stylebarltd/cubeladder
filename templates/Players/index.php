@@ -83,7 +83,45 @@ $this->start('meta'); ?>
     <meta name="twitter:card" content="summary_large_image">
 <?php $this->end(); ?>
 
+<?php
+// Region filter: a continent or a country (PlayersController::index)
+use App\Utility\Continents;
+
+$regionUrl = fn(array $q) => $this->Url->build(['?' => array_filter(['sort' => $sort !== 'rating' ? $sort : null] + $q)]);
+$regionLabel = $country ? Continents::countryName($country) . ' ' . $this->Layout->flag($country)
+    : ($continent ? Continents::NAMES[$continent] : null);
+$this->start('rankingFilter'); ?>
+    <label class="flex items-center gap-2 rounded-lg border border-white/15 bg-black/60 px-3 py-2 text-sm backdrop-blur-[2px]">
+        <i class="fa-solid fa-earth-europe text-zinc-400"></i>
+        <select onchange="location.href = this.value" aria-label="Continent or country"
+                class="flex-1 bg-transparent font-semibold text-white focus:outline-none [&>optgroup]:bg-zinc-900 [&_option]:bg-zinc-900">
+            <option value="<?= h($regionUrl([])) ?>">Everywhere</option>
+            <optgroup label="Continents">
+                <?php foreach ($regionCounts['continents'] as $code => $n):
+                    $slug = strtolower(str_replace(' ', '-', Continents::NAMES[$code])); ?>
+                    <option value="<?= h($regionUrl(['continent' => $slug])) ?>" <?= $continent === $code ? 'selected' : '' ?>><?= h(Continents::NAMES[$code]) ?> (<?= $n ?>)</option>
+                <?php endforeach; ?>
+            </optgroup>
+            <optgroup label="Countries">
+                <?php
+                $countryNames = [];
+                foreach ($regionCounts['countries'] as $code => $n) {
+                    $countryNames[$code] = Continents::countryName($code);
+                }
+                asort($countryNames);
+                foreach ($countryNames as $code => $name): ?>
+                    <option value="<?= h($regionUrl(['country' => strtolower($code)])) ?>" <?= $country === $code ? 'selected' : '' ?>><?= $this->Layout->flag($code) ?> <?= h($name) ?> (<?= $regionCounts['countries'][$code] ?>)</option>
+                <?php endforeach; ?>
+            </optgroup>
+        </select>
+    </label>
+<?php $this->end(); ?>
+
 <?= $this->element('ranking_board', compact('players', 'stats', 'sort', 'activeStat', 'achievementPlayers', 'achievementLabels') + [
     'title' => 'All Time Ranking',
-    'meta' => [['fa-filter', 'min 5,000 pts this year']],
+    'meta' => array_values(array_filter([
+        $regionLabel ? ['fa-earth-europe', $regionLabel] : null,
+        ['fa-filter', 'min ' . number_format($minPoints) . ' pts this year'],
+    ])),
+    'keepQuery' => ['continent' => $continent ? strtolower(str_replace(' ', '-', Continents::NAMES[$continent])) : null, 'country' => $country ? strtolower($country) : null],
 ]) ?>

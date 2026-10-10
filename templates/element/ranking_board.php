@@ -13,10 +13,14 @@
  * @var string $title
  * @var string|null $titleClass
  * @var array $meta [[fa-icon, text], ...] shown under the title
+ * @var array|null $keepQuery query parameters the sorting keeps
+ * View block 'rankingFilter': more controls next to "Sort by"
  */
 ?>
 <?php
-$sortUrl = fn(string $key) => $this->Url->build(['?' => ['sort' => $key]]);
+// other query parameters to keep when sorting (e.g. the region filter)
+$keepQuery = array_filter($keepQuery ?? []);
+$sortUrl = fn(string $key) => $this->Url->build(['?' => ['sort' => $key] + $keepQuery]);
 $shown = array_values(array_filter(
     is_array($players) ? $players : iterator_to_array($players),
     fn($p) => !empty($p->total_score) && $p->total_score > 0 && ($p->stats['kills'] ?? 0) >= 1
@@ -41,7 +45,12 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                     <span><i class="fa-solid fa-arrow-down-wide-short mr-1"></i>by <?= h($activeStat['label']) ?></span>
                 </div>
             </div>
+            <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <?= $this->fetch('rankingFilter') ?>
             <form method="get" class="w-full sm:w-auto">
+                <?php foreach ($keepQuery as $name => $value): ?>
+                    <input type="hidden" name="<?= h($name) ?>" value="<?= h($value) ?>">
+                <?php endforeach; ?>
                 <label class="flex items-center gap-2 rounded-lg border border-white/15 bg-black/60 px-3 py-2 text-sm backdrop-blur-[2px]">
                     <span class="text-zinc-400">Sort by</span>
                     <select name="sort" onchange="this.form.submit()"
@@ -52,6 +61,7 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                     </select>
                 </label>
             </form>
+            </div>
         </div>
 
         <!-- Scoreboard -->

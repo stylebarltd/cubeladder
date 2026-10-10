@@ -19,6 +19,7 @@ return [
                 'Maps: your own stats now show your average CTF rating on that map, compared with your overall rating - and hovering any player on a map page shows the same for them, with their CTF rating and type.',
                 'Maps: the top 12 is now ranked by CTF rating on that map (from 10 rated games) instead of total points.',
                 'Rankings: hover a player\'s name for a small player card - CTF rating, type, attack / defense / combat, weapons of choice and totals.',
+                'All Time Ranking: filter by continent or country - who is the best in Europe, in South America, in Brazil? (from 1,000 points this year)',
                 'Calmer, darker backgrounds on player pages, the front page, the rankings and the Hall of Fame - easier to read.',
                 'Player pages show your weapons of choice with big icons and their share of your kills, and the link preview card shows them too - with the cubeLadder logo.',
             ],
