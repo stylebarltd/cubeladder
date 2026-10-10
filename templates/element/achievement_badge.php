@@ -26,7 +26,7 @@ $short = [
     <span class="inline-flex items-center rounded-full bg-blue-500/25 p-1 ring-1 ring-blue-500/60">
         <img src="/img/achievements/<?= h($event) ?>.svg" alt="<?= h($title ?? $short) ?>" class="h-3 w-3">
     </span>
-    <span class="pointer-events-none absolute left-0 top-1/2 z-30 hidden -translate-y-1/2 whitespace-nowrap rounded-full bg-zinc-950 shadow-lg group-hover/badge:inline-flex">
+    <span class="pointer-events-none absolute left-0 top-1/2 z-30 hidden w-max -translate-y-1/2 whitespace-nowrap rounded-full bg-zinc-950 shadow-lg group-hover/badge:inline-flex">
         <span class="inline-flex items-center gap-1 rounded-full bg-blue-500/25 py-1 pl-1 pr-2 text-[10px] font-semibold text-blue-200 ring-1 ring-blue-500/60">
             <img src="/img/achievements/<?= h($event) ?>.svg" alt="" class="h-3 w-3"><?= h($title ?? $short) ?>
         </span>

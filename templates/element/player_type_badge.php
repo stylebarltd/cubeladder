@@ -28,7 +28,7 @@ $label = $label ?? $type;
     <span class="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] <?= $typeColor ?>" aria-label="<?= h($label) ?>">
         <i class="fa-solid <?= $typeIcon ?>"></i>
     </span>
-    <span class="pointer-events-none absolute left-0 top-1/2 z-30 hidden -translate-y-1/2 whitespace-nowrap rounded-full bg-zinc-950 shadow-lg group-hover/badge:inline-flex">
+    <span class="pointer-events-none absolute left-0 top-1/2 z-30 hidden w-max -translate-y-1/2 whitespace-nowrap rounded-full bg-zinc-950 shadow-lg group-hover/badge:inline-flex">
         <span class="inline-flex h-5 items-center gap-1 rounded-full pl-[5px] pr-2 text-[10px] font-semibold <?= $typeColor ?>">
             <i class="fa-solid <?= $typeIcon ?>"></i><?= h($label) ?>
         </span>
