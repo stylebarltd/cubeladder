@@ -7,6 +7,21 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-11',
+            'title' => 'Share a game',
+            'items' => [
+                'Games and game pages: a "Share result" button on every game, with a preview of the result picture - copy the link (Discord shows the scoreboard), WhatsApp, Telegram, X, Facebook, Reddit or download the picture.',
+            ],
+        ],
+        [
+            'date' => '2026-10-11',
+            'title' => 'Browse the players',
+            'items' => [
+                'Player pages: arrows on the left and right to the previous and next player by CTF rating, with their picture - hover for the name, flag and rank. Also the ← and → keys (on the Games tab they still flip through the games).',
+                'The name and flag now sit in one row above the picture.',
+            ],
+        ],
+        [
+            'date' => '2026-10-11',
             'title' => 'Skill trend',
             'items' => [
                 'The skill rating now has a trend arrow, like the CTF rating: ▲ when your last 10 games are clearly better than your last 100, ▼ when they are worse. In the rankings, on the player page, the hover card and the shared card.',

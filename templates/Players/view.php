@@ -60,9 +60,42 @@ endif;
      style="background-image: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,1) 35%, rgba(0,0,0,.8)), url('<?= $bgMap ?>');">
 <div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-8">
 
+    <?php if (!empty($rankingNav)):
+        // previous / next player by CTF rating, on the far sides in the middle of the screen: the arrow and
+        // their picture, the name, flag and rank slide out on hover (also the arrow keys, except on the Games tab)
+        $navArrow = function (?\App\Model\Entity\Player $p, int $rank, string $dir) {
+            if ($p === null) {
+                return '';
+            }
+            $left = $dir === 'prev';
+            $chevron = '<i class="fas fa-chevron-' . ($left ? 'left' : 'right') . ' w-3 shrink-0 text-center text-sm"></i>';
+            $avatar = '<img src="' . $this->Layout->playerPicture($p) . '" alt="" class="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-white/25 md:h-12 md:w-12">';
+            $preview = '<span class="hidden max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover:max-w-56 group-hover:opacity-100 group-focus-visible:max-w-56 group-focus-visible:opacity-100 md:block ' . ($left ? 'text-left' : 'text-right') . '">'
+                . '<span class="block truncate text-sm font-bold text-white">' . h($p->name) . ' ' . $this->Layout->flag($p->country) . '</span>'
+                . '<span class="block text-[11px] uppercase tracking-wider text-zinc-400">#' . $rank
+                . ($p->rating !== null ? ' &middot; CTF ' . number_format($p->rating, 1) : '') . '</span></span>';
+
+            return $this->Html->link($left ? $chevron . $avatar . $preview : $preview . $avatar . $chevron,
+                ['action' => 'view', $p->id],
+                ['escape' => false, 'id' => 'player-' . $dir,
+                 'title' => ($left ? 'Previous' : 'Next') . ' player by CTF rating: ' . $p->name . ' (' . ($left ? '←' : '→') . ')',
+                 'aria-label' => ($left ? 'Previous' : 'Next') . ' player: ' . $p->name,
+                 'class' => 'group fixed top-1/2 z-30 flex -translate-y-1/2 items-center gap-2 rounded-full bg-black/70 p-1.5 text-zinc-300 shadow-lg backdrop-blur-sm transition hover:bg-black/90 hover:text-white '
+                     . ($left ? 'left-1 pl-2 md:left-3' : 'right-1 pr-2 md:right-3')]);
+        };
+        ?>
+        <?= $navArrow($rankingNav['prev'], $rankingNav['rank'] - 1, 'prev') ?>
+        <?= $navArrow($rankingNav['next'], $rankingNav['rank'] + 1, 'next') ?>
+    <?php endif; ?>
+
     <!-- Header -->
     <div class="<?= $panel ?> relative z-20 mb-6 flex flex-col gap-6 p-5 md:p-6 lg:flex-row lg:items-center">
-        <div class="flex min-w-0 flex-wrap items-center gap-5 sm:flex-nowrap lg:flex-1">
+        <div class="min-w-0 lg:flex-1">
+        <!-- name and flag in one row, above the avatar -->
+        <h1 class="mb-4 flex min-w-0 items-center gap-3 text-3xl md:text-5xl font-extrabold tracking-wide">
+            <span class="truncate"><?= h($player->name) ?></span><span class="shrink-0"><?= $this->Layout->flag($player->country) ?></span>
+        </h1>
+        <div class="flex min-w-0 flex-wrap items-center gap-5 sm:flex-nowrap">
         <a href="<?= $this->Layout->playerPicture($player) ?>" class="shrink-0">
             <img src="<?= $this->Layout->playerPicture($player) ?>" alt="<?= h($player->name) ?>"
                  class="h-24 w-24 md:h-36 md:w-36 rounded-full object-cover ring-2 ring-white/25">
@@ -73,12 +106,11 @@ endif;
             $lastWeek = date('Y-m-d', strtotime('last week sunday'));
             $weekBadges = array_filter($player->achievements ?? [], fn($a) => $a->event_type !== 'best_on_map'
                 && (is_string($a->week_end) ? $a->week_end : $a->week_end->format('Y-m-d')) === $lastWeek);
+            $inactive = !\App\Utility\Activity::isActive($lastSeen['started_at'] ?? null);
             ?>
-            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide">
-                    <?= h($player->name) ?> <?= $this->Layout->flag($player->country) ?>
-                </h1>
-                <?php if (!\App\Utility\Activity::isActive($lastSeen['started_at'] ?? null)): ?>
+            <?php if ($inactive || !empty($rating->archetype) || $weekBadges): ?>
+            <div class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <?php if ($inactive): ?>
                     <!-- no game in the last Activity::ACTIVE_DAYS: out of the rankings until the next one -->
                     <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-sm font-semibold tracking-normal text-zinc-300"
                           title="No game in the last <?= \App\Utility\Activity::ACTIVE_DAYS ?> days: not in the rankings and the CTF rating until the next game">
@@ -92,7 +124,8 @@ endif;
                     <?= $this->element('achievement_badge', ['event' => $a->event_type, 'title' => ($achievementLabels[$a->event_type] ?? $a->event_type) . ' last week', 'large' => true]) ?>
                 <?php endforeach; ?>
             </div>
-            <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-zinc-200">
+            <?php endif; ?>
+            <div class="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-zinc-200">
                 <?php if ($player->rankAllTime > 0): ?>
                     <span title="All Time Ranking by points"><i class="fa-solid fa-ranking-star mr-1"></i>#<?= (int)$player->rankAllTime ?> all time</span>
                 <?php endif; ?>
@@ -142,6 +175,7 @@ endif;
                     ]) ?>
                 <?php endif; ?>
             </div>
+        </div>
         </div>
         </div>
 
@@ -691,4 +725,14 @@ endif;
     window.addEventListener('hashchange', () => open(location.hash.slice(1), true));
     open(location.hash.slice(1), !!location.hash);
 })();
+</script>
+<script>
+// arrow keys: previous / next player in the ranking (the Games tab uses them for its games), keeping the tab
+document.addEventListener('keydown', (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.target.closest('input, textarea, select')) return;
+    const games = document.querySelector('[data-tab-panel="games"]');
+    if (games && !games.hidden) return;
+    const a = document.getElementById(e.key === 'ArrowLeft' ? 'player-prev' : e.key === 'ArrowRight' ? 'player-next' : '');
+    if (a) location.href = a.href + location.hash;
+});
 </script>

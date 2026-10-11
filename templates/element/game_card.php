@@ -10,11 +10,13 @@
  * @var bool $compact Box height instead of full screen (player page)
  * @var string|null $highlight Player id whose row is highlighted
  * @var string|null $extra HTML shown under the title (player's own stats)
+ * @var bool $share Share button with the result picture (index)
  */
 $link = $link ?? false;
 $compact = $compact ?? false;
 $highlight = $highlight ?? null;
 $extra = $extra ?? null;
+$share = $share ?? false;
 
 $mapUrl = $this->Layout->mapImage($game->map->name, (string)$game->id); // picture 1 or 2 per game, bullet artwork when there is none
 
@@ -114,6 +116,19 @@ $head = function () use ($flagMode, $rated) {
                 <span><i class="fa-solid fa-server mr-1"></i><?= $this->Layout->serverName($game->server_name) ?></span>
                 <span><?= $this->Layout->gameModeIcon($game->mode) ?></span>
             </div>
+            <?php if ($share):
+                $preview = \App\Service\GameResultPicture::share($game, $board);
+                $site = rtrim((string)(\Cake\Core\Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh'), '/'); ?>
+                <div class="mt-3 flex">
+                    <?= $this->element('player_card_share', [
+                        'what' => 'result',
+                        'url' => $site . '/games/view/' . $game->id,
+                        'card' => $preview['picture'],
+                        'text' => $preview['title'] . ' - ' . $preview['text'],
+                        'file' => preg_replace('/[^A-Za-z0-9_-]+/', '_', $mapName . '-' . $game->started_at->format('Y-m-d-Hi')) . '-cubeladder.jpg',
+                    ]) ?>
+                </div>
+            <?php endif; ?>
         </div>
 
         <?= $this->fetch('gameNotice') ?>

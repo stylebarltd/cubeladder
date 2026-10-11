@@ -83,4 +83,28 @@ class GameResultPicture
 
         return compact('title', 'map', 'mode', 'server', 'minutes', 'picture');
     }
+
+    /**
+     * Link preview of a game page (og tags, share button): title, text and
+     * the preview picture path (GamesController::preview, versioned by its content).
+     *
+     * @param array $board GamesTable::scoreboard()
+     * @return array{title: string, text: string, picture: string}
+     */
+    public static function share(Game $game, array $board): array
+    {
+        $result = self::describe($game, $board);
+
+        return [
+            'title' => $result['map'] . ($result['mode'] !== '' ? ' · ' . $result['mode'] : '') . ' — ' . $result['title'],
+            'text' => implode(' · ', array_filter([
+                $result['server'],
+                $game->started_at ? $game->started_at->format('j M Y, H:i') : '',
+                $result['minutes'] > 0 ? $result['minutes'] . ' min' : '',
+                !empty($board['rows']) ? 'best player ' . $board['rows'][0]['player']->name . ' (' . number_format($board['rows'][0]['score']) . ' points)' : '',
+                $game->inaccurate ? 'not counted (inaccurate data)' : '',
+            ])),
+            'picture' => '/games/preview/' . $game->id . '?v=' . substr(md5((string)json_encode($result['picture'])), 0, 8),
+        ];
+    }
 }

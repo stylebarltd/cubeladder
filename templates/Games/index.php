@@ -24,7 +24,7 @@ $slideCount = count($games);
             <?php foreach ($games as $game): ?>
                 <!-- Slide -->
                 <div class="game-slide w-full flex-shrink-0">
-                    <?= $this->element('game_card', ['game' => $game, 'board' => $boards[$game->id], 'link' => true]) ?>
+                    <?= $this->element('game_card', ['game' => $game, 'board' => $boards[$game->id], 'link' => true, 'share' => true]) ?>
                 </div>
             <?php endforeach; ?>
 

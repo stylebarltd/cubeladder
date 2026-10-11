@@ -10,7 +10,9 @@
  * @var string $card card picture path (/players/card/<id>?v=...)
  * @var string $text share text
  * @var string $file download file name
+ * @var string $what what is shared: 'card' (default), 'result' (game pages)
  */
+$what = $what ?? 'card';
 $u = rawurlencode($url);
 $t = rawurlencode($text);
 $links = [
@@ -24,18 +26,18 @@ $item = 'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm t
 ?>
 <details class="player-share relative" data-url="<?= h($url) ?>" data-card="<?= h($card) ?>" data-text="<?= h($text) ?>" data-file="<?= h($file) ?>">
     <summary class="list-none cursor-pointer select-none rounded-lg border border-emerald-400/50 bg-black/40 px-4 py-2 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20 transition [&::-webkit-details-marker]:hidden">
-        <i class="fa-solid fa-share-nodes mr-1"></i> Share card
+        <i class="fa-solid fa-share-nodes mr-1"></i> Share <?= h($what) ?>
     </summary>
     <div class="absolute left-0 z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-white/15 bg-zinc-950 p-2 shadow-2xl">
         <a href="<?= h($card) ?>" target="_blank" rel="noopener" class="mb-2 block overflow-hidden rounded-lg ring-1 ring-white/10">
-            <img src="<?= h($card) ?>" alt="Player card" loading="lazy" class="block w-full" width="1200" height="630">
+            <img src="<?= h($card) ?>" alt="<?= h(ucfirst($what)) ?> preview" loading="lazy" class="block w-full" width="1200" height="630">
         </a>
         <button type="button" data-share="native" class="<?= $item ?> hidden"><i class="fa-solid fa-share-from-square w-5 text-center"></i>Share&hellip;</button>
-        <button type="button" data-share="copy" class="<?= $item ?>"><i class="fa-solid fa-link w-5 text-center"></i><span>Copy link <span class="text-zinc-400">(Discord shows the card)</span></span></button>
+        <button type="button" data-share="copy" class="<?= $item ?>"><i class="fa-solid fa-link w-5 text-center"></i><span>Copy link <span class="text-zinc-400">(Discord shows the <?= h($what) ?>)</span></span></button>
         <?php foreach ($links as [$icon, $label, $href]): ?>
             <a href="<?= h($href) ?>" target="_blank" rel="noopener" class="<?= $item ?>"><i class="<?= $icon ?> w-5 text-center"></i><?= $label ?></a>
         <?php endforeach; ?>
-        <a href="<?= h($card) ?>" download="<?= h($file) ?>" class="<?= $item ?>"><i class="fa-solid fa-download w-5 text-center"></i>Download card</a>
+        <a href="<?= h($card) ?>" download="<?= h($file) ?>" class="<?= $item ?>"><i class="fa-solid fa-download w-5 text-center"></i>Download <?= h($what) ?></a>
     </div>
 </details>
 <script>

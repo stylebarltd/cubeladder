@@ -397,6 +397,27 @@ class PlayersController extends AppController
      * clears the cached rankings. Sorting by rating (or skill) puts unrated
      * players (fewer than 20 CTF games) last, by points.
      */
+    /**
+     * The players before and after this one in the All Time Ranking (by CTF
+     * rating, active players only), for the arrows on the player page.
+     * Empty when the player is not in the ranking.
+     *
+     * @return array{rank?: int, prev?: ?\App\Model\Entity\Player, next?: ?\App\Model\Entity\Player}
+     */
+    private function rankingNeighbours(string $playerId): array
+    {
+        $players = array_values(array_filter($this->rankedPlayers('rating', ['total_score' => 'DESC'], self::MIN_POINTS),
+            fn($p) => \App\Utility\Activity::isActive($p->last_seen)));
+        $this->attachRatings($players, 'rating');
+        foreach ($players as $i => $p) {
+            if ((string)$p->id === $playerId) {
+                return ['rank' => $i + 1, 'prev' => $players[$i - 1] ?? null, 'next' => $players[$i + 1] ?? null];
+            }
+        }
+
+        return [];
+    }
+
     private function attachRatings(array &$players, string $sort): void
     {
         $ratings = $this->fetchTable('PlayerRatings')->find()
@@ -886,6 +907,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         // duels won against much stronger players (UpsetService)
         $upsets = (new \App\Service\UpsetService())->forPlayer($player->id);
         $this->set('upsets', $upsets);
+        $this->set('rankingNav', $this->rankingNeighbours((string)$player->id));
 
         $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
             'milestones', 'milestoneProgress', 'funFacts', 'lastSeen', 'weapons'));
