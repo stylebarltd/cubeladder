@@ -58,7 +58,7 @@ endif;
 <div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-8">
 
     <!-- Header -->
-    <div class="<?= $panel ?> mb-6 flex flex-col gap-6 p-5 md:p-6 lg:flex-row lg:items-center">
+    <div class="<?= $panel ?> relative z-20 mb-6 flex flex-col gap-6 p-5 md:p-6 lg:flex-row lg:items-center">
         <div class="flex min-w-0 flex-wrap items-center gap-5 sm:flex-nowrap lg:flex-1">
         <a href="<?= $this->Layout->playerPicture($player) ?>" class="shrink-0">
             <img src="<?= $this->Layout->playerPicture($player) ?>" alt="<?= h($player->name) ?>"
@@ -129,6 +129,14 @@ endif;
                     <?= $this->Html->link('<i class="fa-solid fa-envelope mr-1"></i> Send Message',
                         ['controller' => 'Messages', 'action' => 'send', $player->id],
                         ['escape' => false, 'class' => 'rounded-lg border border-blue-400/50 bg-black/40 px-4 py-2 text-sm font-semibold text-blue-300 hover:bg-blue-500/20 transition']) ?>
+                <?php endif; ?>
+                <?php if ((int)$player->track === 1): ?>
+                    <?= $this->element('player_card_share', [
+                        'url' => $site . '/players/view/' . $player->id,
+                        'card' => substr($ogImage, strlen($site)),
+                        'text' => $ogTitle . ' - ' . $ogText,
+                        'file' => preg_replace('/[^A-Za-z0-9_-]+/', '_', (string)$player->name) . '-cubeladder.jpg',
+                    ]) ?>
                 <?php endif; ?>
             </div>
         </div>

@@ -400,7 +400,7 @@ class PlayersController extends AppController
     private function attachRatings(array &$players, string $sort): void
     {
         $ratings = $this->fetchTable('PlayerRatings')->find()
-            ->select(['player_id', 'rating', 'trend', 'type', 'attack_pct', 'defense_pct', 'combat_pct'])
+            ->select(['player_id', 'rating', 'trend', 'type', 'attack_pct', 'defense_pct', 'combat_pct', 'archetype', 'archetype_pct', 'archetype_rank'])
             ->disableHydration()->all()->indexBy('player_id')->toArray();
         foreach ($players as $player) {
             $r = $ratings[$player->id] ?? null;
@@ -410,6 +410,9 @@ class PlayersController extends AppController
             $player->player_type_label = $r
                 ? \App\Command\CalculateRatingsCommand::typeLabel($r['type'], (int)$r['attack_pct'], (int)$r['defense_pct'], (int)$r['combat_pct'])
                 : null;
+            $player->archetype = $r['archetype'] ?? null;
+            $player->archetype_pct = isset($r['archetype_pct']) ? (int)$r['archetype_pct'] : null;
+            $player->archetype_rank = isset($r['archetype_rank']) ? (int)$r['archetype_rank'] : null;
         }
         if ($sort === 'rating') {
             usort($players, fn($a, $b) => [$b->rating ?? -1, (int)$b->total_score] <=> [$a->rating ?? -1, (int)$a->total_score]);
@@ -1083,9 +1086,23 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             'lastSeen' => $lastSeen,
             'badges' => $badges,
             'weapons' => $this->weaponsOfChoice($id),
+            'map' => $this->mostPlayedMap($id),
         ]);
         $this->viewBuilder()->disableAutoLayout();
         $this->response = $this->response->withHeader('Cache-Control', 'private, max-age=300');
+    }
+
+    /** The player's most played map: ['name', 'n' (counted games)] or null */
+    private function mostPlayedMap(string $playerId): ?array
+    {
+        return $this->Players->PlayerStatsPerGame->find()
+            ->select(['name' => 'Maps.name', 'n' => \App\Model\Table\PlayerStatsPerGameTable::countedGamesSql()])
+            ->innerJoinWith('Games.Maps')
+            ->where(['PlayerStatsPerGame.player_id' => $playerId])
+            ->groupBy(['Maps.id', 'Maps.name'])
+            ->orderByDesc('n')
+            ->disableHydration()
+            ->first();
     }
 
     /** Weapon names for the weapon icons (webroot/img/weapons/<key>.svg) */
@@ -1219,14 +1236,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $rating = $PlayerRatings->find()->where(['player_id' => $id])->first();
         $progressRow = $this->fetchTable('PlayerMilestoneProgress')->find()->where(['player_id' => $id])->first();
         $progress = $progressRow ? (json_decode($progressRow->progress, true) ?: []) : [];
-        $map = $this->Players->PlayerStatsPerGame->find()
-            ->select(['name' => 'Maps.name', 'n' => \App\Model\Table\PlayerStatsPerGameTable::countedGamesSql()])
-            ->innerJoinWith('Games.Maps')
-            ->where(['PlayerStatsPerGame.player_id' => $id])
-            ->groupBy(['Maps.id', 'Maps.name'])
-            ->orderByDesc('n')
-            ->disableHydration()
-            ->first();
+        $map = $this->mostPlayedMap($id);
 
         $card = [
             'name' => (string)$player->name,

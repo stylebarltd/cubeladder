@@ -139,6 +139,11 @@ shuffle($playerImages);
                                                 <?= $this->Html->link($player->name, ['controller' => 'Players', 'action' => 'view', $player->player_id], ['class' => 'hover:text-blue-400']) ?>
                                                 <?= $this->Layout->flag($player->country) ?>
                                             </span>
+                                            <?php if ($ch = $playerRatings[(string)$player->player_id] ?? null): ?>
+                                                <?php if (!empty($ch['archetype'])): ?>
+                                                    <?= $this->element('archetype_badge', ['archetype' => $ch['archetype'], 'pct' => $ch['archetype_pct'] !== null ? (int)$ch['archetype_pct'] : null, 'rank' => $ch['archetype_rank'] !== null ? (int)$ch['archetype_rank'] : null, 'compact' => true]) ?>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
                                             <?php if (isset($inactivePlayers[(string)$player->player_id])): ?>
                                                 <!-- no game in the last Activity::ACTIVE_DAYS: the record stays -->
                                                 <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400"

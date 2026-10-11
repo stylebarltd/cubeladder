@@ -7,6 +7,15 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-11',
+            'title' => 'Share your card',
+            'items' => [
+                'Player pages: a "Share card" button - copy the link for Discord, or share to WhatsApp, Telegram, X, Facebook and Reddit, or download the card. On phones it opens the share menu with the card picture.',
+                'Rankings and Hall of Fame: your character shows as a small emblem next to your name - hover it for the full title.',
+                'All Time Ranking: hovering a name now shows a mini player card in the style of the shared card - tier frame, character, rating and stats.',
+            ],
+        ],
+        [
+            'date' => '2026-10-11',
             'title' => 'More weapon icons',
             'items' => [
                 'Weapons: a second gun now shows from 40% of your main gun\'s kills (was 65%), knife and grenade from 12% (was 20%) - more players get more than one weapon. Shotgun "peppered" kills now count too.',

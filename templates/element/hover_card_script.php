@@ -12,7 +12,10 @@
 (function () {
     if (!window.matchMedia('(hover: hover)').matches) return;
     const card = document.createElement('div');
-    card.className = 'fixed z-50 hidden rounded-xl border border-white/15 bg-zinc-950/95 p-4 text-white shadow-2xl backdrop-blur';
+    // plain box; a fragment with [data-framed] brings its own frame (the player card style)
+    const plain = 'fixed z-50 hidden rounded-xl border border-white/15 bg-zinc-950/95 p-4 text-white shadow-2xl backdrop-blur';
+    const framed = 'fixed z-50 hidden rounded-2xl shadow-2xl';
+    card.className = plain;
     card.style.width = 'min(32rem, calc(100vw - 2rem))';
     document.body.appendChild(card);
     const cache = {};
@@ -33,6 +36,7 @@
         const html = await cache[url];
         if (current !== link || !html) return;
         card.innerHTML = html;
+        card.className = card.querySelector('[data-framed]') ? framed : plain;
         card.classList.remove('hidden');
         place(link);
     }

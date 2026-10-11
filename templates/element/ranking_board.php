@@ -98,6 +98,9 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                                         <?= $this->Html->link(h($player->name), ['controller' => 'Players', 'action' => 'view', $player->id],
                                             ['escape' => false, 'class' => 'truncate font-semibold hover:text-blue-300', 'data-hover-card' => '/players/hover-card/' . $player->id]) ?>
                                         <span class="shrink-0"><?= $this->Layout->flag($player->country) ?></span>
+                                        <?php if (!empty($player->archetype)): ?>
+                                            <?= $this->element('archetype_badge', ['archetype' => $player->archetype, 'pct' => $player->archetype_pct, 'rank' => $player->archetype_rank, 'compact' => true]) ?>
+                                        <?php endif; ?>
                                         <?php foreach ($achievementPlayers[$player->id] ?? [] as $ach => $count): ?>
                                             <?= $this->element('achievement_badge', ['event' => $ach, 'title' => $achievementLabels[$ach] ?? null]) ?>
                                         <?php endforeach; ?>
