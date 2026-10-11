@@ -48,6 +48,8 @@ $slideCount = count($games);
     <?php endif; ?>
 </div>
 
+<!-- the player card on hovering a name, as in the rankings -->
+<?= $this->element('hover_card_script') ?>
 <?php $this->start('scriptBottom'); ?>
 <script>
 (function () {

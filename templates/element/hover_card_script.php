@@ -45,9 +45,17 @@
         current = null;
         card.classList.add('hidden');
     }
-    document.querySelectorAll('[data-hover-card]').forEach(link => {
-        link.addEventListener('mouseenter', () => { clearTimeout(timer); timer = setTimeout(() => open(link), 200); });
-        link.addEventListener('mouseleave', close);
+    // delegated, so links added later (game cards loaded into a page) work too
+    document.addEventListener('mouseover', e => {
+        const link = e.target.closest && e.target.closest('[data-hover-card]');
+        if (!link || link === current || link.contains(e.relatedTarget)) return;
+        clearTimeout(timer);
+        current = link;
+        timer = setTimeout(() => open(link), 200);
+    });
+    document.addEventListener('mouseout', e => {
+        const link = e.target.closest && e.target.closest('[data-hover-card]');
+        if (link && !link.contains(e.relatedTarget)) close();
     });
     window.addEventListener('scroll', close, {passive: true});
 })();

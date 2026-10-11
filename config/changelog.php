@@ -11,7 +11,7 @@ return [
             'items' => [
                 'Player pages: a "Share card" button - copy the link for Discord, or share to WhatsApp, Telegram, X, Facebook and Reddit, or download the card. On phones it opens the share menu with the card picture.',
                 'Rankings and Hall of Fame: your character shows as a small emblem next to your name - hover it for the full title.',
-                'All Time Ranking, Hall of Fame and map pages: hovering a name now shows a mini player card in the style of the shared card - tier frame, character, rating and stats.',
+                'All Time Ranking, Hall of Fame, map and game pages: hovering a name now shows a mini player card in the style of the shared card - tier frame, character, rating and stats.',
             ],
         ],
         [

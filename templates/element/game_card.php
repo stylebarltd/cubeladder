@@ -52,7 +52,7 @@ $playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight, $rat
                     <?= $this->Html->link(
                         h($row['player']->name),
                         ['controller' => 'Players', 'action' => 'view', $row['player']->id],
-                        ['class' => 'sm:truncate hover:text-blue-300', 'escape' => false]
+                        ['class' => 'sm:truncate hover:text-blue-300', 'escape' => false, 'data-hover-card' => '/players/hover-card/' . $row['player']->id]
                     ) ?>
                     <span class="shrink-0"><?= $this->Layout->flag($row['player']->country) ?></span>
                 <?php endif; ?>
@@ -184,7 +184,7 @@ $head = function () use ($flagMode, $rated) {
                     <p class="mt-2 text-[11px] text-zinc-400">
                         Left early (no team):
                         <?php foreach ($board['unassigned'] as $i => $row): ?>
-                            <?= $i ? ', ' : '' ?><?= !empty($row['anonymous']) ? '<span class="italic">Anonymous</span>' : $this->Html->link(h($row['player']->name), ['controller' => 'Players', 'action' => 'view', $row['player']->id], ['class' => 'hover:text-blue-300', 'escape' => false]) ?>
+                            <?= $i ? ', ' : '' ?><?= !empty($row['anonymous']) ? '<span class="italic">Anonymous</span>' : $this->Html->link(h($row['player']->name), ['controller' => 'Players', 'action' => 'view', $row['player']->id], ['class' => 'hover:text-blue-300', 'escape' => false, 'data-hover-card' => '/players/hover-card/' . $row['player']->id]) ?>
                             (<?= $row['score'] ?> pts)
                         <?php endforeach; ?>
                     </p>
