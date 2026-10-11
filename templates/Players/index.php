@@ -59,6 +59,29 @@ $stats = [
     ],
 ];
 
+// Default: rates instead of the year's totals (PlayersController::rateRanking) -
+// the rate big, the total small under it; ?view=totals switches back
+if (!$totals) {
+    $withTotal = fn(string $rate, $total) => $rate . '<span class="block text-[10px] font-normal text-zinc-500">' . h($total) . '</span>';
+    $rated = [
+        'points' => ['Pts/game', 0, 'Points per game (total under it)', fn($p) => number_format((float)$p->total_score)],
+        'kills' => ['Kills/10m', 1, 'Kills per 10 minutes played (total under it)', fn($p) => number_format($p->stats['kills'])],
+        'headshot' => ['HS %', 1, 'Headshot kills, % of all kills (total under it)', fn($p) => number_format($p->stats['headshot'])],
+        'gibbed' => ['Gib %', 1, 'Grenade kills, % of all kills (total under it)', fn($p) => number_format($p->stats['gibbed'])],
+        'slashed' => ['Slash %', 1, 'Knife kills, % of all kills (total under it)', fn($p) => number_format($p->stats['slashed'])],
+        'scored_with_the_flag' => ['Flags/h', 1, 'Flags scored per hour played (total under it)', fn($p) => number_format($p->stats['scored_with_the_flag'])],
+        'teamkills' => ['TK/100', 1, 'Teamkills per 100 kills - fewest first (total under it)', fn($p) => number_format($p->stats['teamkills'])],
+    ];
+    foreach ($rated as $key => [$label, $decimals, $title, $total]) {
+        $stats[$key] = [
+            'label' => $label,
+            'title' => $title,
+            'html' => true,
+            'value' => fn($p) => $withTotal(number_format($p->rates[$key] ?? 0, $decimals), $total($p)),
+        ];
+    }
+}
+
 $activeStat = $stats[$sort] ?? $stats['points'];
 
 /**
@@ -96,10 +119,18 @@ $this->start('meta'); ?>
 // Region filter: a continent or a country (PlayersController::index)
 use App\Utility\Continents;
 
-$regionUrl = fn(array $q) => $this->Url->build(['?' => array_filter(['sort' => $sort !== 'rating' ? $sort : null] + $q)]);
+$regionUrl = fn(array $q) => $this->Url->build(['?' => array_filter(['sort' => $sort !== 'rating' ? $sort : null, 'view' => $totals ? 'totals' : null] + $q)]);
+// the switch between rates and totals, keeping the sort and the region
+$viewUrl = fn(bool $t) => $this->Url->build(['?' => array_filter(['sort' => $sort !== 'rating' ? $sort : null, 'view' => $t ? 'totals' : null,
+    'continent' => $this->request->getQuery('continent'), 'country' => $this->request->getQuery('country')])]);
+$viewBtn = fn(bool $on) => 'rounded-md px-3 py-1 font-semibold transition ' . ($on ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white');
 $regionLabel = $country ? Continents::countryName($country) . ' ' . $this->Layout->flag($country)
     : ($continent ? Continents::NAMES[$continent] : null);
 $this->start('rankingFilter'); ?>
+    <div class="flex items-center gap-1 rounded-lg border border-white/15 bg-black/60 p-1 text-sm backdrop-blur-[2px]" role="group" aria-label="Rates or totals">
+        <a href="<?= h($viewUrl(false)) ?>" class="<?= $viewBtn(!$totals) ?>" title="Kills per 10 min, headshot / gib / slash kills in % of the kills, flags per hour, teamkills per 100 kills, points per game - sorting by them needs <?= \App\Controller\PlayersController::RATE_MIN_MINUTES / 60 ?> hours played">Rates</a>
+        <a href="<?= h($viewUrl(true)) ?>" class="<?= $viewBtn($totals) ?>" title="The totals of the year">Totals</a>
+    </div>
     <label class="flex items-center gap-2 rounded-lg border border-white/15 bg-black/60 px-3 py-2 text-sm backdrop-blur-[2px]">
         <i class="fa-solid fa-earth-europe text-zinc-400"></i>
         <select onchange="location.href = this.value" aria-label="Continent or country"
@@ -132,6 +163,8 @@ $this->start('rankingFilter'); ?>
         $regionLabel ? ['fa-earth-europe', $regionLabel] : null,
         ['fa-filter', 'min ' . number_format($minPoints) . ' pts this year'],
         ['fa-bolt', 'played in the last ' . \App\Utility\Activity::ACTIVE_DAYS . ' days'],
+        !$totals && in_array($sort, ['points', 'kills', 'headshot', 'gibbed', 'slashed', 'scored_with_the_flag', 'teamkills'], true)
+            ? ['fa-clock', 'min ' . (\App\Controller\PlayersController::RATE_MIN_MINUTES / 60) . ' h played'] : null,
     ])),
-    'keepQuery' => ['continent' => $continent ? strtolower(str_replace(' ', '-', Continents::NAMES[$continent])) : null, 'country' => $country ? strtolower($country) : null],
+    'keepQuery' => ['view' => $totals ? 'totals' : null, 'continent' => $continent ? strtolower(str_replace(' ', '-', Continents::NAMES[$continent])) : null, 'country' => $country ? strtolower($country) : null],
 ]) ?>

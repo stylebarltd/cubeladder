@@ -285,6 +285,12 @@ class PlayersController extends AppController
         // it is recalculated after the import that clears the cache above
         $this->attachRatings($players, $sort);
 
+        // Rates (default) or the plain totals of the year (?view=totals)
+        $totals = $this->request->getQuery('view') === 'totals';
+        if (!$totals) {
+            $players = $this->rateRanking($players, $sort);
+        }
+
         $achievePlayers = $this->Players->Achievements->find()
             ->contain(['Players'])
             ->where([
@@ -296,8 +302,46 @@ class PlayersController extends AppController
             $achievementPlayers[$player->player_id][$player->event_type]=$player->count;
         }
 
-        $this->set(compact('players', 'sort', 'achievementPlayers', 'continent', 'country', 'minPoints', 'regionCounts'));
+        $this->set(compact('players', 'sort', 'achievementPlayers', 'continent', 'country', 'minPoints', 'regionCounts', 'totals'));
     }
+
+    /** Playing time this year to be ranked by a rate (per 10 min, % of kills, ...) */
+    public const RATE_MIN_MINUTES = 300;
+
+    /**
+     * The All Time Ranking by rates instead of totals: totals mostly rank who
+     * played the most. Kills per 10 minutes, headshot / gib / slash kills as
+     * % of the kills, flags per hour, teamkills per 100 kills (fewest first)
+     * and points per game. Sorting by a rate needs RATE_MIN_MINUTES played.
+     */
+    private function rateRanking(array $players, string $sort): array
+    {
+        $rate = fn($n, $per) => $per > 0 ? $n / $per : 0.0;
+        foreach ($players as $p) {
+            $mins = (int)$p->minutes;
+            $kills = (int)$p->stats['kills'];
+            $p->rates = [
+                'points' => $rate((float)$p->total_score, (int)$p->games),
+                'kills' => $rate($kills * 10, $mins),
+                'headshot' => $rate($p->stats['headshot'] * 100, $kills),
+                'gibbed' => $rate($p->stats['gibbed'] * 100, $kills),
+                'slashed' => $rate($p->stats['slashed'] * 100, $kills),
+                'scored_with_the_flag' => $rate($p->stats['scored_with_the_flag'] * 60, $mins),
+                'teamkills' => $rate($p->stats['teamkills'] * 100, $kills),
+            ];
+        }
+        if (!isset(self::RATE_SORTS[$sort])) {
+            return $players;
+        }
+        $players = array_values(array_filter($players, fn($p) => (int)$p->minutes >= self::RATE_MIN_MINUTES));
+        $dir = self::RATE_SORTS[$sort];
+        usort($players, fn($a, $b) => $dir * ($b->rates[$sort] <=> $a->rates[$sort]) ?: (int)$b->total_score <=> (int)$a->total_score);
+
+        return $players;
+    }
+
+    /** The rate sorts: 1 = highest first, -1 = lowest first */
+    private const RATE_SORTS = ['points' => 1, 'kills' => 1, 'headshot' => 1, 'gibbed' => 1, 'slashed' => 1, 'scored_with_the_flag' => 1, 'teamkills' => -1];
 
     /** Points this year to be in the All Time Ranking, and in a continent / country filter of it */
     public const MIN_POINTS = 5000;
@@ -340,6 +384,8 @@ class PlayersController extends AppController
                     'picked_off' => 'SUM(PlayerStatsPerGame.picked_off)',
                     'busted' => 'SUM(PlayerStatsPerGame.busted)',
                     'games' => \App\Model\Table\PlayerStatsPerGameTable::countedGamesSql(),
+                    // time on a team (older games without it: the game length) for the per-minute rates
+                    'minutes' => 'SUM(COALESCE(PlayerStatsPerGame.minutes_played, Games.duration_minutes, 0))',
                     'last_seen' => 'MAX(Games.started_at)',
                     // Game id of that most-recent game, so the date can link to it
                     'last_game_id' => '(SELECT ps2.game_id FROM player_stats_per_game ps2 '

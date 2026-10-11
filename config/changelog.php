@@ -7,6 +7,14 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-11',
+            'title' => 'Ranking by rates',
+            'items' => [
+                'All Time Ranking: the stat columns are now rates instead of totals, so they show who is good, not only who plays the most - kills per 10 minutes, headshot / grenade / knife kills in % of your kills, flags per hour, teamkills per 100 kills (fewest first) and points per game. The total stays small under each number.',
+                'The "Totals" switch next to the region filter shows the year\'s totals as before. Sorting by a rate needs 5 hours played this year.',
+            ],
+        ],
+        [
+            'date' => '2026-10-11',
             'title' => 'Share a game',
             'items' => [
                 'Games and game pages: a "Share result" button on every game, with a preview of the result picture - copy the link (Discord shows the scoreboard), WhatsApp, Telegram, X, Facebook, Reddit or download the picture.',
