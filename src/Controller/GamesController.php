@@ -9,23 +9,38 @@ use Cake\Collection\Collection;
 
 class GamesController extends AppController
 {
+    /** Games per page of the list */
+    public const PER_PAGE = 50;
+
+    /**
+     * The games list, last played first (?page=n): map, mode, server, result
+     * and the best player; each row opens the game page.
+     */
     public function index()
     {
+        $where = ['Games.inaccurate' => false, 'Games.ended_at IS NOT' => null];
+        $total = $this->Games->find()->where($where)->count();
+        $pages = max(1, (int)ceil($total / self::PER_PAGE));
+        $page = min($pages, max(1, (int)$this->request->getQuery('page', 1)));
+
         $games = $this->Games->find()
             ->contain(['Maps', 'PlayerStatsPerGame' => ['Players']])
-            ->where(['Games.inaccurate' => false, 'Games.ended_at IS NOT' => null])
-            ->orderByDesc('Games.ended_at')
-            ->limit(50)
+            ->where($where)
+            ->orderBy(['Games.ended_at' => 'DESC', 'Games.id' => 'DESC'])
+            ->limit(self::PER_PAGE)
+            ->offset(($page - 1) * self::PER_PAGE)
             ->toArray();
 
         $boards = [];
+        $results = [];
         foreach ($games as $game) {
             $boards[$game->id] = $this->Games->scoreboard($game);
+            $results[$game->id] = \App\Service\GameResultPicture::describe($game, $boards[$game->id]);
         }
 
         $lastGameDateRange = $this->getGameDateRange();
 
-        $this->set(compact('games', 'boards', 'lastGameDateRange'));
+        $this->set(compact('games', 'boards', 'results', 'lastGameDateRange', 'page', 'pages', 'total'));
     }
 
     /**
@@ -71,15 +86,25 @@ class GamesController extends AppController
         $game = $this->loadGame($id);
         $board = $this->Games->scoreboard($game);
 
-        // Neighbouring (counted) games for the prev / next arrows
-        $neighbour = fn(string $op, string $dir) => $this->Games->find()
-            ->select(['Games.id'])
-            ->where(['Games.inaccurate' => false, 'Games.ended_at IS NOT' => null, "Games.started_at $op" => $game->started_at])
-            ->orderBy(['Games.started_at' => $dir])
-            ->disableHydration()
-            ->first()['id'] ?? null;
-        $prevId = $neighbour('<', 'DESC');
-        $nextId = $neighbour('>', 'ASC');
+        // Neighbouring (counted) games for the arrows, in the order of the
+        // games list (last played first): prev = the newer game above it,
+        // next = the older one below
+        $neighbour = function (string $op, string $dir) use ($game) {
+            if ($game->ended_at === null) {
+                return null;
+            }
+            return $this->Games->find()
+                ->select(['Games.id'])
+                ->where(['Games.inaccurate' => false, 'Games.ended_at IS NOT' => null, 'OR' => [
+                    "Games.ended_at $op" => $game->ended_at,
+                    'AND' => ['Games.ended_at' => $game->ended_at, "Games.id $op" => $game->id],
+                ]])
+                ->orderBy(['Games.ended_at' => $dir, 'Games.id' => $dir])
+                ->disableHydration()
+                ->first()['id'] ?? null;
+        };
+        $prevId = $neighbour('>', 'ASC');
+        $nextId = $neighbour('<', 'DESC');
 
         $notQualified = $game->inaccurate ? (new HallOfFameService())->notQualified($game->id) : [];
         // a much weaker player beating a much stronger one in their duel

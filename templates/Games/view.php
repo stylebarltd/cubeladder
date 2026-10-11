@@ -49,11 +49,11 @@ $this->start('meta'); ?>
 
         <?php if ($prevId): ?>
             <?= $this->Html->link('<i class="fas fa-chevron-left"></i>', ['action' => 'view', $prevId],
-                ['escape' => false, 'id' => 'game-prev', 'title' => 'Previous game', 'aria-label' => 'Previous game', 'class' => $navBtn . ' right-16 md:right-auto md:left-2']) ?>
+                ['escape' => false, 'id' => 'game-prev', 'title' => 'Newer game (←)', 'aria-label' => 'Newer game', 'class' => $navBtn . ' right-16 md:right-auto md:left-2']) ?>
         <?php endif; ?>
         <?php if ($nextId): ?>
             <?= $this->Html->link('<i class="fas fa-chevron-right"></i>', ['action' => 'view', $nextId],
-                ['escape' => false, 'id' => 'game-next', 'title' => 'Next game', 'aria-label' => 'Next game', 'class' => $navBtn . ' right-2']) ?>
+                ['escape' => false, 'id' => 'game-next', 'title' => 'Older game (→)', 'aria-label' => 'Older game', 'class' => $navBtn . ' right-2']) ?>
         <?php endif; ?>
     </div>
 </div>
