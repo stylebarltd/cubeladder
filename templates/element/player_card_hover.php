@@ -150,7 +150,7 @@ $archetypeColor = match ($archetype) {
                 <div class="text-[10px] text-zinc-500">#<?= (int)$rating->rank ?> of <?= number_format($ratedPlayers) ?></div>
                 <?php if ($rating->skill !== null): ?>
                     <div class="mt-1.5 border-t border-white/10 pt-1.5 text-center text-[10px] uppercase tracking-wider text-zinc-400">
-                        Skill <b class="font-mono text-sm <?= $this->Layout->ratingClass((float)$rating->skill) ?>"><?= number_format((float)$rating->skill, 1) ?></b>
+                        Skill <b class="font-mono text-sm <?= $this->Layout->ratingClass((float)$rating->skill) ?>"><?= number_format((float)$rating->skill, 1) ?></b><?= $this->Layout->trendArrow($rating->skill_trend !== null ? (float)$rating->skill_trend : null, 'text-[9px]', 'games') ?>
                     </div>
                 <?php endif; ?>
             </div>

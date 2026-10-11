@@ -91,7 +91,7 @@ class PlayerCardImage
     /**
      * @param array $card name, country, background (file), avatar (file|null),
      *   hours, games, played ("50 h 23 min"), inactive (bool),
-     *   rating (null or rating, trend, type, type_label, rank, rated, win_rate, skill, skill_rank,
+     *   rating (null or rating, trend, type, type_label, rank, rated, win_rate, skill, skill_rank, skill_trend,
      *   attack_pct, defense_pct, combat_pct, archetype, archetype_pct,
      *   archetype_rank), weapons ([[key, name, pct]]), totals (kills, flags,
      *   wins, mvp)
@@ -250,7 +250,13 @@ class PlayerCardImage
         // the skill rating (individual, all modes) below
         if ($r && isset($r['skill'])) {
             $sx = $this->run($col1 + 2, $y + 210, 16, $this->regular, self::MUTED, 'SKILL ');
-            $this->text(number_format((float)$r['skill'], 1), $sx, $y + 212, 24, $this->bold, $this->ratingColor((float)$r['skill']));
+            $skill = number_format((float)$r['skill'], 1);
+            $this->text($skill, $sx, $y + 212, 24, $this->bold, $this->ratingColor((float)$r['skill']));
+            if (!empty($r['skill_trend'])) {
+                $up = $r['skill_trend'] === 'up';
+                $this->text($up ? '▲' : '▼', $sx + $this->width($skill, 24, $this->bold) + 6, $y + 206, 14, $this->regular,
+                    $up ? [74, 222, 128] : [248, 113, 113]);
+            }
         }
 
         $d1 = $x + 266;

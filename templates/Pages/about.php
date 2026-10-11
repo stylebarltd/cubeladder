@@ -248,7 +248,8 @@ $rules = [
                     <p>The CTF rating is about the team and the flag. The skill rating is about <b>you</b>: how good you are yourself &ndash; in a fight and with the flag &ndash;
                         in <b>every mode</b> (CTF, TDM, DM, OSOK, &hellip;). Same scale: <b>5.0</b> is average, <b>8+</b> is top.</p>
                     <p>Like the CTF rating, every game of 3+ minutes (4+ players) is measured <b>per minute</b> and <b>against the others in the same game</b>.
-                        Your skill rating is the average of your <b>last 100 games</b>; you get it together with your CTF rating.</p>
+                        Your skill rating is the average of your <b>last 100 games</b>; you get it together with your CTF rating.
+                        The arrow <span class="text-green-400">▲</span> / <span class="text-red-400">▼</span> shows your form: your last 10 games are 0.5+ better or worse than your last 100.</p>
                 </div>
                 <table class="w-full self-start text-sm">
                     <tbody class="divide-y divide-white/10">

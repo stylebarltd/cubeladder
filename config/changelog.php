@@ -7,6 +7,13 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-11',
+            'title' => 'Skill trend',
+            'items' => [
+                'The skill rating now has a trend arrow, like the CTF rating: ▲ when your last 10 games are clearly better than your last 100, ▼ when they are worse. In the rankings, on the player page, the hover card and the shared card.',
+            ],
+        ],
+        [
+            'date' => '2026-10-11',
             'title' => 'Upsets and giant slayers',
             'items' => [
                 'Game pages and the Discord results: the "Upset of the game" - when a much weaker player (3+ skill lower) wins the duel against a much stronger one, e.g. 5-2 in kills on each other.',

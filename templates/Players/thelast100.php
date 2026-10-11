@@ -22,7 +22,11 @@ $stats = [
     ],
     'skill' => [
         'label' => 'Skill',
-        'value' => fn($p) => $p->skill !== null ? number_format($p->skill, 1) : '–',
+        // HTML: the skill rating plus its trend arrow
+        'html' => true,
+        'value' => fn($p) => $p->skill !== null
+            ? $this->Layout->trendArrow($p->skill_trend ?? null, 'mr-1 text-[10px]', 'games') . number_format($p->skill, 1)
+            : '–',
         'title' => 'Skill rating 0-10: individual, last 100 games of any mode - kills, headshot / knife / grenade kills, K/D, flags, streaks, team wins, lobby strength - see About',
     ],
     'kd' => [

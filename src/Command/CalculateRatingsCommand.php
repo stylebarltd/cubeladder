@@ -107,6 +107,9 @@ class CalculateRatingsCommand extends Command
     /** From this difference (last 10 vs last 100 games) the trend arrow shows */
     public const TREND_ARROW = 0.5;
 
+    /** The trends compare the last this many games with the last WINDOW */
+    public const TREND_GAMES = 10;
+
     /**
      * The type as shown: All-Rounders get their specialization - the
      * strongest of attack (flag play), defense (returns) and combat, as the
@@ -236,6 +239,7 @@ class CalculateRatingsCommand extends Command
             $skill = $skills[$rating['player_id']] ?? null;
             $rating['skill'] = $skill['skill'] ?? null;
             $rating['skill_rank'] = $skill ? $skillRank[$rating['player_id']] + 1 : null;
+            $rating['skill_trend'] = $skill['trend'] ?? null;
             $rating['skill_win_rate'] = $skill && $skill['decided'] > 0 ? round($skill['wins'] / $skill['decided'], 3) : null;
         }
         unset($rating);
@@ -299,7 +303,7 @@ class CalculateRatingsCommand extends Command
                     FROM player_game_ratings r
                     INNER JOIN games g ON g.id = r.game_id
                 )
-                SELECT x.player_id, AVG(IF(rn <= 10, game_rating, NULL)) - AVG(game_rating) AS trend
+                SELECT x.player_id, AVG(IF(rn <= " . self::TREND_GAMES . ", game_rating, NULL)) - AVG(game_rating) AS trend
                 FROM x INNER JOIN player_ratings pr ON pr.player_id = x.player_id
                 WHERE rn <= :window
                 GROUP BY x.player_id", ['window' => self::WINDOW])->fetchAll('assoc');
@@ -495,7 +499,7 @@ class CalculateRatingsCommand extends Command
      * (the average first-pass skill of the others, SKILL_WEIGHTS['lobby']).
      *
      * @param array<string, true> $rated player ids to rate
-     * @return array<string, array{skill: float, wins: int, decided: int}>
+     * @return array<string, array{skill: float, trend: float, score: float, wins: int, decided: int}>
      */
     private function skills(array $rated): array
     {
@@ -532,14 +536,20 @@ class CalculateRatingsCommand extends Command
         $lSd = sqrt(array_sum(array_map(fn($v) => ($v - $lMean) ** 2, $lobby)) / max(1, count($lobby))) ?: 1.0;
 
         $total = [];
+        $gameScores = [];
         foreach ($rows as $i => [$playerId, , $win, $score, $rn]) {
             if ($rn > self::WINDOW || !isset($rated[$playerId])) {
                 continue;
             }
             $t = &$total[$playerId];
-            $t ??= ['score' => 0.0, 'n' => 0, 'wins' => 0, 'decided' => 0];
-            $t['score'] += (float)$score + self::SKILL_WEIGHTS['lobby'] * ($lobby[$i] - $lMean) / $lSd;
+            $t ??= ['score' => 0.0, 'n' => 0, 'wins' => 0, 'decided' => 0, 'recent' => 0.0, 'nRecent' => 0];
+            $gameScores[] = $game = (float)$score + self::SKILL_WEIGHTS['lobby'] * ($lobby[$i] - $lMean) / $lSd;
+            $t['score'] += $game;
             $t['n']++;
+            if ($rn <= self::TREND_GAMES) {
+                $t['recent'] += $game;
+                $t['nRecent']++;
+            }
             $t['wins'] += (int)$win === 1 ? 1 : 0;
             $t['decided'] += (int)$win !== 0 ? 1 : 0;
             unset($t);
@@ -551,10 +561,15 @@ class CalculateRatingsCommand extends Command
         $raw = array_map(fn($t) => $t['score'] / $t['n'], $total);
         $mean = array_sum($raw) / count($raw);
         $sd = sqrt(array_sum(array_map(fn($v) => ($v - $mean) ** 2, $raw)) / count($raw)) ?: 1.0;
+        // trend on the per-game scale (5.0 = an average game), as the CTF trend
+        $gMean = array_sum($gameScores) / count($gameScores);
+        $gSd = sqrt(array_sum(array_map(fn($v) => ($v - $gMean) ** 2, $gameScores)) / count($gameScores)) ?: 1.0;
         $skills = [];
         foreach ($raw as $playerId => $v) {
+            $t = $total[$playerId];
             $skills[$playerId] = [
                 'skill' => round(max(0.1, min(9.9, 5 + 1.5 * ($v - $mean) / $sd)), 1),
+                'trend' => round(1.5 * ($t['recent'] / max(1, $t['nRecent']) - $v) / $gSd, 2),
                 'score' => $v,
                 'wins' => $total[$playerId]['wins'],
                 'decided' => $total[$playerId]['decided'],
