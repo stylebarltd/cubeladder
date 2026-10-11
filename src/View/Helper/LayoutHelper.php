@@ -382,6 +382,7 @@ if(!$type){
             'sniper'   => 0,
             'shotgun'  => 0,
             'carabine' => 0,
+            'pistol'   => 0,
         ];
 
         $special = [
@@ -398,6 +399,7 @@ if(!$type){
             'splattered' => ['type' => 'primary', 'weapon' => 'shotgun'],
             'peppered'   => ['type' => 'primary', 'weapon' => 'shotgun'],
             'picked_off' => ['type' => 'primary', 'weapon' => 'carabine'],
+            'busted'     => ['type' => 'primary', 'weapon' => 'pistol'],
 
             // special
             'slashed' => ['type' => 'special', 'weapon' => 'knife'],

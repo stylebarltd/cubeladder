@@ -338,6 +338,7 @@ class PlayersController extends AppController
                     'splattered' => 'SUM(PlayerStatsPerGame.splattered)',
                     'peppered' => 'SUM(PlayerStatsPerGame.peppered)',
                     'picked_off' => 'SUM(PlayerStatsPerGame.picked_off)',
+                    'busted' => 'SUM(PlayerStatsPerGame.busted)',
                     'games' => \App\Model\Table\PlayerStatsPerGameTable::countedGamesSql(),
                     'last_seen' => 'MAX(Games.started_at)',
                     // Game id of that most-recent game, so the date can link to it
@@ -376,6 +377,7 @@ class PlayersController extends AppController
                     'splattered'           => (int)$player->splattered,
                     'peppered'             => (int)$player->peppered,
                     'picked_off'           => (int)$player->picked_off,
+                    'busted'               => (int)$player->busted,
                 ];
             });
 
@@ -584,6 +586,7 @@ class PlayersController extends AppController
                     'punctured' => 0, //sniper
                     'splattered' => 0, //shotgun
                     'picked_off' => 0, //carabine
+                    'busted' => 0, //pistol
                     'suicided' => 0,
                     'stole_the_flag' => 0,
                     'scored_with_the_flag' => 0
@@ -602,6 +605,7 @@ class PlayersController extends AppController
                     $stats['punctured'] += $ps->punctured;
                     $stats['splattered'] += $ps->splattered;
                     $stats['picked_off'] += $ps->picked_off;
+                    $stats['busted'] += $ps->busted;
                     $stats['suicided'] += $ps->suicided;
                     $stats['stole_the_flag'] += $ps->stole_the_flag;
                     $stats['scored_with_the_flag'] += $ps->scored_with_the_flag;
