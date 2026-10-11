@@ -192,7 +192,7 @@ $rules = [
                 <h2 class="mb-4 text-lg font-bold"><i class="fa-solid fa-handshake mr-2 text-orange-300"></i>Credits</h2>
                 <ul class="space-y-2 text-sm text-zinc-200">
                     <li class="flex gap-2"><?= $check ?><span>ZZ|Perros for adding the [aCKa] servers to the ladder</span></li>
-                    <li class="flex gap-2"><?= $check ?><span>ZZ|Ketar* for sponsoring the .ovh domain</span></li>
+                    <li class="flex gap-2"><?= $check ?><span>ZZ|Ketar* for sponsoring the .ovh domain, ideas and feedback</span></li>
                     <li class="flex gap-2"><?= $check ?><span>Chobbz for adding the Banana &amp; POTATO servers to the ladder</span></li>
                     <li class="flex gap-2"><?= $check ?><span>O*BrutalSystem for the code snippets and idea of the live view</span></li>
                 </ul>
