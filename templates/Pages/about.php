@@ -241,6 +241,35 @@ $rules = [
             </div>
         </section>
 
+        <section id="characters" class="scroll-mt-20 rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-3">
+            <h2 class="mb-4 text-lg font-bold"><i class="fa-solid fa-masks-theater mr-2 text-purple-300"></i>Characters &amp; card tiers</h2>
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div class="space-y-3 text-sm text-zinc-200">
+                    <p>Some players are known for one thing. Over your <b>last 100 CTF games</b> (per minute, like the rating) you get a character
+                        when you are in the <b>top <?= 100 - \App\Command\CalculateRatingsCommand::ARCHETYPE_PCT ?>%</b> of all rated players in its stat &ndash;
+                        the strongest one if you have several. The <b>#1</b> in a stat is <b>&ldquo;The Butcher&rdquo;</b>, <b>&ldquo;The Headhunter&rdquo;</b> &hellip; with a crown.
+                        It shows on your player page and your player card.</p>
+                    <ul class="space-y-2">
+                        <?php foreach (['Headhunter' => 'headshots', 'Butcher' => 'knife kills', 'Bomber' => 'grenade kills', 'Pistolero' => 'pistol kills', 'Berserker' => 'long kill streaks (the average longest streak per game)'] as $name => $stat): ?>
+                            <li class="flex items-center gap-3"><img src="/img/characters/<?= strtolower($name) ?>.svg" alt="" class="h-8 w-8 shrink-0"><span><b><?= $name ?></b> &ndash; <?= $stat ?></span></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <div class="space-y-3 text-sm text-zinc-200">
+                    <p>The card you get when you share your player page (Discord, WhatsApp &amp; co.) gets more epic with your CTF rating:</p>
+                    <table class="w-full text-sm">
+                        <tbody class="divide-y divide-white/10">
+                            <tr><td class="py-1.5 pr-3 font-bold text-orange-300"><i class="fa-solid fa-crown mr-1"></i>Legend</td><td class="py-1.5">8.0+ &ndash; fire frame, light rays, glowing rating, the top 3 show their place</td></tr>
+                            <tr><td class="py-1.5 pr-3 font-bold text-indigo-300"><i class="fa-solid fa-gem mr-1"></i>Diamond</td><td class="py-1.5">7.0+ &ndash; diamond frame, light rays, sparkles</td></tr>
+                            <tr><td class="py-1.5 pr-3 font-bold text-yellow-300"><i class="fa-solid fa-medal mr-1"></i>Gold</td><td class="py-1.5">6.0+ &ndash; gold frame and glow</td></tr>
+                            <tr><td class="py-1.5 pr-3 font-bold text-slate-300"><i class="fa-solid fa-shield-halved mr-1"></i>Silver</td><td class="py-1.5">5.0+ &ndash; silver frame</td></tr>
+                            <tr><td class="py-1.5 pr-3 font-bold text-blue-300">Standard</td><td class="py-1.5">below 5.0 or not rated yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
         <?php if (!empty($changelog)): ?>
         <!-- What's new (config/changelog.php) -->
         <section class="rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-3">

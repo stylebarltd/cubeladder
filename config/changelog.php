@@ -14,6 +14,14 @@ return [
             ],
         ],
         [
+            'date' => '2026-10-11',
+            'title' => 'Characters and epic player cards',
+            'items' => [
+                'Characters: the top 10% in headshots, knife kills, grenade kills, pistol kills or kill streaks become Headhunter, Butcher, Bomber, Pistolero or Berserker - with an emblem on their player page and card. The #1 in each is "The Butcher" & co.',
+                'Player cards now get more epic with the CTF rating: Silver from 5.0, Gold from 6.0, Diamond from 7.0 and Legend from 8.0 - frames, glow, light rays and sparkles.',
+            ],
+        ],
+        [
             'date' => '2026-10-10',
             'title' => 'New player cards',
             'items' => [

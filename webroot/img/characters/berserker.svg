@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9d5ff"/><stop offset=".45" stop-color="#9333ea"/><stop offset="1" stop-color="#2e1065"/></linearGradient>
+<radialGradient id="core" cx=".5" cy=".42" r=".62"><stop offset="0" stop-color="#9333ea" stop-opacity=".55"/><stop offset=".6" stop-color="#0b1120" stop-opacity=".9"/><stop offset="1" stop-color="#020617"/></radialGradient>
+<linearGradient id="ico" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e9d5ff"/></linearGradient>
+</defs>
+<path d="M256 18 L462 78 V236 C462 362 378 446 256 496 C134 446 50 362 50 236 V78 Z" fill="url(#rim)"/>
+<path d="M256 18 L462 78 V236 C462 362 378 446 256 496 C134 446 50 362 50 236 V78 Z" fill="url(#core)" transform="translate(256 262) scale(.84) translate(-256 -257)"/>
+<path d="M256 18 L462 78 V236 C462 362 378 446 256 496 C134 446 50 362 50 236 V78 Z" fill="none" stroke="#e9d5ff" stroke-opacity=".5" stroke-width="5" transform="translate(256 262) scale(.84) translate(-256 -257)"/>
+<path d="M256 18 L462 78 V110 L256 50 L50 110 V78 Z" fill="#ffffff" fill-opacity=".22"/>
+<g fill="url(#ico)" fill-rule="evenodd" transform="translate(256 252) scale(.52) translate(-256 -256) translate(0 -10)"><path d="M262 20C280 110 392 170 392 300C392 400 330 470 256 488C182 470 120 400 120 310C120 248 150 204 186 176C182 226 198 262 228 280C210 190 228 100 262 20ZM256 300C276 340 316 364 316 412C316 446 290 468 256 474C222 468 196 446 196 414C196 378 230 352 256 300Z"/></g>
+</svg>

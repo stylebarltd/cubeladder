@@ -12,6 +12,9 @@ use RuntimeException;
  * (rating, trend, type, rank, time played), the player panel (avatar, name,
  * weapons of choice on their most played map) and the stats panel (CTF
  * rating, type, win rate, attack / defense / combat, totals with icons).
+ * The better the CTF rating, the more epic the card (TIERS: Silver, Gold,
+ * Diamond, Legend - frame, glow, light rays, sparkles), and a player's
+ * character (Butcher, Headhunter, ...) shows as an emblem on the map.
  * GD + the bundled DejaVu Sans and Font Awesome fonts (resources/fonts).
  */
 class PlayerCardImage
@@ -47,12 +50,36 @@ class PlayerCardImage
     private const ICONS = [
         'gamepad' => 0xf11b, 'crosshairs' => 0xf05b, 'clock' => 0xf017, 'skull' => 0xf54c,
         'flag' => 0xf024, 'trophy' => 0xf091, 'star' => 0xf005, 'moon' => 0xf186,
+        'crown' => 0xf521, 'gem' => 0xf3a5, 'medal' => 0xf5a2, 'shield' => 0xf3ed,
+    ];
+
+    /**
+     * Card tiers by CTF rating, best first (below 5.0 or unrated: the plain
+     * card): frame gradient stops, frame width, background tint, glow,
+     * light rays behind the avatar, number of sparkles
+     */
+    public const TIERS = [
+        'legend' => ['min' => 8.0, 'name' => 'LEGEND', 'icon' => 'crown', 'frame' => 6, 'rays' => true, 'sparkles' => 22,
+            'stops' => [[255, 225, 120], [251, 146, 60], [225, 29, 72]], 'bg' => [46, 16, 12], 'glow' => [251, 146, 60]],
+        'diamond' => ['min' => 7.0, 'name' => 'DIAMOND', 'icon' => 'gem', 'frame' => 5, 'rays' => true, 'sparkles' => 12,
+            'stops' => [[103, 232, 249], [129, 140, 248], [217, 70, 239]], 'bg' => [24, 18, 56], 'glow' => [129, 140, 248]],
+        'gold' => ['min' => 6.0, 'name' => 'GOLD', 'icon' => 'medal', 'frame' => 4, 'rays' => false, 'sparkles' => 5,
+            'stops' => [[254, 240, 138], [234, 179, 8], [161, 98, 7]], 'bg' => [34, 26, 6], 'glow' => [234, 179, 8]],
+        'silver' => ['min' => 5.0, 'name' => 'SILVER', 'icon' => 'shield', 'frame' => 3, 'rays' => false, 'sparkles' => 0,
+            'stops' => [[248, 250, 252], [148, 163, 184], [71, 85, 105]], 'bg' => null, 'glow' => [148, 163, 184]],
+    ];
+
+    /** Character emblem colors (webroot/img/characters, PNGs in resources/characters) */
+    private const ARCHETYPE_COLORS = [
+        'Headhunter' => [125, 211, 252], 'Butcher' => [252, 165, 165], 'Bomber' => [253, 186, 116],
+        'Pistolero' => [110, 231, 183], 'Berserker' => [216, 180, 254],
     ];
 
     private string $regular;
     private string $bold;
     private string $icons;
     private GdImage $im;
+    private ?array $tier = null;
 
     public function __construct()
     {
@@ -65,8 +92,9 @@ class PlayerCardImage
      * @param array $card name, country, background (file), avatar (file|null),
      *   hours, games, played ("50 h 23 min"), inactive (bool),
      *   rating (null or rating, trend, type, type_label, rank, rated, win_rate,
-     *   attack_pct, defense_pct, combat_pct), weapons ([[key, name, pct]]),
-     *   totals (kills, flags, wins, mvp)
+     *   attack_pct, defense_pct, combat_pct, archetype, archetype_pct,
+     *   archetype_rank), weapons ([[key, name, pct]]), totals (kills, flags,
+     *   wins, mvp)
      * @return string JPEG bytes
      */
     public function render(array $card): string
@@ -77,17 +105,41 @@ class PlayerCardImage
         imagealphablending($this->im, true);
         imageantialias($this->im, true);
         $this->rect(0, 0, $w, $h, self::BG);
+        $r = $card['rating'] ?? null;
+        $this->tier = self::tier($r ? (float)$r['rating'] : null);
+        $t = $this->tier;
 
-        // frame
-        $this->roundRect(10, 10, $w - 20, $h - 20, 16, null, [37, 99, 235], 2);
+        // frame: plain blue, or the tier's gradient with a glow inside
+        if ($t) {
+            if ($t['bg']) {
+                // the tier's color rising from the bottom
+                for ($y = 0; $y < $h; $y++) {
+                    $this->rect(0, $y, $w, 1, $t['bg'], (int)(127 - 127 * ($y / $h) ** 1.6));
+                }
+            }
+            $this->ring(10, 10, $w - 20, $h - 20, 18, $t['frame'], $t['frame'] + 34,
+                fn($px, $py, $d) => [$t['glow'], 0.32 * (1 - ($d - $t['frame']) / 34) ** 2]);
+            $this->ring(10, 10, $w - 20, $h - 20, 18, 0, $t['frame'],
+                fn($px, $py, $d) => [$this->gradient($t['stops'], (($px - 10) / ($w - 20) + ($py - 10) / ($h - 20)) / 2), 1.0]);
+            if ($t['frame'] >= 5) {
+                // a thin second line inside the frame
+                $this->ring(10, 10, $w - 20, $h - 20, 18, $t['frame'] + 4, $t['frame'] + 5,
+                    fn($px, $py, $d) => [$t['stops'][0], 0.55]);
+            }
+            $this->sparkles(crc32($card['name']), $t['sparkles'], $t['stops'][0]);
+        } else {
+            $this->roundRect(10, 10, $w - 20, $h - 20, 16, null, [37, 99, 235], 2);
+        }
 
         // brand
         $this->logo(WWW_ROOT . 'img/brand/cubeladder-mark-transparent.png', 30, 20, 44);
         $this->text('cube', 84, 55, 24, $this->bold, self::BLUE);
         $this->text('Ladder', 84 + $this->width('cube', 24, $this->bold), 55, 24, $this->bold, self::WHITE);
-        $this->rect(12, 78, $w - 24, 1, [30, 58, 138]);
+        $this->rect(12 + ($t['frame'] ?? 0), 78, $w - 24 - 2 * ($t['frame'] ?? 0), 1, $t ? $t['stops'][2] : [30, 58, 138]);
+        if ($t) {
+            $this->tierPill($t, $r, $w - 30 - ($t['frame'] ?? 0), 24);
+        }
 
-        $r = $card['rating'] ?? null;
         $pad = 40;
 
         // headline
@@ -129,10 +181,20 @@ class PlayerCardImage
         $this->mapBackground($card['background'] ?? null, $x + (int)($w * 0.35), $y + 1, (int)($w * 0.65) - 1, $h - 2);
 
         $avatar = 106;
-        $this->avatar($card['avatar'] ?? null, $x + 24, $y + (int)(($h - $avatar) / 2), $avatar);
+        $ax = $x + 24;
+        $ay = $y + (int)(($h - $avatar) / 2);
+        if ($this->tier) {
+            $this->halo($ax + (int)($avatar / 2), $ay + (int)($avatar / 2), $avatar, [$x + 1, $y + 1, $x + (int)($w * 0.35) + 60, $y + $h - 2]);
+        }
+        $this->avatar($card['avatar'] ?? null, $ax, $ay, $avatar);
 
+        $archetype = $card['rating']['archetype'] ?? null;
         $tx = $x + 24 + $avatar + 30;
-        $this->text($this->fit($card['name'], 38, $w - ($tx - $x) - 20, $this->bold), $tx, $y + 50, 38, $this->bold, [255, 255, 255]);
+        $nameMax = $w - ($tx - $x) - 20 - ($archetype ? 360 : 0);
+        $this->text($this->fit($card['name'], 38, $nameMax, $this->bold), $tx, $y + 50, 38, $this->bold, [255, 255, 255]);
+        if ($archetype) {
+            $this->archetype($card['rating'], $x + $w - 20, $y, $h);
+        }
 
         $meta = implode('   ·   ', array_filter([
             $card['country'] ? strtoupper($card['country']) : '',
@@ -154,7 +216,7 @@ class PlayerCardImage
             $this->text($name, $lx, $y + 111, 13, $this->bold, self::WHITE);
             $this->text($pct . '% of kills', $lx, $y + 130, 12, $this->regular, [191, 203, 222]);
             $wx = $lx + max($this->width($name, 13, $this->bold), $this->width($pct . '% of kills', 12, $this->regular)) + 36;
-            if ($wx > $x + $w - 180) {
+            if ($wx > $x + $w - ($archetype ? 520 : 180)) {
                 break;
             }
         }
@@ -171,6 +233,9 @@ class PlayerCardImage
         if ($r) {
             $value = number_format((float)$r['rating'], 1);
             $color = $this->ratingColor((float)$r['rating']);
+            if ($this->tier && $this->tier['rays']) {
+                $this->glowText($value, $col1, $y + 128, 84, $this->bold, $this->tier['glow']);
+            }
             $this->text($value, $col1, $y + 128, 84, $this->bold, $color);
             if (!empty($r['trend'])) {
                 $up = $r['trend'] === 'up';
@@ -298,9 +363,201 @@ class PlayerCardImage
             }
             imagedestroy($square);
         }
-        imagesetthickness($this->im, 2);
-        imageellipse($this->im, $x + (int)($size / 2), $y + (int)($size / 2), $size, $size, imagecolorallocate($this->im, 71, 85, 105));
-        imagesetthickness($this->im, 1);
+        $t = $this->tier;
+        if ($t) {
+            // the tier's gradient ring
+            $c = $size / 2;
+            $this->ringCircle($x + $c, $y + $c, $c + 1, $t['frame'] - 1,
+                fn($px, $py) => $this->gradient($t['stops'], (($px - $x) / $size + ($py - $y) / $size) / 2));
+        } else {
+            imagesetthickness($this->im, 2);
+            imageellipse($this->im, $x + (int)($size / 2), $y + (int)($size / 2), $size, $size, imagecolorallocate($this->im, 71, 85, 105));
+            imagesetthickness($this->im, 1);
+        }
+    }
+
+    /** The card tier of a CTF rating (TIERS), null for the plain card */
+    public static function tier(?float $rating): ?array
+    {
+        if ($rating === null) {
+            return null;
+        }
+        foreach (self::TIERS as $key => $tier) {
+            if ($rating >= $tier['min']) {
+                return $tier + ['key' => $key];
+            }
+        }
+
+        return null;
+    }
+
+    /** "LEGEND" (with the place for the top 3) in the top right corner, right-aligned to $right */
+    private function tierPill(array $t, ?array $r, int $right, int $y): void
+    {
+        $label = $t['name'] . ($r && (int)$r['rank'] <= 3 ? '  ·  #' . (int)$r['rank'] : '');
+        $tw = $this->width($label, 15, $this->bold);
+        $pw = 22 + 24 + $tw + 18;
+        $px = $right - $pw;
+        $this->roundRect($px, $y, $pw, 36, 18, $t['bg'] ?? [30, 41, 59], null);
+        $this->ring($px, $y, $pw, 36, 18, 0, 2,
+            fn($qx, $qy, $d) => [$this->gradient($t['stops'], ($qx - $px) / $pw), 1.0]);
+        $this->icon($t['icon'], $px + 18, $y + 25, 15, $t['stops'][0]);
+        $this->text($label, $px + 22 + 24, $y + 25, 15, $this->bold, $t['stops'][0]);
+    }
+
+    /**
+     * Behind the avatar: a soft glow in the tier's color, and light rays on
+     * Diamond and Legend cards, clipped to $clip [x1, y1, x2, y2]
+     */
+    private function halo(int $cx, int $cy, int $avatar, array $clip): void
+    {
+        $t = $this->tier;
+        imagesetclip($this->im, ...$clip);
+        if ($t['rays']) {
+            $n = $t['key'] === 'legend' ? 20 : 14;
+            $c = imagecolorallocatealpha($this->im, ...[...$t['stops'][0], 118]);
+            for ($i = 0; $i < $n; $i++) {
+                $a = 2 * M_PI * $i / $n + 0.1;
+                // overlapping lengths: bright near the avatar, fading out
+                foreach ([0.9, 1.2, 1.5] as $k) {
+                    $len = $avatar * $k;
+                    $spread = 0.11 / $k;
+                    imagefilledpolygon($this->im, [
+                        $cx, $cy,
+                        (int)($cx + $len * cos($a - $spread)), (int)($cy + $len * sin($a - $spread)),
+                        (int)($cx + $len * cos($a + $spread)), (int)($cy + $len * sin($a + $spread)),
+                    ], $c);
+                }
+            }
+        }
+        for ($d = (int)($avatar * 1.9); $d > $avatar; $d -= 6) {
+            imagefilledellipse($this->im, $cx, $cy, $d, $d, imagecolorallocatealpha($this->im, ...[...$t['glow'], 121]));
+        }
+        imagesetclip($this->im, 0, 0, self::WIDTH - 1, self::HEIGHT - 1);
+    }
+
+    /**
+     * The character: emblem on the right of the player panel (over the map),
+     * its name and what it stands for right-aligned next to it
+     */
+    private function archetype(array $r, int $right, int $y, int $h): void
+    {
+        $key = strtolower($r['archetype']);
+        $size = 112;
+        $ex = $right - $size;
+        $ey = $y + (int)(($h - $size) / 2);
+        $rgb = self::ARCHETYPE_COLORS[$r['archetype']] ?? self::WHITE;
+        // a soft glow in its color behind the emblem
+        for ($d = (int)($size * 1.5); $d > (int)($size * 0.6); $d -= 8) {
+            imagefilledellipse($this->im, $ex + (int)($size / 2), $ey + (int)($size / 2), $d, $d, imagecolorallocatealpha($this->im, ...[...$rgb, 120]));
+        }
+        $this->png(ROOT . '/resources/characters/' . $key . '.png', $ex, $ey, $size);
+
+        $rank = isset($r['archetype_rank']) ? (int)$r['archetype_rank'] : null;
+        $name = strtoupper(\App\Command\CalculateRatingsCommand::archetypeLabel($r['archetype'], $rank));
+        $text = \App\Command\CalculateRatingsCommand::archetypeText($r['archetype'], isset($r['archetype_pct']) ? (int)$r['archetype_pct'] : null, $rank);
+        $tx = $ex - 14;
+        $this->text('CHARACTER', $tx - $this->width('CHARACTER', 11, $this->regular), $y + 46, 11, $this->regular, self::MUTED);
+        $this->text($name, $tx - $this->width($name, 26, $this->bold), $y + 82, 26, $this->bold, $rgb);
+        $this->text($text, $tx - $this->width($text, 13, $this->regular), $y + 106, 13, $this->regular, [226, 232, 240]);
+        if ($rank === 1) {
+            $this->icon('crown', $ex + (int)($size / 2) - 13, $ey + 6, 22, [255, 225, 120]);
+        }
+    }
+
+    /**
+     * Pixels between $d0 and $d1 inside a rounded rectangle (anti-aliased),
+     * colored by $color($px, $py, $d) => [rgb, opacity 0-1]
+     */
+    private function ring(int $x, int $y, int $w, int $h, int $r, float $d0, float $d1, callable $color): void
+    {
+        $band = (int)ceil($d1) + 1;
+        $hw = $w / 2;
+        $hh = $h / 2;
+        $cx = $x + $hw;
+        $cy = $y + $hh;
+        for ($py = $y; $py <= $y + $h; $py++) {
+            $edge = $py - $y < $band + $r || $y + $h - $py < $band + $r;
+            $ranges = $edge ? [[$x, $x + $w]] : [[$x, $x + $band], [$x + $w - $band, $x + $w]];
+            foreach ($ranges as [$from, $to]) {
+                for ($px = $from; $px <= $to; $px++) {
+                    // distance from the outer edge, inwards
+                    $qx = abs($px + .5 - $cx) - ($hw - $r);
+                    $qy = abs($py + .5 - $cy) - ($hh - $r);
+                    $d = -(sqrt(max($qx, 0) ** 2 + max($qy, 0) ** 2) + min(max($qx, $qy), 0) - $r);
+                    $cover = max(0, min(1, $d - $d0 + .5)) * max(0, min(1, $d1 - $d + .5));
+                    if ($cover <= 0) {
+                        continue;
+                    }
+                    [$rgb, $opacity] = $color($px, $py, $d);
+                    $alpha = 127 - (int)round(127 * $cover * max(0, min(1, $opacity)));
+                    if ($alpha < 127) {
+                        imagesetpixel($this->im, $px, $py, imagecolorallocatealpha($this->im, $rgb[0], $rgb[1], $rgb[2], $alpha));
+                    }
+                }
+            }
+        }
+    }
+
+    /** A circle ring of $thickness inside radius $radius, colored by $color($px, $py) => rgb */
+    private function ringCircle(float $cx, float $cy, float $radius, int $thickness, callable $color): void
+    {
+        $thickness = max(2, $thickness);
+        for ($py = (int)floor($cy - $radius); $py <= (int)ceil($cy + $radius); $py++) {
+            for ($px = (int)floor($cx - $radius); $px <= (int)ceil($cx + $radius); $px++) {
+                $dist = sqrt(($px + .5 - $cx) ** 2 + ($py + .5 - $cy) ** 2);
+                $cover = max(0, min(1, $radius - $dist + .5)) * max(0, min(1, $dist - ($radius - $thickness) + .5));
+                if ($cover > 0) {
+                    $rgb = $color($px, $py);
+                    imagesetpixel($this->im, $px, $py, imagecolorallocatealpha($this->im, $rgb[0], $rgb[1], $rgb[2], 127 - (int)round(127 * $cover)));
+                }
+            }
+        }
+    }
+
+    /** Four-point stars, always in the same places for a player, away from the text */
+    private function sparkles(int $seed, int $n, array $rgb): void
+    {
+        mt_srand($seed);
+        // free areas: right of the headline, the top band, the bottom edge
+        $zones = [[640, 96, 1150, 200], [300, 22, 900, 70], [60, 606, 1140, 616]];
+        for ($i = 0; $i < $n; $i++) {
+            [$x1, $y1, $x2, $y2] = $zones[$i % 4 === 3 ? 2 : $i % 2];
+            $cx = mt_rand($x1, $x2);
+            $cy = mt_rand($y1, $y2);
+            $s = mt_rand(4, 11);
+            $k = $s * 0.22;
+            $c = imagecolorallocatealpha($this->im, $rgb[0], $rgb[1], $rgb[2], mt_rand(20, 70));
+            imagefilledpolygon($this->im, [
+                $cx, $cy - $s, (int)($cx + $k), (int)($cy - $k), $cx + $s, $cy, (int)($cx + $k), (int)($cy + $k),
+                $cx, $cy + $s, (int)($cx - $k), (int)($cy + $k), $cx - $s, $cy, (int)($cx - $k), (int)($cy - $k),
+            ], $c);
+            if ($s >= 9) {
+                imagefilledellipse($this->im, $cx, $cy, $s * 2, $s * 2, imagecolorallocatealpha($this->im, $rgb[0], $rgb[1], $rgb[2], 118));
+            }
+        }
+        mt_srand();
+    }
+
+    /** A soft glow around big text (drawn under it) */
+    private function glowText(string $s, int $x, int $y, int $size, string $font, array $rgb): void
+    {
+        foreach ([8 => 122, 5 => 118, 2 => 112] as $radius => $alpha) {
+            $c = imagecolorallocatealpha($this->im, $rgb[0], $rgb[1], $rgb[2], $alpha);
+            for ($a = 0; $a < 360; $a += 30) {
+                imagettftext($this->im, $size, 0, $x + (int)round($radius * cos(deg2rad($a))), $y + (int)round($radius * sin(deg2rad($a))), $c, $font, $s);
+            }
+        }
+    }
+
+    /** Color at $t (0-1) along gradient stops */
+    private function gradient(array $stops, float $t): array
+    {
+        $t = max(0, min(1, $t)) * (count($stops) - 1);
+        $i = min((int)floor($t), count($stops) - 2);
+        $f = $t - $i;
+
+        return array_map(fn($a, $b) => (int)round($a + ($b - $a) * $f), $stops[$i], $stops[$i + 1]);
     }
 
     /** The cube mark (transparent PNG), height $h */

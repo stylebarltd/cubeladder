@@ -1252,6 +1252,8 @@ $gamesDataGlobal = [];        // games inside lastGameIds
                 'rank' => (int)$rating->rank, 'rated' => $PlayerRatings->find()->count(),
                 'win_rate' => $rating->win_rate !== null ? (float)$rating->win_rate : null,
                 'attack_pct' => (int)$rating->attack_pct, 'defense_pct' => (int)$rating->defense_pct, 'combat_pct' => (int)$rating->combat_pct,
+                'archetype' => $rating->archetype, 'archetype_pct' => $rating->archetype_pct !== null ? (int)$rating->archetype_pct : null,
+                'archetype_rank' => $rating->archetype_rank !== null ? (int)$rating->archetype_rank : null,
             ] : null,
             'totals' => [
                 'kills' => (int)($progress['kills'] ?? 0), 'flags' => (int)($progress['flags'] ?? 0),

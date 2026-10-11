@@ -37,6 +37,12 @@ use Cake\I18n\DateTime;
  *   Defender      defense >= 70
  *   Fragger       combat >= 70
  *   Offensive / Defensive Team Player: everyone else, by their lean
+ *
+ * Characters (archetypes) are what a player stands out for over the same
+ * games, among the rated players: headshots, knife, grenade or pistol kills
+ * per minute, or the average longest kill streak. A player in the top 10%
+ * of one of them gets it (the strongest one if several); #1 in that stat is
+ * "The Butcher" etc. on display (archetypeLabel()).
  */
 class CalculateRatingsCommand extends Command
 {
@@ -46,6 +52,24 @@ class CalculateRatingsCommand extends Command
 
     public const TYPES = [
         'All-Rounder', 'Flag Runner', 'Defender', 'Fragger', 'Offensive Team Player', 'Defensive Team Player',
+    ];
+
+    /**
+     * Character => [stat, minimum total in the window]; the stats are per
+     * minute, except the streak (average longest kill streak per game)
+     */
+    public const ARCHETYPES = [
+        'Headhunter' => ['headshot', 100], 'Butcher' => ['slashed', 50], 'Bomber' => ['gibbed', 100],
+        'Pistolero' => ['busted', 200], 'Berserker' => ['streak', 0],
+    ];
+
+    /** From this percentile in its stat a player gets the character */
+    public const ARCHETYPE_PCT = 90;
+
+    /** What each character stands out for (tooltips, the card) */
+    public const ARCHETYPE_STATS = [
+        'Headhunter' => 'headshots', 'Butcher' => 'knife kills', 'Bomber' => 'grenade kills',
+        'Pistolero' => 'pistol kills', 'Berserker' => 'kill streaks',
     ];
 
     private const WEAPONS = [
@@ -78,6 +102,23 @@ class CalculateRatingsCommand extends Command
         };
 
         return $type . ' · ' . $spec;
+    }
+
+    /** "Butcher", or "The Butcher" for #1 in knife kills */
+    public static function archetypeLabel(string $archetype, ?int $rank): string
+    {
+        return ($rank === 1 ? 'The ' : '') . $archetype;
+    }
+
+    /** "Top 3% in knife kills" (#1: "Most knife kills of all rated players") */
+    public static function archetypeText(string $archetype, ?int $pct, ?int $rank): string
+    {
+        $stat = self::ARCHETYPE_STATS[$archetype] ?? '';
+        if ($rank === 1) {
+            return $archetype === 'Berserker' ? 'Longest kill streaks of all rated players' : 'Most ' . $stat . ' of all rated players';
+        }
+
+        return sprintf('Top %d%% in %s', max(1, 100 - (int)$pct), $stat);
     }
 
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
@@ -127,6 +168,8 @@ class CalculateRatingsCommand extends Command
         $mean = array_sum($raw) / count($raw);
         $sd = sqrt(array_sum(array_map(fn($v) => ($v - $mean) ** 2, $raw)) / count($raw)) ?: 1.0;
 
+        $archetypes = $this->archetypes($rows);
+
         $now = DateTime::now();
         $ratings = [];
         foreach ($rows as $i => $r) {
@@ -145,6 +188,9 @@ class CalculateRatingsCommand extends Command
                 'rating' => round(max(0.1, min(9.9, 5 + 1.5 * ((float)$r['raw'] - $mean) / $sd)), 1),
                 'type' => $type,
                 'weapon' => $this->weapon($r),
+                'archetype' => $archetypes[$i]['archetype'] ?? null,
+                'archetype_pct' => $archetypes[$i]['pct'] ?? null,
+                'archetype_rank' => $archetypes[$i]['rank'] ?? null,
                 'games' => (int)$r['games'],
                 'attack_pct' => $a,
                 'defense_pct' => $d,
@@ -164,8 +210,11 @@ class CalculateRatingsCommand extends Command
             $names = $this->fetchTable('Players')->find('list', valueField: 'name')
                 ->where(['id IN' => array_column(array_slice($ratings, 0, 20), 'player_id')])->toArray();
             foreach (array_slice($ratings, 0, 20) as $r) {
-                $io->out(sprintf('%3d  %-18s %4.1f  %-22s %s', $r['rank'], $names[$r['player_id']] ?? '?', $r['rating'], $r['type'], $r['weapon']));
+                $io->out(sprintf('%3d  %-18s %4.1f  %-22s %-8s %s', $r['rank'], $names[$r['player_id']] ?? '?', $r['rating'], $r['type'], $r['weapon'],
+                    $r['archetype'] ? self::archetypeLabel($r['archetype'], $r['archetype_rank']) . ' (' . $r['archetype_pct'] . ')' : ''));
             }
+            $counts = array_count_values(array_filter(array_column($ratings, 'archetype')));
+            $io->out('Characters: ' . json_encode($counts) . ' of ' . count($ratings));
         } else {
             $connection->transactional(function ($connection) use ($ratings) {
                 $connection->execute('DELETE FROM player_ratings');
@@ -245,7 +294,9 @@ class CalculateRatingsCommand extends Command
         return $this->ctes() . "
             SELECT ranked.player_id, COUNT(*) AS games, AVG(score) AS raw,
                    AVG(att_z) AS attack, AVG(dfn_z) AS defense, AVG(combat_z) AS combat,
-                   SUM(win = 1) AS wins, SUM(win <> 0) AS decided, " . $this->sumWeapons() . "
+                   SUM(win = 1) AS wins, SUM(win <> 0) AS decided, " . $this->sumWeapons() . ",
+                   SUM(mins) AS mins, SUM(headshot) AS headshot,
+                   AVG(longest_streak) AS streak, COUNT(longest_streak) AS streak_games
             FROM ranked
             INNER JOIN players pl ON pl.id = ranked.player_id AND pl.track = 1
             WHERE rn <= :window
@@ -278,7 +329,7 @@ class CalculateRatingsCommand extends Command
             WITH pg AS (
                 SELECT p.player_id, p.game_id, g.ended_at,
                        CAST(COALESCE(p.minutes_played, g.duration_minutes, 0) AS DOUBLE) AS mins,
-                       p.kills, p.deaths, p.teamkills, p.suicided,
+                       p.kills, p.deaths, p.teamkills, p.suicided, p.headshot, p.longest_streak,
                        p.scored_with_the_flag AS sc, p.stole_the_flag AS st,
                        p.lost_the_flag AS lo, p.returned_the_flag AS re,
                        $pgWeapons,
@@ -325,7 +376,7 @@ class CalculateRatingsCommand extends Command
                 FROM rel
             ),
             z AS (
-                SELECT rel.player_id, rel.game_id, rel.ended_at, rel.win, " . implode(', ', $weaponCols) . ",
+                SELECT rel.player_id, rel.game_id, rel.ended_at, rel.win, rel.mins, rel.headshot, rel.longest_streak, " . implode(', ', $weaponCols) . ",
                        (obj_rel - m_obj) / s_obj AS obj_z, (att_rel - m_att) / s_att AS att_z,
                        (dfn_rel - m_dfn) / s_dfn AS dfn_z,
                        0.8 * (kd_rel - m_kd) / s_kd + 0.2 * (fpm_rel - m_fpm) / s_fpm AS combat_z,
@@ -338,6 +389,46 @@ class CalculateRatingsCommand extends Command
                        ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY ended_at DESC) AS rn
                 FROM z
             )";
+    }
+
+    /**
+     * The character of each rated player (by row index): the ARCHETYPES stat
+     * with the highest percentile among the rated players, from
+     * ARCHETYPE_PCT, with the player's place in it. Players below a stat's
+     * minimum total (or with fewer than MIN_GAMES games with a streak) count
+     * as 0 in it.
+     *
+     * @return array<int, array{archetype: string, pct: int, rank: int}>
+     */
+    private function archetypes(array $rows): array
+    {
+        $best = [];
+        foreach (self::ARCHETYPES as $archetype => [$stat, $min]) {
+            $values = [];
+            foreach ($rows as $i => $r) {
+                if ($stat === 'streak') {
+                    $values[$i] = (int)$r['streak_games'] >= self::MIN_GAMES ? (float)$r['streak'] : 0.0;
+                } else {
+                    $values[$i] = (int)$r[$stat] >= $min && (float)$r['mins'] > 0 ? (int)$r[$stat] / (float)$r['mins'] : 0.0;
+                }
+            }
+            $sorted = array_values($values);
+            sort($sorted);
+            arsort($values);
+            $rank = 0;
+            foreach ($values as $i => $value) {
+                $rank++;
+                if ($value <= 0) {
+                    break;
+                }
+                $pct = (int)floor(100 * $this->countBelow($sorted, $value) / count($sorted));
+                if ($pct >= self::ARCHETYPE_PCT && $pct > ($best[$i]['pct'] ?? -1)) {
+                    $best[$i] = ['archetype' => $archetype, 'pct' => $pct, 'rank' => $rank];
+                }
+            }
+        }
+
+        return $best;
     }
 
     /** The weapon with 40%+ of the player's kills, else "Mixed" */

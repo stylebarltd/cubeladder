@@ -29,11 +29,14 @@ if ((int)$player->track === 1):
         $ogText = str_replace('CTF rating ' . number_format((float)$rating->rating, 1),
             'CTF rating ' . number_format((float)$rating->rating, 1) . ((float)$rating->trend > 0 ? ' ▲ on the rise' : ' ▼ going down'), $ogText);
     }
+    if (!empty($rating->archetype)) {
+        $ogText .= ' · ' . \App\Command\CalculateRatingsCommand::archetypeLabel($rating->archetype, $rating->archetype_rank);
+    }
     if (!empty($timePlayed['all'])) {
         $ogText .= ' · ' . $this->Layout->duration((int)$timePlayed['all']) . ' played';
     }
     // a new picture URL whenever the rating changes, so previews don't stay stale
-    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $rating?->trend, $player->name, $player->picture, array_column($weapons['choice'] ?? [], 'pct', 'key'), 'card-v2'])), 0, 8);
+    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $rating?->trend, $player->name, $player->picture, array_column($weapons['choice'] ?? [], 'pct', 'key'), $rating?->archetype, $rating?->archetype_rank, $rating?->archetype_pct, 'card-v3'])), 0, 8);
     $this->assign('title', $ogTitle);
     $this->start('meta'); ?>
     <meta property="og:type" content="profile">
@@ -78,6 +81,9 @@ endif;
                           title="No game in the last <?= \App\Utility\Activity::ACTIVE_DAYS ?> days: not in the rankings and the CTF rating until the next game">
                         <i class="fa-solid fa-moon text-xs"></i>Inactive
                     </span>
+                <?php endif; ?>
+                <?php if (!empty($rating->archetype)): ?>
+                    <?= $this->element('archetype_badge', ['archetype' => $rating->archetype, 'pct' => $rating->archetype_pct, 'rank' => $rating->archetype_rank]) ?>
                 <?php endif; ?>
                 <?php foreach ($weekBadges as $a): ?>
                     <?= $this->element('achievement_badge', ['event' => $a->event_type, 'title' => ($achievementLabels[$a->event_type] ?? $a->event_type) . ' last week', 'large' => true]) ?>
