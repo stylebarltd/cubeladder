@@ -373,8 +373,8 @@ if(!$type){
 //    }
     public function weapon(
         array $stats,
-        float $hybridThreshold = 0.65,
-        float $specialThreshold = 0.2
+        float $hybridThreshold = 0.4,
+        float $specialThreshold = 0.12
     ): array {
         $primary = [
             'rifle'    => 0,
@@ -396,6 +396,7 @@ if(!$type){
             'punctured'  => ['type' => 'primary', 'weapon' => 'sniper'],
             'headshot'   => ['type' => 'primary', 'weapon' => 'sniper'],
             'splattered' => ['type' => 'primary', 'weapon' => 'shotgun'],
+            'peppered'   => ['type' => 'primary', 'weapon' => 'shotgun'],
             'picked_off' => ['type' => 'primary', 'weapon' => 'carabine'],
 
             // special

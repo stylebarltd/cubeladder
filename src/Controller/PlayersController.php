@@ -336,6 +336,7 @@ class PlayersController extends AppController
                     'sprayed' => 'SUM(PlayerStatsPerGame.sprayed)',
                     'punctured' => 'SUM(PlayerStatsPerGame.punctured)',
                     'splattered' => 'SUM(PlayerStatsPerGame.splattered)',
+                    'peppered' => 'SUM(PlayerStatsPerGame.peppered)',
                     'picked_off' => 'SUM(PlayerStatsPerGame.picked_off)',
                     'games' => \App\Model\Table\PlayerStatsPerGameTable::countedGamesSql(),
                     'last_seen' => 'MAX(Games.started_at)',
@@ -373,6 +374,7 @@ class PlayersController extends AppController
                     'sprayed'              => (int)$player->sprayed,
                     'punctured'            => (int)$player->punctured,
                     'splattered'           => (int)$player->splattered,
+                    'peppered'             => (int)$player->peppered,
                     'picked_off'           => (int)$player->picked_off,
                 ];
             });

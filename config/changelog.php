@@ -6,6 +6,13 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-10-11',
+            'title' => 'More weapon icons',
+            'items' => [
+                'Weapons: a second gun now shows from 40% of your main gun\'s kills (was 65%), knife and grenade from 12% (was 20%) - more players get more than one weapon. Shotgun "peppered" kills now count too.',
+            ],
+        ],
+        [
             'date' => '2026-10-10',
             'title' => 'New player cards',
             'items' => [
