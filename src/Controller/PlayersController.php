@@ -905,7 +905,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
     {
         $player = $this->request->getAttribute('identity');
         if (!$this->ownsPlayer($player)) {
-            $this->Flash->error('You can only edit your own profile, from the IP you play from.');
+            $this->Flash->error($this->ownershipHint('edit your profile'));
             return $this->redirect(['action' => 'index']);
         }
         // all avatar files
@@ -941,7 +941,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $this->request->allowMethod(['post']);
         $player = $this->request->getAttribute('identity');
         if (!$this->ownsPlayer($player)) {
-            $this->Flash->error('You can only edit your own profile, from the IP you play from.');
+            $this->Flash->error($this->ownershipHint('edit your profile'));
             return $this->redirect(['action' => 'index']);
         }
 
@@ -987,7 +987,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $this->request->allowMethod(['post']);
         $player = $this->request->getAttribute('identity');
         if (!$this->ownsPlayer($player)) {
-            $this->Flash->error('You can only edit your own profile, from the IP you play from.');
+            $this->Flash->error($this->ownershipHint('edit your profile'));
             return $this->redirect(['action' => 'index']);
         }
 

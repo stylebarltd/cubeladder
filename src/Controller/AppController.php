@@ -165,6 +165,23 @@ class AppController extends Controller
     }
 
     /**
+     * Why ownsPlayer() failed and what the visitor can do about it, for
+     * $what ("send messages", "edit your profile", ...).
+     */
+    protected function ownershipHint(string $what): string
+    {
+        $identity = $this->request->getAttribute('identity');
+        if ($identity === null) {
+            return sprintf('To %s, play a game on one of our servers first: we recognize you by the internet address (IP) you play from. '
+                . 'Open cubeLadder from the same connection afterwards - your name then shows at the top right.', $what);
+        }
+
+        return sprintf('To %s as %s, we check that you are on the internet address (IP) %s last played from - yours has changed since '
+            . '(new address from your provider, another network, phone or VPN). Play one game on one of our servers from this connection: '
+            . 'about 10 minutes after the game it works again.', $what, $identity->name, $identity->name);
+    }
+
+    /**
      * The visitor is a site admin (Ladder.admins) and owns that identity
      * (same IP as the admin's player - see ownsPlayer()).
      */

@@ -19,13 +19,16 @@ class MessagesController extends AppController
 
     /**
      * Logged-in player who may read / send private messages: identity and
-     * the player's own IP (ownsPlayer), else a 403.
+     * the player's own IP (ownsPlayer), else back to the front page with
+     * what to do (ownershipHint).
      */
     private function messagingPlayer(): \App\Model\Entity\Player
     {
         $player = $this->request->getAttribute('identity');
         if (!$this->ownsPlayer($player)) {
-            throw new ForbiddenException('Messages are only available from the IP you play from.');
+            // the explanation as a notice on the front page, not an error page
+            $this->Flash->error($this->ownershipHint('read and send messages'));
+            throw new \Cake\Http\Exception\RedirectException(\Cake\Routing\Router::url(['controller' => 'Pages', 'action' => 'display', 'home']));
         }
 
         return $player;
@@ -129,7 +132,7 @@ class MessagesController extends AppController
         $sender = $this->request->getAttribute('identity');
 
         if (!$this->ownsPlayer($sender)) {
-            $this->Flash->error('You must be a registered player, on the IP you play from, to send messages.');
+            $this->Flash->error($this->ownershipHint('send messages'));
             return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
         }
 
