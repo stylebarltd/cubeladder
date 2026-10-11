@@ -241,6 +241,29 @@ $rules = [
             </div>
         </section>
 
+        <section id="skill" class="scroll-mt-20 rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-3">
+            <h2 class="mb-4 text-lg font-bold"><i class="fa-solid fa-user-ninja mr-2 text-sky-300"></i>Skill rating</h2>
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div class="space-y-3 text-sm text-zinc-200">
+                    <p>The CTF rating is about the team and the flag. The skill rating is about <b>you</b>: how good you are yourself &ndash; in a fight and with the flag &ndash;
+                        in <b>every mode</b> (CTF, TDM, DM, OSOK, &hellip;). Same scale: <b>5.0</b> is average, <b>8+</b> is top.</p>
+                    <p>Like the CTF rating, every game of 3+ minutes (4+ players) is measured <b>per minute</b> and <b>against the others in the same game</b>.
+                        Your skill rating is the average of your <b>last 100 games</b>; you get it together with your CTF rating.</p>
+                </div>
+                <table class="w-full self-start text-sm">
+                    <tbody class="divide-y divide-white/10">
+                        <tr><td class="py-1.5 pr-3 font-bold text-sky-300">30%</td><td class="py-1.5"><b>Kill points</b> &ndash; per kill 1, <b>headshot, knife and grenade kills 1.5</b></td></tr>
+                        <tr><td class="py-1.5 pr-3 font-bold text-sky-300">35%</td><td class="py-1.5"><b>K/D</b> &ndash; kills against deaths: staying alive matters</td></tr>
+                        <tr><td class="py-1.5 pr-3 font-bold text-sky-300">10%</td><td class="py-1.5"><b>Flags</b> &ndash; flag scored 3, taking the flag 1, returning your flag 1 (CTF, KTF, HTF)</td></tr>
+                        <tr><td class="py-1.5 pr-3 font-bold text-sky-300">10%</td><td class="py-1.5"><b>Kill streaks</b> &ndash; your longest streak in the game</td></tr>
+                        <tr><td class="py-1.5 pr-3 font-bold text-sky-300">5%</td><td class="py-1.5"><b>Team wins</b> &ndash; only a little, the teams change all the time</td></tr>
+                        <tr><td class="py-1.5 pr-3 font-bold text-sky-300">5%</td><td class="py-1.5"><b>Lobby strength</b> &ndash; doing well against strong players counts more</td></tr>
+                        <tr><td class="py-1.5 pr-3 font-bold text-sky-300">5%</td><td class="py-1.5"><b>Discipline</b> &ndash; teamkills and suicides count against you</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         <section id="characters" class="scroll-mt-20 rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-3">
             <h2 class="mb-4 text-lg font-bold"><i class="fa-solid fa-masks-theater mr-2 text-purple-300"></i>Characters &amp; card tiers</h2>
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">

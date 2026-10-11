@@ -20,6 +20,11 @@ $stats = [
             : '–',
         'title' => 'CTF rating 0-10 (last 100 CTF games, from 20 on) - see About',
     ],
+    'skill' => [
+        'label' => 'Skill',
+        'value' => fn($p) => $p->skill !== null ? number_format($p->skill, 1) : '–',
+        'title' => 'Skill rating 0-10: individual, last 100 games of any mode - kills, headshot / knife / grenade kills, K/D, flags, streaks, team wins, lobby strength - see About',
+    ],
     'kd' => [
         'label' => 'KDR',
         'value' => fn($p) => $p->stats['kd_ratio'] ?? 0,

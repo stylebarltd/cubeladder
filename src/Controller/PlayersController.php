@@ -394,18 +394,19 @@ class PlayersController extends AppController
     /**
      * CTF rating and type (bin/cake CalculateRatings) for the ranking boards -
      * looked up per request, as they are recalculated after the import that
-     * clears the cached rankings. Sorting by rating puts unrated players
-     * (fewer than 20 CTF games) last, by points.
+     * clears the cached rankings. Sorting by rating (or skill) puts unrated
+     * players (fewer than 20 CTF games) last, by points.
      */
     private function attachRatings(array &$players, string $sort): void
     {
         $ratings = $this->fetchTable('PlayerRatings')->find()
-            ->select(['player_id', 'rating', 'trend', 'type', 'attack_pct', 'defense_pct', 'combat_pct', 'archetype', 'archetype_pct', 'archetype_rank'])
+            ->select(['player_id', 'rating', 'trend', 'skill', 'type', 'attack_pct', 'defense_pct', 'combat_pct', 'archetype', 'archetype_pct', 'archetype_rank'])
             ->disableHydration()->all()->indexBy('player_id')->toArray();
         foreach ($players as $player) {
             $r = $ratings[$player->id] ?? null;
             $player->rating = $r ? (float)$r['rating'] : null;
             $player->rating_trend = isset($r['trend']) ? (float)$r['trend'] : null;
+            $player->skill = isset($r['skill']) ? (float)$r['skill'] : null;
             $player->player_type = $r['type'] ?? null;
             $player->player_type_label = $r
                 ? \App\Command\CalculateRatingsCommand::typeLabel($r['type'], (int)$r['attack_pct'], (int)$r['defense_pct'], (int)$r['combat_pct'])
@@ -416,6 +417,8 @@ class PlayersController extends AppController
         }
         if ($sort === 'rating') {
             usort($players, fn($a, $b) => [$b->rating ?? -1, (int)$b->total_score] <=> [$a->rating ?? -1, (int)$a->total_score]);
+        } elseif ($sort === 'skill') {
+            usort($players, fn($a, $b) => [$b->skill ?? -1, (int)$b->total_score] <=> [$a->skill ?? -1, (int)$a->total_score]);
         }
     }
 
@@ -1260,6 +1263,8 @@ $gamesDataGlobal = [];        // games inside lastGameIds
                 'trend' => $rating->trend !== null && abs((float)$rating->trend) >= \App\Command\CalculateRatingsCommand::TREND_ARROW
                     ? ((float)$rating->trend > 0 ? 'up' : 'down') : null,
                 'rank' => (int)$rating->rank, 'rated' => $PlayerRatings->find()->count(),
+                'skill' => $rating->skill !== null ? (float)$rating->skill : null,
+                'skill_rank' => $rating->skill_rank !== null ? (int)$rating->skill_rank : null,
                 'win_rate' => $rating->win_rate !== null ? (float)$rating->win_rate : null,
                 'attack_pct' => (int)$rating->attack_pct, 'defense_pct' => (int)$rating->defense_pct, 'combat_pct' => (int)$rating->combat_pct,
                 'archetype' => $rating->archetype, 'archetype_pct' => $rating->archetype_pct !== null ? (int)$rating->archetype_pct : null,

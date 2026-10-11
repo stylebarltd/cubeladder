@@ -91,7 +91,7 @@ class PlayerCardImage
     /**
      * @param array $card name, country, background (file), avatar (file|null),
      *   hours, games, played ("50 h 23 min"), inactive (bool),
-     *   rating (null or rating, trend, type, type_label, rank, rated, win_rate,
+     *   rating (null or rating, trend, type, type_label, rank, rated, win_rate, skill, skill_rank,
      *   attack_pct, defense_pct, combat_pct, archetype, archetype_pct,
      *   archetype_rank), weapons ([[key, name, pct]]), totals (kills, flags,
      *   wins, mvp)
@@ -153,7 +153,8 @@ class PlayerCardImage
                 $x = $this->run($x, 162, 19, $this->regular, self::WHITE, $up ? ' on the rise' : ' going down');
             }
             $this->run($x, 162, 19, $this->regular, self::WHITE, '  ·  ' . ($r['type_label'] ?? $r['type']));
-            $line3 = sprintf('#%d of %s rated players', (int)$r['rank'], number_format((int)$r['rated']));
+            $line3 = sprintf('#%d of %s rated players', (int)$r['rank'], number_format((int)$r['rated']))
+                . (isset($r['skill']) ? sprintf('  ·  Skill %s (#%d)', number_format((float)$r['skill'], 1), (int)$r['skill_rank']) : '');
         } else {
             $this->text(!empty($card['inactive']) ? 'Inactive - no game in the last 90 days' : 'Not rated yet - the CTF rating starts after 20 CTF games',
                 $pad, 162, 19, $this->regular, self::WHITE);
@@ -246,6 +247,11 @@ class PlayerCardImage
             $this->icon('moon', $col1 + 30, $y + 118, 60, self::MUTED);
         }
         $this->text('CTF RATING', $col1 + 2, $y + 172, 16, $this->regular, self::MUTED);
+        // the skill rating (individual, all modes) below
+        if ($r && isset($r['skill'])) {
+            $sx = $this->run($col1 + 2, $y + 210, 16, $this->regular, self::MUTED, 'SKILL ');
+            $this->text(number_format((float)$r['skill'], 1), $sx, $y + 212, 24, $this->bold, $this->ratingColor((float)$r['skill']));
+        }
 
         $d1 = $x + 266;
         $this->rect($d1, $y + 28, 1, $h - 56, self::LINE);

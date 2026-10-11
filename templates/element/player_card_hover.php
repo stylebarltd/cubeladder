@@ -148,6 +148,11 @@ $archetypeColor = match ($archetype) {
                 </div>
                 <div class="mt-1 text-[10px] uppercase tracking-wider text-zinc-400">CTF rating</div>
                 <div class="text-[10px] text-zinc-500">#<?= (int)$rating->rank ?> of <?= number_format($ratedPlayers) ?></div>
+                <?php if ($rating->skill !== null): ?>
+                    <div class="mt-1.5 border-t border-white/10 pt-1.5 text-center text-[10px] uppercase tracking-wider text-zinc-400">
+                        Skill <b class="font-mono text-sm <?= $this->Layout->ratingClass((float)$rating->skill) ?>"><?= number_format((float)$rating->skill, 1) ?></b>
+                    </div>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
         <div class="min-w-0 <?= $rating ? '' : 'col-span-2' ?>">

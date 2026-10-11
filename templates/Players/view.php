@@ -29,6 +29,9 @@ if ((int)$player->track === 1):
         $ogText = str_replace('CTF rating ' . number_format((float)$rating->rating, 1),
             'CTF rating ' . number_format((float)$rating->rating, 1) . ((float)$rating->trend > 0 ? ' ▲ on the rise' : ' ▼ going down'), $ogText);
     }
+    if (!empty($rating) && $rating->skill !== null) {
+        $ogText .= ' · Skill ' . number_format((float)$rating->skill, 1);
+    }
     if (!empty($rating->archetype)) {
         $ogText .= ' · ' . \App\Command\CalculateRatingsCommand::archetypeLabel($rating->archetype, $rating->archetype_rank);
     }
@@ -36,7 +39,7 @@ if ((int)$player->track === 1):
         $ogText .= ' · ' . $this->Layout->duration((int)$timePlayed['all']) . ' played';
     }
     // a new picture URL whenever the rating changes, so previews don't stay stale
-    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $rating?->trend, $player->name, $player->picture, array_column($weapons['choice'] ?? [], 'pct', 'key'), $rating?->archetype, $rating?->archetype_rank, $rating?->archetype_pct, 'card-v3'])), 0, 8);
+    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $rating?->trend, $player->name, $player->picture, array_column($weapons['choice'] ?? [], 'pct', 'key'), $rating?->archetype, $rating?->archetype_rank, $rating?->archetype_pct, $rating?->skill, $rating?->skill_rank, 'card-v4'])), 0, 8);
     $this->assign('title', $ogTitle);
     $this->start('meta'); ?>
     <meta property="og:type" content="profile">
@@ -225,6 +228,15 @@ endif;
                             </span>
                         <?php endforeach; ?>
                     </div>
+                    <?php if ($rating->skill !== null): ?>
+                        <!-- skill rating: individual, all modes (kills, special kills, K/D, team wins, streaks, lobby) -->
+                        <div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/10 pt-4"
+                             title="Individual skill over the last 100 games of any mode: kills (headshot, knife, grenade count 1.5), K/D, flags, kill streaks, team wins and how strong the lobby was">
+                            <span class="text-xs uppercase tracking-[0.15em] text-zinc-400"><i class="fa-solid fa-user-ninja mr-1"></i>Skill rating</span>
+                            <span class="font-mono text-3xl font-extrabold leading-none <?= $this->Layout->ratingClass((float)$rating->skill) ?>"><?= number_format((float)$rating->skill, 1) ?></span>
+                            <span class="text-xs text-zinc-300">#<?= (int)$rating->skill_rank ?> of <?= number_format((int)$ratedPlayers) ?></span>
+                        </div>
+                    <?php endif; ?>
             </a>
         <?php elseif (!\App\Utility\Activity::isActive($lastSeen['started_at'] ?? null) && !empty($lastSeen)): ?>
             <!-- inactive: the CTF rating comes back with the next game -->

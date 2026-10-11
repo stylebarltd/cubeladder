@@ -43,6 +43,9 @@ use Cake\I18n\DateTime;
  * per minute, or the average longest kill streak. A player in the top 10%
  * of one of them gets it (the strongest one if several); #1 in that stat is
  * "The Butcher" etc. on display (archetypeLabel()).
+ *
+ * Skill rating (individual, any mode, same 0-10 scale) of the same players
+ * over their last 100 counted games, see SKILL_WEIGHTS and skills().
  */
 class CalculateRatingsCommand extends Command
 {
@@ -61,6 +64,25 @@ class CalculateRatingsCommand extends Command
     public const ARCHETYPES = [
         'Headhunter' => ['headshot', 100], 'Butcher' => ['slashed', 50], 'Bomber' => ['gibbed', 100],
         'Pistolero' => ['busted', 200], 'Berserker' => ['streak', 0],
+    ];
+
+    /** Extra kill points for a headshot, knife or grenade kill (on top of the +1 of every kill) */
+    public const SKILL_SPECIAL_BONUS = 0.5;
+
+    /** Flag part of the skill rating: a flag scored counts this many steals (flag pickups) or returns */
+    public const SKILL_FLAG_SCORED = 3;
+
+    /**
+     * Skill rating (individual, all modes): weights of the parts of a game.
+     * points = kills, headshot / knife / grenade kills count
+     * 1 + SKILL_SPECIAL_BONUS, per minute; kd = kills against deaths; flags =
+     * flags scored (x SKILL_FLAG_SCORED), taken and returned, per minute (0
+     * in modes without flags); win = team result (team modes - low, as the
+     * teams change all the time); streak = longest kill streak; discipline = teamkills and
+     * suicides (minus); lobby = how strong the others in the game were.
+     */
+    public const SKILL_WEIGHTS = [
+        'points' => 0.30, 'kd' => 0.35, 'flags' => 0.10, 'win' => 0.05, 'streak' => 0.10, 'lobby' => 0.05, 'discipline' => 0.05,
     ];
 
     /** From this percentile in its stat a player gets the character */
@@ -206,11 +228,23 @@ class CalculateRatingsCommand extends Command
         }
         unset($rating);
 
+        // skill rating (individual, all modes) of the same players, with its own place
+        $skills = $this->skills(array_fill_keys(array_column($ratings, 'player_id'), true));
+        uasort($skills, fn($x, $y) => $y['score'] <=> $x['score']);
+        $skillRank = array_flip(array_keys($skills));
+        foreach ($ratings as &$rating) {
+            $skill = $skills[$rating['player_id']] ?? null;
+            $rating['skill'] = $skill['skill'] ?? null;
+            $rating['skill_rank'] = $skill ? $skillRank[$rating['player_id']] + 1 : null;
+            $rating['skill_win_rate'] = $skill && $skill['decided'] > 0 ? round($skill['wins'] / $skill['decided'], 3) : null;
+        }
+        unset($rating);
+
         if ($args->getOption('dry-run')) {
             $names = $this->fetchTable('Players')->find('list', valueField: 'name')
                 ->where(['id IN' => array_column(array_slice($ratings, 0, 20), 'player_id')])->toArray();
             foreach (array_slice($ratings, 0, 20) as $r) {
-                $io->out(sprintf('%3d  %-18s %4.1f  %-22s %-8s %s', $r['rank'], $names[$r['player_id']] ?? '?', $r['rating'], $r['type'], $r['weapon'],
+                $io->out(sprintf('%3d  %-18s %4.1f  skill %4.1f (#%3d)  %-22s %-8s %s', $r['rank'], $names[$r['player_id']] ?? '?', $r['rating'], $r['skill'] ?? 0, $r['skill_rank'] ?? 0, $r['type'], $r['weapon'],
                     $r['archetype'] ? self::archetypeLabel($r['archetype'], $r['archetype_rank']) . ' (' . $r['archetype_pct'] . ')' : ''));
             }
             $counts = array_count_values(array_filter(array_column($ratings, 'archetype')));
@@ -333,16 +367,7 @@ class CalculateRatingsCommand extends Command
                        p.scored_with_the_flag AS sc, p.stole_the_flag AS st,
                        p.lost_the_flag AS lo, p.returned_the_flag AS re,
                        $pgWeapons,
-                       CASE
-                           WHEN p.team NOT IN ('CLA', 'RVSF') OR g.team_scores IS NULL
-                                OR NOT JSON_CONTAINS_PATH(g.team_scores, 'all', '$.CLA', '$.RVSF') THEN 0
-                           WHEN (COALESCE(JSON_VALUE(g.team_scores, '$.CLA.flags'), 0) + 0, COALESCE(JSON_VALUE(g.team_scores, '$.CLA.frags'), 0) + 0)
-                              = (COALESCE(JSON_VALUE(g.team_scores, '$.RVSF.flags'), 0) + 0, COALESCE(JSON_VALUE(g.team_scores, '$.RVSF.frags'), 0) + 0) THEN 0
-                           WHEN ((COALESCE(JSON_VALUE(g.team_scores, '$.CLA.flags'), 0) + 0, COALESCE(JSON_VALUE(g.team_scores, '$.CLA.frags'), 0) + 0)
-                               > (COALESCE(JSON_VALUE(g.team_scores, '$.RVSF.flags'), 0) + 0, COALESCE(JSON_VALUE(g.team_scores, '$.RVSF.frags'), 0) + 0))
-                                = (p.team = 'CLA') THEN 1
-                           ELSE -1
-                       END AS win
+                       " . $this->winSql() . " AS win
                 FROM player_stats_per_game p
                 INNER JOIN games g ON g.id = p.game_id
                 WHERE g.mode = 'ctf' AND g.inaccurate = 0 AND g.ended_at IS NOT NULL
@@ -389,6 +414,154 @@ class CalculateRatingsCommand extends Command
                        ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY ended_at DESC) AS rn
                 FROM z
             )";
+    }
+
+    /** The team result of p in g: 1 won, -1 lost, 0 draw or no teams */
+    private function winSql(): string
+    {
+        return "CASE
+                           WHEN p.team NOT IN ('CLA', 'RVSF') OR g.team_scores IS NULL
+                                OR NOT JSON_CONTAINS_PATH(g.team_scores, 'all', '$.CLA', '$.RVSF') THEN 0
+                           WHEN (COALESCE(JSON_VALUE(g.team_scores, '$.CLA.flags'), 0) + 0, COALESCE(JSON_VALUE(g.team_scores, '$.CLA.frags'), 0) + 0)
+                              = (COALESCE(JSON_VALUE(g.team_scores, '$.RVSF.flags'), 0) + 0, COALESCE(JSON_VALUE(g.team_scores, '$.RVSF.frags'), 0) + 0) THEN 0
+                           WHEN ((COALESCE(JSON_VALUE(g.team_scores, '$.CLA.flags'), 0) + 0, COALESCE(JSON_VALUE(g.team_scores, '$.CLA.frags'), 0) + 0)
+                               > (COALESCE(JSON_VALUE(g.team_scores, '$.RVSF.flags'), 0) + 0, COALESCE(JSON_VALUE(g.team_scores, '$.RVSF.frags'), 0) + 0))
+                                = (p.team = 'CLA') THEN 1
+                           ELSE -1
+                       END";
+    }
+
+    /**
+     * Skill (individual) score of every player in every counted game of any
+     * mode, before the lobby part, newest first per player (rn). Each part per
+     * minute (streak per game) against the others in the same game, see
+     * SKILL_WEIGHTS.
+     */
+    private function skillSql(): string
+    {
+        $w = self::SKILL_WEIGHTS;
+
+        return "
+            WITH pg AS (
+                SELECT p.player_id, p.game_id, g.ended_at,
+                       CAST(COALESCE(p.minutes_played, g.duration_minutes, 0) AS DOUBLE) AS mins,
+                       GREATEST(p.kills, 0) AS kills, p.deaths, p.teamkills, p.suicided,
+                       p.headshot + p.slashed + p.gibbed AS special,
+                       COALESCE(p.longest_streak, 0) AS streak,
+                       p.scored_with_the_flag AS sc, p.stole_the_flag AS st, p.returned_the_flag AS re,
+                       " . $this->winSql() . " AS win
+                FROM player_stats_per_game p
+                INNER JOIN games g ON g.id = p.game_id
+                WHERE g.inaccurate = 0 AND g.ended_at IS NOT NULL
+                  AND COALESCE(p.minutes_played, g.duration_minutes, 0) >= :min_minutes
+            ),
+            r AS (
+                SELECT pg.*,
+                       COUNT(*) OVER (PARTITION BY game_id) AS n,
+                       (kills + " . self::SKILL_SPECIAL_BONUS . " * special) / mins AS pts,
+                       LN((kills + 3) / (deaths + 3.0)) AS kd,
+                       (" . self::SKILL_FLAG_SCORED . " * sc + st + re) / mins AS flags,
+                       -(teamkills + suicided) / mins AS disc
+                FROM pg
+            ),
+            rel AS (
+                SELECT r.*,
+                       pts - AVG(pts) OVER w AS pts_rel, kd - AVG(kd) OVER w AS kd_rel,
+                       streak - AVG(streak) OVER w AS streak_rel, flags - AVG(flags) OVER w AS flags_rel,
+                       disc - AVG(disc) OVER w AS disc_rel
+                FROM r
+                WHERE n >= :min_players
+                WINDOW w AS (PARTITION BY game_id)
+            ),
+            scale AS (
+                SELECT AVG(pts_rel) AS m_pts, STDDEV_POP(pts_rel) AS s_pts, AVG(kd_rel) AS m_kd, STDDEV_POP(kd_rel) AS s_kd,
+                       AVG(streak_rel) AS m_streak, STDDEV_POP(streak_rel) AS s_streak,
+                       AVG(flags_rel) AS m_flags, STDDEV_POP(flags_rel) AS s_flags,
+                       AVG(disc_rel) AS m_disc, STDDEV_POP(disc_rel) AS s_disc, AVG(win) AS m_win, STDDEV_POP(win) AS s_win
+                FROM rel
+            )
+            SELECT player_id, game_id, win,
+                   {$w['points']} * (pts_rel - m_pts) / s_pts + {$w['kd']} * (kd_rel - m_kd) / s_kd
+                   + {$w['flags']} * (flags_rel - m_flags) / s_flags + {$w['win']} * (win - m_win) / s_win + {$w['streak']} * (streak_rel - m_streak) / s_streak
+                   + {$w['discipline']} * (disc_rel - m_disc) / s_disc AS score,
+                   ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY ended_at DESC) AS rn
+            FROM rel CROSS JOIN scale";
+    }
+
+    /**
+     * Skill rating (0.1 - 9.9, 5.0 = average) of the rated players: the
+     * average skill game score over their last WINDOW counted games of any
+     * mode, where each game also counts how strong the others in it were
+     * (the average first-pass skill of the others, SKILL_WEIGHTS['lobby']).
+     *
+     * @param array<string, true> $rated player ids to rate
+     * @return array<string, array{skill: float, wins: int, decided: int}>
+     */
+    private function skills(array $rated): array
+    {
+        $connection = $this->fetchTable('PlayerStatsPerGame')->getConnection();
+        $rows = $connection->execute($this->skillSql(), [
+            'min_minutes' => PlayerStatsPerGameTable::MIN_MINUTES,
+            'min_players' => self::MIN_PLAYERS_PER_GAME,
+        ])->fetchAll('num');
+
+        // first pass: each player's average without the lobby
+        $sum = $count = [];
+        foreach ($rows as [$playerId, , , $score, $rn]) {
+            if ($rn <= self::WINDOW) {
+                $sum[$playerId] = ($sum[$playerId] ?? 0) + (float)$score;
+                $count[$playerId] = ($count[$playerId] ?? 0) + 1;
+            }
+        }
+        $first = [];
+        foreach ($sum as $playerId => $s) {
+            $first[$playerId] = $s / $count[$playerId];
+        }
+
+        // the lobby of each game: the others' first-pass average (unknown players count as average, 0)
+        $gameSum = $gameN = [];
+        foreach ($rows as [$playerId, $gameId]) {
+            $gameSum[$gameId] = ($gameSum[$gameId] ?? 0) + ($first[$playerId] ?? 0);
+            $gameN[$gameId] = ($gameN[$gameId] ?? 0) + 1;
+        }
+        $lobby = [];
+        foreach ($rows as $i => [$playerId, $gameId]) {
+            $lobby[$i] = ($gameSum[$gameId] - ($first[$playerId] ?? 0)) / max(1, $gameN[$gameId] - 1);
+        }
+        $lMean = array_sum($lobby) / max(1, count($lobby));
+        $lSd = sqrt(array_sum(array_map(fn($v) => ($v - $lMean) ** 2, $lobby)) / max(1, count($lobby))) ?: 1.0;
+
+        $total = [];
+        foreach ($rows as $i => [$playerId, , $win, $score, $rn]) {
+            if ($rn > self::WINDOW || !isset($rated[$playerId])) {
+                continue;
+            }
+            $t = &$total[$playerId];
+            $t ??= ['score' => 0.0, 'n' => 0, 'wins' => 0, 'decided' => 0];
+            $t['score'] += (float)$score + self::SKILL_WEIGHTS['lobby'] * ($lobby[$i] - $lMean) / $lSd;
+            $t['n']++;
+            $t['wins'] += (int)$win === 1 ? 1 : 0;
+            $t['decided'] += (int)$win !== 0 ? 1 : 0;
+            unset($t);
+        }
+        $total = array_filter($total, fn($t) => $t['n'] >= self::MIN_GAMES);
+        if (!$total) {
+            return [];
+        }
+        $raw = array_map(fn($t) => $t['score'] / $t['n'], $total);
+        $mean = array_sum($raw) / count($raw);
+        $sd = sqrt(array_sum(array_map(fn($v) => ($v - $mean) ** 2, $raw)) / count($raw)) ?: 1.0;
+        $skills = [];
+        foreach ($raw as $playerId => $v) {
+            $skills[$playerId] = [
+                'skill' => round(max(0.1, min(9.9, 5 + 1.5 * ($v - $mean) / $sd)), 1),
+                'score' => $v,
+                'wins' => $total[$playerId]['wins'],
+                'decided' => $total[$playerId]['decided'],
+            ];
+        }
+
+        return $skills;
     }
 
     /**

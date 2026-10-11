@@ -7,6 +7,14 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-11',
+            'title' => 'Skill rating',
+            'items' => [
+                'New: the skill rating (0-10) - your individual rating in every mode, next to the CTF rating. It counts your kills (headshot, knife and grenade kills a bit more) and your K/D most, plus flags (scored, taken, returned), kill streaks, a little team wins and how strong the lobby was. See About.',
+                'Rankings: a new "Skill" column - sort by it to see the best fighters. Also on the player page, the hover card and the shared player card.',
+            ],
+        ],
+        [
+            'date' => '2026-10-11',
             'title' => 'Share your card',
             'items' => [
                 'Player pages: a "Share card" button - copy the link for Discord, or share to WhatsApp, Telegram, X, Facebook and Reddit, or download the card. On phones it opens the share menu with the card picture.',
