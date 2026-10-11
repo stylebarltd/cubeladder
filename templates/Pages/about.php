@@ -194,6 +194,7 @@ $rules = [
                     <li class="flex gap-2"><?= $check ?><span>ZZ|Perros for adding the [aCKa] servers to the ladder</span></li>
                     <li class="flex gap-2"><?= $check ?><span>ZZ|Ketar* for sponsoring the .ovh domain</span></li>
                     <li class="flex gap-2"><?= $check ?><span>Chobbz for adding the Banana &amp; POTATO servers to the ladder</span></li>
+                    <li class="flex gap-2"><?= $check ?><span>O*BrutalSystem for the idea of the live view</span></li>
                 </ul>
             </section>
 
