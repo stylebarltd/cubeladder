@@ -123,6 +123,12 @@ if ! "$BASE_DIR/bin/cake" GeoPlayers >> "$LOGFILE" 2>&1; then
     echo "GeoPlayers failed!" >> "$LOGFILE"
 fi
 
+echo "➡ PlacementBonus"
+# 1st / 2nd / 3rd of free-for-all games: 20 / 15 / 10 extra points
+if ! "$BASE_DIR/bin/cake" PlacementBonus >> "$LOGFILE" 2>&1; then
+    echo "PlacementBonus failed!" >> "$LOGFILE"
+fi
+
 echo "➡ CalculateRatings"
 # CTF ratings and player types (a few seconds)
 if ! "$BASE_DIR/bin/cake" CalculateRatings >> "$LOGFILE" 2>&1; then

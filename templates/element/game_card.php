@@ -66,7 +66,7 @@ $playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight, $rat
         <td class="px-1 py-1 sm:px-2 text-right"><?= $row['deaths'] ?></td>
         <?php /* phones: with a rating column, k/d (frags / deaths) makes room */ ?>
         <td class="px-1 py-1 sm:px-2 text-right <?= $rated ? 'hidden sm:table-cell' : '' ?> <?= $ratioClass($row['kd_ratio']) ?>"><?= number_format($row['kd_ratio'], 2) ?></td>
-        <td class="px-1 py-1 sm:px-2 text-right font-bold text-sky-300"><?= $row['score'] ?></td>
+        <td class="px-1 py-1 sm:px-2 text-right font-bold text-sky-300 whitespace-nowrap"><?= $row['score'] ?><?php if (!empty($row['bonus'])): ?><span class="ml-1 text-[10px] font-semibold text-amber-300" title="Placement bonus: <?= $row['bonus'] === 20 ? '1st' : ($row['bonus'] === 15 ? '2nd' : '3rd') ?> place (included)">+<?= (int)$row['bonus'] ?></span><?php endif; ?></td>
         <?php if ($rated): ?>
             <td class="px-1 py-1 sm:px-2 text-right font-bold <?= $ratingClass($row['rating']) ?>"
                 title="<?= $row['rating'] === null ? 'no rating: under 3 minutes played' : 'CTF rating of this game' ?>"><?= $row['rating'] !== null ? number_format($row['rating'], 1) : '–' ?></td>

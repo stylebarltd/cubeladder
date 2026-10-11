@@ -787,7 +787,8 @@ class AcLogParser
         foreach ($this->pointsMap as $col => $pts) {
             $total += ($row[$col] ?? 0) * $pts;
         }
-        $row['total_score'] = $total;
+        // the placement bonus of a re-read game stays in (bin/cake PlacementBonus)
+        $row['total_score'] = $total + (int)($row['bonus'] ?? 0);
 
         // kd ratio (avoid division by zero)
         $deaths = $row['deaths'] ?? 0;

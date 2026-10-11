@@ -6,6 +6,22 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-10-12',
+            'title' => 'Placement bonus',
+            'items' => [
+                'Free-for-all games (DM, OSOK, LSS, KTF, PF, survivor): 1st place gets +20 points, 2nd +15, 3rd +10. 1st and 2nd need 4+ players, 3rd 5+. Counted for all earlier games too.',
+                'The scoreboard shows the bonus next to the points, e.g. 112 +20 - see About.',
+            ],
+        ],
+        [
+            'date' => '2026-10-11',
+            'title' => 'Game cards',
+            'items' => [
+                'Games is now a page of game cards, last played first: the map, the result, the top 3 players, server, players and minutes - 50 per page. Click a card to open the game.',
+                'On a game page the arrows (and the ← → keys) go on in the same order: ← the newer game, → the older one.',
+            ],
+        ],
+        [
             'date' => '2026-10-11',
             'title' => 'Ranking by rates',
             'items' => [
@@ -17,7 +33,7 @@ return [
             'date' => '2026-10-11',
             'title' => 'Share a game',
             'items' => [
-                'Games and game pages: a "Share result" button on every game, with a preview of the result picture - copy the link (Discord shows the scoreboard), WhatsApp, Telegram, X, Facebook, Reddit or download the picture.',
+                'Game pages: a "Share result" button, with a preview of the result picture - copy the link (Discord shows the scoreboard), WhatsApp, Telegram, X, Facebook, Reddit or download the picture.',
             ],
         ],
         [

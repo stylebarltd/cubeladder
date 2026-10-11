@@ -174,6 +174,7 @@ class GamesTable extends Table
                 'deaths' => (int)$stat->deaths,
                 'kd_ratio' => (float)$stat->kd_ratio,
                 'score' => (int)$stat->total_score,
+                'bonus' => (int)$stat->bonus, // placement bonus, included in score (bin/cake PlacementBonus)
                 'minutes' => $stat->minutes_played,
                 'rating' => isset($ratings[$stat->player_id]) ? (float)$ratings[$stat->player_id] : null,
             ];

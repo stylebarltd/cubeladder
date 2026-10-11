@@ -161,6 +161,22 @@ $rules = [
                 <td class="px-3 py-2">Flag lost</td>
             </tr>
 
+            <!-- Placement bonus (bin/cake PlacementBonus) -->
+            <tr class="bg-white/5">
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-trophy text-yellow-300 w-5 shrink-0 text-center"></i>1st place</span></td>
+                <td class="px-3 py-2 text-center font-bold text-amber-300">+20</td>
+                <td class="px-3 py-2" rowspan="3">Free-for-all games (DM, OSOK, LSS, KTF, PF, survivor): the top 3 by points.
+                    Equal points share the higher place; 1st and 2nd need 4+ players, 3rd 5+.</td>
+            </tr>
+            <tr>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-medal text-zinc-300 w-5 shrink-0 text-center"></i>2nd place</span></td>
+                <td class="px-3 py-2 text-center font-bold text-amber-300">+15</td>
+            </tr>
+            <tr>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-medal text-amber-600 w-5 shrink-0 text-center"></i>3rd place</span></td>
+                <td class="px-3 py-2 text-center font-bold text-amber-300">+10</td>
+            </tr>
+
             <!-- Penalties -->
             <tr class="bg-white/5">
                 <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-user-slash text-red-400 w-5 shrink-0 text-center"></i>teamkills</span></td>
