@@ -179,9 +179,11 @@ class DiscordLiveService
         $now = time();
 
         // clean up old join notices so the channel stays tidy (the unread
-        // marker they caused disappears with them for those who missed it)
+        // marker they caused disappears with them for those who missed it);
+        // all of them as soon as no server has a game anymore, so the channel reads as read again
+        $gameOn = $threshold > 0 && array_filter($servers, fn($s) => $s['online'] && (int)$s['numplayers'] >= $threshold);
         foreach ($state['join_msgs'] ?? [] as $i => $msg) {
-            if ((int)$cfg['ttl'] > 0 && $now - $msg['at'] >= (int)$cfg['ttl']) {
+            if (!$gameOn || ((int)$cfg['ttl'] > 0 && $now - $msg['at'] >= (int)$cfg['ttl'])) {
                 $res = $this->http->delete($this->messageUrl((string)$msg['id']));
                 if ($res->isOk() || $res->getStatusCode() === 404) {
                     unset($state['join_msgs'][$i]);

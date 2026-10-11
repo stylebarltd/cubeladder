@@ -573,7 +573,9 @@ return [
                 'cooldown' => 1800,
                 'mention' => null,
                 // join notices are deleted again after this many seconds,
-                // keeping the channel clean (0 = keep them forever)
+                // keeping the channel clean (0 = keep them forever) - and
+                // right away once no server has threshold+ players anymore,
+                // so the channel shows as read again
                 'ttl' => 900,
             ],
 
