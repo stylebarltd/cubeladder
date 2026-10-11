@@ -136,7 +136,7 @@ shuffle($playerImages);
                                         <!-- Name with the record-game weapon(s) right next to it -->
                                         <div class="flex items-center flex-wrap gap-x-2 gap-y-0.5">
                                             <span class="font-semibold truncate">
-                                                <?= $this->Html->link($player->name, ['controller' => 'Players', 'action' => 'view', $player->player_id], ['class' => 'hover:text-blue-400']) ?>
+                                                <?= $this->Html->link($player->name, ['controller' => 'Players', 'action' => 'view', $player->player_id], ['class' => 'hover:text-blue-400', 'data-hover-card' => '/players/hover-card/' . $player->player_id]) ?>
                                                 <?= $this->Layout->flag($player->country) ?>
                                             </span>
                                             <?php if ($ch = $playerRatings[(string)$player->player_id] ?? null): ?>
@@ -269,4 +269,6 @@ shuffle($playerImages);
     render();
 })();
 </script>
+<!-- the player card on hovering a name, as in the rankings -->
+<?= $this->element('hover_card_script') ?>
 <?php $this->end(); ?>
