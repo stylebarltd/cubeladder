@@ -349,6 +349,32 @@ endif;
         <?php endforeach; ?>
     </div>
 
+    <?php if (!empty($upsets['count'])): ?>
+    <!-- giant slayer: duels won against much stronger players (UpsetService) -->
+    <section class="<?= $panel ?> mb-6 p-5">
+        <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h3 class="text-lg font-bold"><i class="fa-solid fa-bolt mr-1 text-fuchsia-300"></i>Giant slayer</h3>
+            <span class="text-xs text-zinc-400"
+                  title="Duels in a game: <?= h($player->name) ?> killed a player with a <?= number_format(\App\Service\UpsetService::GAP, 0) ?>+ higher skill rating at least <?= \App\Service\UpsetService::MIN_KILLS ?> times, and <?= \App\Service\UpsetService::MIN_LEAD ?>+ more often than the other way round (current skill ratings, games since Sep 2026)">
+                <b class="text-fuchsia-300"><?= (int)$upsets['count'] ?></b> <?= $upsets['count'] === 1 ? 'duel' : 'duels' ?> won against much stronger players<?php if ($upsets['opponents'] > 1): ?> &middot; <?= (int)$upsets['opponents'] ?> different players<?php endif; ?>
+            </span>
+        </div>
+        <div class="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+            <?php foreach ($upsets['top'] as $u): $l = $u['loser']; ?>
+                <a href="/games/view/<?= h($u['game_id']) ?>" class="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-1.5 transition hover:bg-white/10">
+                    <span class="font-mono text-lg font-extrabold text-fuchsia-300"><?= (int)$u['kills'] ?>&ndash;<?= (int)$u['deaths'] ?></span>
+                    <span class="min-w-0 flex-1 truncate">
+                        vs <b><?= h($l['name']) ?></b> <?= $this->Layout->flag($l['country']) ?>
+                        <span class="font-mono text-xs <?= $this->Layout->ratingClass($l['skill']) ?>"><?= number_format($l['skill'], 1) ?></span>
+                    </span>
+                    <span class="hidden shrink-0 text-[11px] text-zinc-500 sm:inline"><?= h($this->Layout->cleanMapName((string)$u['map'])) ?> &middot; <?= h(date('d M Y', strtotime((string)$u['started_at']))) ?></span>
+                    <span class="shrink-0 rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-[10px] font-bold text-fuchsia-200" title="skill difference">+<?= number_format($u['gap'], 1) ?></span>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
+
     <!-- the last 100 -->
     <div class="mb-6">
         <section class="<?= $panel ?> p-5">

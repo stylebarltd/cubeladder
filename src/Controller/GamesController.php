@@ -82,8 +82,10 @@ class GamesController extends AppController
         $nextId = $neighbour('>', 'ASC');
 
         $notQualified = $game->inaccurate ? (new HallOfFameService())->notQualified($game->id) : [];
+        // a much weaker player beating a much stronger one in their duel
+        $upsets = $game->inaccurate ? [] : (new \App\Service\UpsetService())->forGame($game->id);
 
-        $this->set(compact('game', 'board', 'prevId', 'nextId', 'notQualified'));
+        $this->set(compact('game', 'board', 'prevId', 'nextId', 'notQualified', 'upsets'));
     }
 
     /**

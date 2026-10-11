@@ -7,6 +7,14 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-11',
+            'title' => 'Upsets and giant slayers',
+            'items' => [
+                'Game pages and the Discord results: the "Upset of the game" - when a much weaker player (3+ skill lower) wins the duel against a much stronger one, e.g. 5-2 in kills on each other.',
+                'Player pages: "Giant slayer" - your duels won against much stronger players, the biggest ones first.',
+            ],
+        ],
+        [
+            'date' => '2026-10-11',
             'title' => 'Skill rating',
             'items' => [
                 'New: the skill rating (0-10) - your individual rating in every mode, next to the CTF rating. It counts your kills (headshot, knife and grenade kills a bit more) and your K/D most, plus flags (scored, taken, returned), kill streaks, a little team wins and how strong the lobby was. See About.',

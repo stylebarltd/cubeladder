@@ -262,6 +262,9 @@ $rules = [
                     </tbody>
                 </table>
             </div>
+            <p class="mt-4 text-sm text-zinc-200"><i class="fa-solid fa-bolt mr-1 text-fuchsia-300"></i><b>Upsets:</b> two players who kill each other in a game have a duel.
+                When the weaker one (by skill, <?= number_format(\App\Service\UpsetService::GAP, 0) ?>+ lower) wins it &ndash; <?= \App\Service\UpsetService::MIN_KILLS ?>+ kills on the stronger one and <?= \App\Service\UpsetService::MIN_LEAD ?>+ more than they got back &ndash;
+                it is an <b>upset</b>: shown on the game page and in the Discord results, and as <b>Giant slayer</b> on the player page (games since Sep 2026).</p>
         </section>
 
         <section id="characters" class="scroll-mt-20 rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-3">

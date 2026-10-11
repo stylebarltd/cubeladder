@@ -882,6 +882,10 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $funFacts = $milestoneProgress ? $this->funFacts((string)$player->id) : [];
         $weapons = $this->weaponsOfChoice((string)$player->id);
 
+        // duels won against much stronger players (UpsetService)
+        $upsets = (new \App\Service\UpsetService())->forPlayer($player->id);
+        $this->set('upsets', $upsets);
+
         $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
             'milestones', 'milestoneProgress', 'funFacts', 'lastSeen', 'weapons'));
         $this->set(compact(

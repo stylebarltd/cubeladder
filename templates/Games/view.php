@@ -51,7 +51,7 @@ $this->start('meta'); ?>
     $navBtn = 'absolute top-4 md:top-1/2 md:-translate-y-1/2 z-20 h-11 w-11 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white transition';
     ?>
     <div class="relative">
-        <?= $this->element('game_card', ['game' => $game, 'board' => $board]) ?>
+        <?= $this->element('game_card', ['game' => $game, 'board' => $board, 'extra' => $this->element('game_upsets', ['upsets' => $upsets ?? []]) ?: null]) ?>
 
         <?php if ($prevId): ?>
             <?= $this->Html->link('<i class="fas fa-chevron-left"></i>', ['action' => 'view', $prevId],

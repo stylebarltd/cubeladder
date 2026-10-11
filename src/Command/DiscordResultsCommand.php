@@ -19,7 +19,8 @@ use Throwable;
  * Posts the result of every newly finished game to the Discord results
  * channel (Ladder.discord.results.webhook, from DISCORD_RESULTS_WEBHOOK):
  * the final scoreboard as a picture (LiveScoreboardImage, like the live
- * channel), winner, best player and a link to the game page.
+ * channel), winner, best player, the upset of the game (UpsetService) and a
+ * link to the game page.
  *
  * Runs after every log import (process_logs.sh). Only games that count are
  * posted (finished, not inaccurate); games are remembered in
@@ -218,6 +219,13 @@ class DiscordResultsCommand extends Command
                     $fields[] = ['name' => '🚩 Most flags', 'value' => $link($byFlags[0]['player']) . ' · ' . $byFlags[0]['flags'], 'inline' => true];
                 }
             }
+        }
+        // upset of the game: a much weaker player (by skill) won the duel against a much stronger one
+        $upset = (new \App\Service\UpsetService())->forGame((string)$game->id, 1)[0] ?? null;
+        if ($upset) {
+            $who = fn(array $p) => sprintf('[%s](%s/players/view/%s) (%s)', $this->linkText((string)$p['name']), $site, $p['id'], number_format($p['skill'], 1));
+            $fields[] = ['name' => '⚡ Upset of the game', 'value' => sprintf('%s beat %s · **%d–%d** in kills on each other',
+                $who($upset['winner']), $who($upset['loser']), $upset['kills'], $upset['deaths']), 'inline' => false];
         }
 
         $when = $game->started_at
