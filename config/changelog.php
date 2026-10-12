@@ -7,6 +7,13 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-12',
+            'title' => 'Points fix for March',
+            'items' => [
+                'Games played 9 - 27 March 2026 counted headshots and knife kills as 1 point instead of 2. Fixed: 8,642 points added back to 260 players.',
+            ],
+        ],
+        [
+            'date' => '2026-10-12',
             'title' => 'Placement bonus',
             'items' => [
                 'Free-for-all games (DM, OSOK, LSS, KTF, PF, survivor): 1st place gets +20 points, 2nd +15, 3rd +10. 1st and 2nd need 4+ players, 3rd 5+. Counted for all earlier games too.',
