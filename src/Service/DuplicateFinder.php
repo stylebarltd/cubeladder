@@ -95,14 +95,21 @@ class DuplicateFinder
             return [];
         }
 
+        // handled: the pair itself, or both already asked about towards the same profile
+        // (a player asked about A and B on C: A~B is not a new question)
         $handled = [];
-        foreach ($this->conn->execute('SELECT from_id, to_id FROM merge_requests')->fetchAll('assoc') as $r) {
+        $askedTo = [];
+        foreach ($this->conn->execute('SELECT from_id, to_id, status FROM merge_requests')->fetchAll('assoc') as $r) {
             $handled[min($r['from_id'], $r['to_id']) . '|' . max($r['from_id'], $r['to_id'])] = true;
+            if ($r['status'] !== 'dismissed') {
+                $askedTo[$r['from_id']] = $r['to_id'];
+            }
         }
+        $group = fn(string $id) => $askedTo[$id] ?? $id;
 
         $result = [];
         foreach ($pairs as $key => [$a, $b]) {
-            if (isset($handled[$key])) {
+            if (isset($handled[$key]) || $group($a) === $group($b)) {
                 continue;
             }
             [$old, $new] = $byId[$a]['last_game'] <= $byId[$b]['last_game'] ? [$byId[$a], $byId[$b]] : [$byId[$b], $byId[$a]];
