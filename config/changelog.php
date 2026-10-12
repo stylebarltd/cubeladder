@@ -7,6 +7,16 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-12',
+            'title' => 'B[] New York joins the ladder!',
+            'items' => [
+                "Barry's | B[] | New York server is now a ladder server: games there count for the ranking, Hall of Fame, achievements and milestones, just like aCKa, Banana and POTATO.",
+                'Our first server in America - good ping for players from North and South America.',
+                'Join: /connect 107.173.23.18 28763 - or find it on the Live page.',
+                'Thanks to Barry for bringing it back!',
+            ],
+        ],
+        [
+            'date' => '2026-10-12',
             'title' => 'Merge your old profile',
             'items' => [
                 'Two profiles of yours (another PC, a reinstall)? Open the old one and click "This was my profile" - an admin merges it into your current profile with all games, points and awards, and you get a message when it is done.',

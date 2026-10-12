@@ -35,10 +35,11 @@ class DiscordUpdateCommand extends Command
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
         return $parser
-            ->setDescription('Post a changelog entry to the Discord updates channel (silent)')
+            ->setDescription('Post a changelog entry to the Discord updates channel (silent, or --loud)')
             ->addOption('entry', ['help' => 'Which entry, 1 = the newest', 'default' => '1'])
             ->addOption('print', ['help' => 'Print the payload only', 'boolean' => true])
             ->addOption('force', ['help' => 'Post even when this entry was posted before', 'boolean' => true])
+            ->addOption('loud', ['help' => 'A normal message that notifies (big news), with the title as text', 'boolean' => true])
             ->addOption('card', ['help' => 'Show a player card under it: a player id, or "random" (a rated player)']);
     }
 
@@ -69,6 +70,10 @@ class DiscordUpdateCommand extends Command
             'flags' => 4096, // SUPPRESS_NOTIFICATIONS: no ping, no sound
             'allowed_mentions' => ['parse' => []],
         ];
+        if ($args->getOption('loud')) {
+            unset($payload['flags']);
+            $payload['content'] = '📢 **' . $entry['title'] . '**';
+        }
         if ($args->getOption('print')) {
             $io->out((string)json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
