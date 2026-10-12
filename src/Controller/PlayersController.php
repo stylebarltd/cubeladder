@@ -719,8 +719,77 @@ class PlayersController extends AppController
 
         $this->set(compact('players', 'sort', 'lastGameDateRange', 'achievementPlayers'));
     }
+    /**
+     * "This was my profile": the visitor's own player (identity + IP) asks
+     * the admin to merge $oldId into it. GET shows both, POST sends the
+     * request (merge_requests + a message to the admin).
+     */
+    public function claim(string $oldId)
+    {
+        $me = $this->request->getAttribute('identity');
+        if (!$this->ownsPlayer($me)) {
+            $this->Flash->error($this->ownershipHint('merge an old profile into yours'));
+
+            return $this->redirect(['action' => 'view', $oldId]);
+        }
+        $old = $this->Players->find()->where(['id' => $oldId])->first();
+        if ($old === null || $old->id === $me->id) {
+            $this->Flash->error($old === null ? 'That profile no longer exists - maybe it is merged already.' : 'That is your current profile.');
+
+            return $this->redirect(['action' => 'view', $me->id]);
+        }
+
+        $Requests = $this->fetchTable('MergeRequests');
+        $open = $Requests->find()->where(['from_id' => $old->id, 'to_id' => $me->id, 'status IN' => ['pending', 'asked']])->first();
+        $merger = new \App\Service\PlayerMerger();
+
+        if ($this->request->is('post')) {
+            if ($open && $open->status === 'pending') {
+                $this->Flash->success('Already sent - the admin merges it soon.');
+
+                return $this->redirect(['action' => 'view', $me->id]);
+            }
+            $request = $open ?? $Requests->newEmptyEntity();
+            $Requests->patchEntity($request, [
+                'from_id' => $old->id, 'to_id' => $me->id, 'requested_by' => $me->id, 'status' => 'pending',
+                'note' => mb_substr(trim((string)$this->request->getData('note')), 0, 1000) ?: null,
+            ], ['accessibleFields' => ['*' => true]]);
+            $Requests->saveOrFail($request);
+
+            $adminId = ((array)Configure::read('Ladder.admins'))[0] ?? null;
+            if ($adminId) {
+                $Messages = $this->fetchTable('Messages');
+                $Messages->save($Messages->newEntity([
+                    'sender_id' => $me->id, 'receiver_id' => $adminId, 'is_read' => 0,
+                    'body' => sprintf("**Merge request**
+%s says %s was their old profile.%s
+%s",
+                        $me->name, $old->name, $request->note ? "
+" . $request->note : '',
+                        \Cake\Routing\Router::url(['controller' => 'Admin', 'action' => 'index'], true)),
+                ], ['accessibleFields' => ['*' => true]]));
+            }
+            $this->Flash->success(sprintf('Sent! The admin merges %s into your profile soon - you get a message when it is done.', $old->name));
+
+            return $this->redirect(['action' => 'view', $me->id]);
+        }
+
+        $this->set([
+            'old' => $merger->profile($old->id),
+            'me' => $merger->profile($me->id),
+            'pending' => $open && $open->status === 'pending',
+        ]);
+    }
+
     public function view(string $id)
     {
+        // a merged profile: on to the one it is part of now
+        if (!$this->Players->exists(['id' => $id])) {
+            $merged = $this->fetchTable('PlayerMerges')->find()->where(['from_id' => $id])->first();
+            if ($merged) {
+                return $this->redirect(['action' => 'view', $merged->to_id], 301);
+            }
+        }
 
         $theLast100GameIds = $this->getLastGameIds();
 

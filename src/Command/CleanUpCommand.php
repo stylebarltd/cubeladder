@@ -82,6 +82,7 @@ class CleanUpCommand extends Command
             ['player_milestones', 'x', 'player_id', 'players'],
             ['player_milestone_progress', 'x', 'player_id', 'players'],
             ['player_aliases', 'x', 'player_id', 'players'],
+            ['player_pubkeys', 'x', 'player_id', 'players'],
             ['achievements', 'x', 'player_id', 'players'],
             ['kill_pairs', 'x', 'killer_id', 'players'],
             ['kill_pairs', 'x', 'victim_id', 'players'],

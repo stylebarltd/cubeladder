@@ -918,6 +918,25 @@ class AcLogParser
             $this->playersCache[$p->name] = $p->id;
             if (!empty($p->pubkey)) $this->pubkeyCache[$p->pubkey] = $p->id;
         }
+        // every earlier key too: a second PC, or a merged profile
+        foreach (ConnectionManager::get('default')->execute('SELECT pubkey, player_id FROM player_pubkeys')->fetchAll('assoc') as $k) {
+            $this->pubkeyCache[$k['pubkey']] ??= $k['player_id'];
+        }
+    }
+
+    /**
+     * Remembers that $playerId logged in with $pubkey (player_pubkeys), so
+     * that key keeps leading to this profile after the next one is adopted.
+     */
+    protected function rememberPubkey(string $playerId, ?string $pubkey, Chronos $now): void
+    {
+        if (!$pubkey) {
+            return;
+        }
+        ConnectionManager::get('default')->execute(
+            'INSERT INTO player_pubkeys (pubkey, player_id, first_seen, last_seen) VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE player_id = VALUES(player_id), last_seen = GREATEST(COALESCE(last_seen, VALUES(last_seen)), VALUES(last_seen))',
+            [$pubkey, $playerId, $now->format('Y-m-d H:i:s'), $now->format('Y-m-d H:i:s')]);
     }
 
     protected function getPlayerIdByNameCached(string $name): ?string
@@ -933,8 +952,9 @@ class AcLogParser
         $now = $ts ?? Chronos::now();
 
         // 1) Identity by pubkey
-        if ($pubkey && isset($this->pubkeyCache[$pubkey])) {
-            $player = $this->Players->get($this->pubkeyCache[$pubkey]);
+        $player = $pubkey && isset($this->pubkeyCache[$pubkey])
+            ? $this->Players->find()->where(['id' => $this->pubkeyCache[$pubkey]])->first() : null;
+        if ($player) {
 
             // IMPORTANT: only overwrite if this login is newer
             if (
@@ -949,6 +969,7 @@ class AcLogParser
 
             // always refresh name cache
             $this->playersCache[$name] = $player->id;
+            $this->rememberPubkey($player->id, $pubkey, $now);
 
             return $player;
         }
@@ -987,6 +1008,7 @@ class AcLogParser
 
                 $this->playersCache[$name] = $existing->id;
                 $this->pubkeyCache[$pubkey] = $existing->id;
+                $this->rememberPubkey($existing->id, $pubkey, $now);
 
                 return $existing;
             }
@@ -1034,6 +1056,7 @@ class AcLogParser
 
                 $this->playersCache[$name] = $existing->id;
                 $this->pubkeyCache[$pubkey] = $existing->id;
+                $this->rememberPubkey($existing->id, $pubkey, $now);
 
                 return $existing;
             }
@@ -1070,6 +1093,7 @@ class AcLogParser
         $this->playersCache[$name] = $player->id;
         if ($pubkey) {
             $this->pubkeyCache[$pubkey] = $player->id;
+            $this->rememberPubkey($player->id, $pubkey, $now);
         }
 
         return $player;

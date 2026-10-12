@@ -7,6 +7,14 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-12',
+            'title' => 'Merge your old profile',
+            'items' => [
+                'Two profiles of yours (another PC, a reinstall)? Open the old one and click "This was my profile" - an admin merges it into your current profile with all games, points and awards, and you get a message when it is done.',
+                'After the merge both PCs log in to the same profile. Links to the old profile lead to the new one.',
+            ],
+        ],
+        [
+            'date' => '2026-10-12',
             'title' => 'Points fix for March',
             'items' => [
                 'Games played 9 - 27 March 2026 counted headshots and knife kills as 1 point instead of 2. Fixed: 8,642 points added back to 260 players.',

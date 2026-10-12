@@ -166,6 +166,12 @@ endif;
                         ['controller' => 'Messages', 'action' => 'send', $player->id],
                         ['escape' => false, 'class' => 'rounded-lg border border-blue-400/50 bg-black/40 px-4 py-2 text-sm font-semibold text-blue-300 hover:bg-blue-500/20 transition']) ?>
                 <?php endif; ?>
+                <?php if ($authPlayer && $authPlayer->id != $player->id): ?>
+                    <?= $this->Html->link('<i class="fa-solid fa-code-merge mr-1"></i> This was my profile',
+                        ['controller' => 'Players', 'action' => 'claim', $player->id],
+                        ['escape' => false, 'title' => 'Merge this old profile into yours (an admin checks it)',
+                         'class' => 'rounded-lg border border-white/15 bg-black/40 px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/10 transition']) ?>
+                <?php endif; ?>
                 <?php if ((int)$player->track === 1): ?>
                     <?= $this->element('player_card_share', [
                         'url' => $site . '/players/view/' . $player->id,

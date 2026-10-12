@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Service\PlayerMerger;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
@@ -15,7 +16,7 @@ use Cake\Datasource\ConnectionManager;
  * For each target name, the survivor is the profile with the MOST games
  * (player_stats_per_game rows). All other profiles for that name are merged
  * into it: their stats and achievements are repointed to the
- * survivor and the duplicate rows are deleted.
+ * survivor and the duplicate rows are deleted (App\Service\PlayerMerger).
  *
  * Usage:
  *   bin/cake merge_players --auto                 Merge every name that maps to
@@ -117,9 +118,7 @@ class MergePlayersCommand extends Command
                 continue;
             }
 
-            $conn->transactional(function ($c) use ($survivor, $dupIds, $profiles) {
-                $this->mergeInto($c, $survivor, $dupIds, $profiles);
-            });
+            (new PlayerMerger($conn))->merge($survivor['id'], $dupIds, 'cli');
 
             $totalGroups++;
             $totalMerged += count($dupIds);
@@ -335,83 +334,5 @@ class MergePlayersCommand extends Command
         });
 
         return $profiles[0];
-    }
-
-    private function mergeInto($conn, array $survivor, array $dupIds, array $profiles): void
-    {
-        $sid = $survivor['id'];
-
-        foreach ($dupIds as $dupId) {
-            // Repoint stats; UPDATE IGNORE skips rows that collide on the
-            // (game_id, player_id) unique key (same player already has that game).
-            $conn->execute(
-                'UPDATE IGNORE player_stats_per_game SET player_id = :sid WHERE player_id = :dup',
-                ['sid' => $sid, 'dup' => $dupId]
-            );
-            // Drop any colliding leftovers that UPDATE IGNORE refused to move.
-            $conn->execute(
-                'DELETE FROM player_stats_per_game WHERE player_id = :dup',
-                ['dup' => $dupId]
-            );
-
-            $conn->execute(
-                'UPDATE achievements SET player_id = :sid WHERE player_id = :dup',
-                ['sid' => $sid, 'dup' => $dupId]
-            );
-        }
-
-        // Work out the identity to keep on the survivor.
-        $bestPubkey = !empty($survivor['pubkey']) ? $survivor['pubkey'] : null;
-        $bestPicture = !empty($survivor['picture']) ? $survivor['picture'] : null;
-        $bestIp = !empty($survivor['ip']) ? $survivor['ip'] : null;
-        $bestCountry = !empty($survivor['country']) ? $survivor['country'] : null;
-        $minFirst = $survivor['first_seen'];
-        $maxLast = $survivor['last_seen'];
-
-        foreach ($profiles as $p) {
-            if ($bestPubkey === null && !empty($p['pubkey'])) {
-                $bestPubkey = $p['pubkey'];
-            }
-            if ($bestPicture === null && !empty($p['picture'])) {
-                $bestPicture = $p['picture'];
-            }
-            if ($bestIp === null && !empty($p['ip'])) {
-                $bestIp = $p['ip'];
-            }
-            if ($bestCountry === null && !empty($p['country'])) {
-                $bestCountry = $p['country'];
-            }
-            if (!empty($p['first_seen']) && ($minFirst === null || $p['first_seen'] < $minFirst)) {
-                $minFirst = $p['first_seen'];
-            }
-            if (!empty($p['last_seen']) && ($maxLast === null || $p['last_seen'] > $maxLast)) {
-                $maxLast = $p['last_seen'];
-            }
-        }
-
-        // Remove the duplicate player rows FIRST. The survivor may be a
-        // pubkey-less profile (most games but never logged in with a pubkey);
-        // assigning a duplicate's pubkey to it while that duplicate still
-        // exists would violate the unique_pubkey index. Deleting the dups now
-        // frees their pubkeys so the survivor can claim one.
-        foreach (array_chunk($dupIds, 500) as $chunk) {
-            $in = implode(',', array_fill(0, count($chunk), '?'));
-            $conn->execute("DELETE FROM players WHERE id IN ($in)", $chunk);
-        }
-
-        // Now consolidate the chosen identity onto the survivor.
-        $conn->execute(
-            'UPDATE players SET pubkey = :pk, picture = :pic, ip = :ip, country = :co,
-                    first_seen = :fs, last_seen = :ls WHERE id = :sid',
-            [
-                'pk' => $bestPubkey,
-                'pic' => $bestPicture,
-                'ip' => $bestIp,
-                'co' => $bestCountry,
-                'fs' => $minFirst,
-                'ls' => $maxLast,
-                'sid' => $sid,
-            ]
-        );
     }
 }

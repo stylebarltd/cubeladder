@@ -110,6 +110,9 @@ class LayoutHelper extends Helper
     public function messageBody(string $body): string
     {
         $html = preg_replace('/\*\*(.+?)\*\*/s', '<strong>$1</strong>', h($body));
+        // links to this site (merge confirm, admin area) are clickable, others stay text
+        $base = preg_quote(h(\Cake\Routing\Router::fullBaseUrl()), '#');
+        $html = preg_replace('#' . $base . '/[A-Za-z0-9/_\-?=&;%.]*#', '<a href="$0" class="text-blue-300 underline hover:text-blue-200">$0</a>', $html);
 
         return nl2br($html);
     }

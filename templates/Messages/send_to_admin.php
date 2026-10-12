@@ -7,6 +7,11 @@
             Send message to admin
         </h2>
 
+        <p class="mb-6 text-sm text-gray-400">
+            <i class="fa-solid fa-code-merge mr-1"></i>Two profiles of yours (another PC, a reinstall)? Open your old profile and click
+            <b>This was my profile</b> - or write the names of both here.
+        </p>
+
         <?= $this->Form->create($message) ?>
 
         <!-- Message field -->

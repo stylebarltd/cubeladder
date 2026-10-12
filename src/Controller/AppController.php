@@ -182,11 +182,15 @@ class AppController extends Controller
     }
 
     /**
-     * The visitor is a site admin (Ladder.admins) and owns that identity
-     * (same IP as the admin's player - see ownsPlayer()).
+     * The visitor is a site admin: logged in with the admin password
+     * (AdminController::login), or a site admin's player (Ladder.admins) on
+     * that player's IP (see ownsPlayer()).
      */
     protected function isAdmin(): bool
     {
+        if ($this->request->getSession()->read('Admin.ok') === true) {
+            return true;
+        }
         $identity = $this->request->getAttribute('identity');
 
         return $identity !== null
@@ -223,6 +227,15 @@ class AppController extends Controller
         // initial state of the "on air" dot (state files only, no polling;
         // the layout refreshes it from /live/onair)
         $this->set('liveNow', (new \App\Service\LiveStatusService())->onAir(false));
+
+        // admin icon in the header: open merge requests + unread messages to the admin
+        $isAdmin = $this->isAdmin();
+        $this->set('isAdmin', $isAdmin);
+        if ($isAdmin) {
+            $adminId = ((array)Configure::read('Ladder.admins'))[0] ?? null;
+            $this->set('adminPending', $this->fetchTable('MergeRequests')->find()->where(['status' => 'pending'])->count()
+                + ($adminId ? $this->fetchTable('Messages')->find()->where(['receiver_id' => $adminId, 'is_read' => 0])->count() : 0));
+        }
 
         $player = $this->viewBuilder()->getVar('authPlayer');
 

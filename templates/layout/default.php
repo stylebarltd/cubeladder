@@ -17,7 +17,7 @@
     <?= $this->Html->meta('csrfToken', $this->request->getAttribute('csrfToken')) ?>
 
     <!-- Tailwind CSS -->
-    <?= $this->Html->css('tailwind.css?ver=1.84') ?>
+    <?= $this->Html->css('tailwind.css?ver=1.85') ?>
 
     <!-- cubeLadder icon (webroot/img/brand) -->
     <?= $this->Html->meta('icon', '/favicon.ico') ?>
@@ -97,6 +97,16 @@
                     <a href="/about" class="hidden md:inline-block p-2 hover:text-zinc-500 transition" title="About, rules &amp; what's new" aria-label="About">
                         <i class="fa-solid fa-circle-question"></i>
                     </a>
+
+                    <!-- Admin area (logged in admins only), with open merge requests + unread messages -->
+                    <?php if (!empty($isAdmin)): ?>
+                        <a href="/admin" class="relative p-2 text-amber-300 hover:text-amber-200 transition" title="Admin" aria-label="Admin">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <?php if (!empty($adminPending)): ?>
+                                <span class="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-xs text-black"><?= (int)$adminPending ?></span>
+                            <?php endif; ?>
+                        </a>
+                    <?php endif; ?>
 
                     <!-- Inbox only if single authenticated player (desktop; in the menu on phones) -->
                     <?php if (!empty($authPlayer)): ?>
