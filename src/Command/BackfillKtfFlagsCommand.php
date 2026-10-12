@@ -25,7 +25,7 @@ class BackfillKtfFlagsCommand extends Command
     /** log file suffix => games.server_name (as in process_logs.sh) */
     private const SERVERS = [
         'Europa' => 'acka-europa', 'Custom' => 'acka-custom', 'Nostalgic' => 'acka-nostalgic',
-        'Assault' => 'acka-assault', 'local#1111' => 'chobbz-banana', 'local#2222' => 'chobbz-potato',
+        'Assault' => 'acka-assault', 'local#1111' => 'chobbz-banana', 'local#2222' => 'chobbz-potato', 'local#28763' => 'barry-b',
     ];
     private const FLAG_POINTS = 5;
 

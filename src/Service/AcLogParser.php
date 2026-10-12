@@ -438,14 +438,6 @@ class AcLogParser
 //            $ip = $m[1];
 //            $killerName = trim($m[2]);
 //            $verb = strtolower($m[3]);
-            if (str_starts_with($verb, 'scored, carrying')) {
-                // keep the flag scores every 15 s of carrying: one flag per carry (its
-                // first score), else holding it for minutes would be dozens of "flags"
-                if ((int)preg_replace('~\D~', '', $verb) > 15) {
-                    return;
-                }
-                $verb = 'scored with the flag';
-            }
 //            $victimRaw = trim($m[4]);
 //
 //
@@ -501,6 +493,14 @@ class AcLogParser
             }
             $playerName = trim($m[2]);
             $verb = strtolower($m[3]);
+            if (str_starts_with($verb, 'scored, carrying')) {
+                // keep the flag scores every 15 s of carrying: one flag per carry (its
+                // first score), else holding it for minutes would be dozens of "flags"
+                if ((int)preg_replace('~\D~', '', $verb) > 15) {
+                    return;
+                }
+                $verb = 'scored with the flag';
+            }
 
             $playerId = $this->getPlayerIdByNameCached($playerName);
             if (!$playerId) return;

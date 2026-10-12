@@ -244,9 +244,8 @@ class LayoutHelper extends Helper
             'chobbz-potato'   => 'POTATO',
         ];
 
-        $label = $serverName[$type];
-
-        return $label;
+        // other servers: their name in Ladder.servers, else the key
+        return $serverName[$type] ?? (\Cake\Core\Configure::read('Ladder.servers.' . $type . '.name') ?: (string)$type);
     }
 
     public function gameMode($type): string

@@ -116,3 +116,6 @@ EOF
     "$BASE_DIR/bin/cake" GeoPlayers >> "$LOGFILE" 2>&1
 
 done
+
+# FTP servers (Barry's B server)
+"$BASE_DIR/fetch_ftp_logs.sh" || echo "fetch_ftp_logs.sh failed!" >> "$LOGFILE"

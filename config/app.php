@@ -532,6 +532,8 @@ return [
             'acka-europa'    => ['name' => '[aCKa] Europa',      'host' => '54.36.188.74', 'port' => 28765],
             'chobbz-banana'  => ['name' => 'Banana',  'host' => 'ac.cbz.ovh',   'port' => 1111],
             'chobbz-potato'  => ['name' => 'POTATO',  'host' => 'ac.cbz.ovh',   'port' => 2222],
+            // Barry's B server (logs over FTP, see process_logs.sh)
+            'barry-b'        => ['name' => 'B[] New York', 'host' => '107.173.23.18', 'port' => 28763],
             // clan match / inter servers: own sidebar box on /live ('live' => false)
             'mys-1111'  => ['name' => 'MyS 1111',  'host' => 'mysick.org',   'port' => 1111, 'live' => false],
             'mys-2222'  => ['name' => 'MyS 2222',  'host' => 'mysick.org',   'port' => 2222, 'live' => false],
@@ -558,7 +560,7 @@ return [
 
         'discord' => [
             'webhook' => env('DISCORD_LIVE_WEBHOOK'),
-            'servers' => ['acka-custom', 'acka-nostalgic', 'acka-assault', 'acka-europa', 'chobbz-banana', 'chobbz-potato'],
+            'servers' => ['acka-custom', 'acka-nostalgic', 'acka-assault', 'acka-europa', 'chobbz-banana', 'chobbz-potato', 'barry-b'],
             'site' => env('APP_FULL_BASE_URL', 'https://cubeladder.ovh'),
             'state' => TMP . 'discord_live.json',
             /*

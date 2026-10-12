@@ -113,6 +113,9 @@ EOF
 
 done
 
+# FTP servers (Barry's B server): fetch_ftp_logs.sh
+"$BASE_DIR/fetch_ftp_logs.sh" || echo "fetch_ftp_logs.sh failed!" >> "$LOGFILE"
+
 echo "➡ CleanUp"
 if ! "$BASE_DIR/bin/cake" CleanUp >> "$LOGFILE" 2>&1; then
     echo "CleanUp failed!" >> "$LOGFILE"
