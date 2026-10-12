@@ -148,6 +148,61 @@ class DuplicateFinder
         return array_slice($result, 0, $limit);
     }
 
+    /**
+     * Candidates grouped per player: pairs that share a profile are one
+     * player (A~B, B~C), asked once on the profile they played last.
+     *
+     * @param list<array> $candidates candidates()
+     * @return list<array{to: array, olds: list<array>}>
+     */
+    public static function clusters(array $candidates): array
+    {
+        $parent = [];
+        $find = function (string $id) use (&$parent, &$find): string {
+            $parent[$id] ??= $id;
+
+            return $parent[$id] === $id ? $id : ($parent[$id] = $find($parent[$id]));
+        };
+        $profiles = [];
+        foreach ($candidates as $c) {
+            $profiles[$c['old']['id']] = $c['old'];
+            $profiles[$c['new']['id']] = $c['new'];
+            $parent[$find($c['old']['id'])] = $find($c['new']['id']);
+        }
+        $groups = [];
+        foreach ($profiles as $id => $p) {
+            $groups[$find($id)][] = $p;
+        }
+        $result = [];
+        foreach ($groups as $members) {
+            usort($members, fn($a, $b) => strcmp((string)$b['last_game'], (string)$a['last_game']));
+            $result[] = ['to' => array_shift($members), 'olds' => $members];
+        }
+
+        return $result;
+    }
+
+    /**
+     * The question to a player about their likely old profiles, with a
+     * confirm link each (PlayersController::claim).
+     *
+     * @param list<array> $olds profiles
+     * @param string $site https://cubeladder.ovh
+     */
+    public static function askText(array $olds, string $site): string
+    {
+        $lines = array_map(fn($p) => sprintf("%s (%d games, last seen %s):\n%s/players/claim/%s",
+            $p['name'], $p['games'], $p['last_game'] ?? $p['last_seen'] ? date('j M Y', strtotime((string)($p['last_game'] ?? $p['last_seen']))) : 'a while ago',
+            rtrim($site, '/'), $p['id']), $olds);
+        $one = count($olds) === 1;
+
+        return sprintf("**%s**\nIt looks like you also played as %s\n\n%s\n\n"
+            . "If that was you, open the link and confirm - we then merge it into this profile, with all games, points and awards, "
+            . "and both PCs log in to the same profile from then on.\nIf it wasn't you, just ignore this message.",
+            $one ? 'Is this your old profile?' : 'Are these your old profiles?',
+            $one ? 'this profile:' : 'these profiles:', implode("\n\n", $lines));
+    }
+
     private function playedTogether(string $a, string $b): bool
     {
         return (bool)$this->conn->execute(

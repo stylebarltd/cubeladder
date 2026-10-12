@@ -238,7 +238,7 @@ class AdminController extends AppController
             if ($do === 'merge') {
                 $merger->merge($newId, [$oldId], 'admin');
             } elseif ($do === 'ask') {
-                $this->sendMessage($newId, $this->askText($old));
+                $this->sendMessage($newId, DuplicateFinder::askText([$old], Router::fullBaseUrl()));
                 $Requests->save($Requests->newEntity(['from_id' => $oldId, 'to_id' => $newId, 'status' => 'asked'], ['accessibleFields' => ['*' => true]]));
             } elseif ($do === 'dismiss') {
                 $Requests->save($Requests->newEntity(['from_id' => $oldId, 'to_id' => $newId, 'status' => 'dismissed',
@@ -252,17 +252,6 @@ class AdminController extends AppController
         $this->Flash->success(sprintf('%d pair%s %s.', $count, $count === 1 ? '' : 's', $label));
 
         return $this->redirect(['action' => 'duplicates']);
-    }
-
-    /** The question to the player behind the newer profile */
-    private function askText(array $old): string
-    {
-        $url = Router::url(['controller' => 'Players', 'action' => 'claim', $old['id']], true);
-        $seen = $old['last_seen'] ? date('j M Y', strtotime((string)$old['last_seen'])) : 'a while ago';
-
-        return sprintf("**Is this your old profile?**\nIt looks like you also played as %s (%d games, last seen %s).\n"
-            . "If that was you, open this link and confirm - we then merge it into this profile, with all games, points and awards:\n%s\n"
-            . "If it wasn't you, just ignore this message.", $old['name'], $old['games'], $seen, $url);
     }
 
     private function closeRequest($request, string $status): void
