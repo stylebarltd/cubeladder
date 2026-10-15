@@ -36,6 +36,8 @@ class CompetitiveTracker
     public const START_WINDOW = 120;
     /** Part of the game a player must have played to win / lose rating */
     public const MIN_SHARE = 0.5;
+    /** Competitive games on MyS are always CTF: other modes are only casual (not saved, not announced) */
+    public const MODES = [5];
 
     public static function servers(): array
     {
@@ -121,7 +123,7 @@ class CompetitiveTracker
         $minutes = (int)(Configure::read('Ladder.competitive.minutes') ?? 15);
         if (!empty($game['onair_id']) || !empty($game['onair_tried']) || $game['start']['CLA'] < 2
             || $game['first_min'] !== $minutes || (int)$s['minremain'] === 0
-            || !in_array($game['mode'], AcExtInfoService::TEAM_MODES, true)) {
+            || !in_array($game['mode'], self::MODES, true)) {
             return;
         }
         $game['onair_tried'] = true; // once per game, also when Discord fails
@@ -228,7 +230,7 @@ class CompetitiveTracker
         }
         $modeCode = AcExtInfoService::MODE_CODES[$game['mode']] ?? null;
         $size = (int)$game['start']['CLA'];
-        if (!in_array($game['mode'], AcExtInfoService::TEAM_MODES, true) || $size < 2 || !$game['players']) {
+        if (!in_array($game['mode'], self::MODES, true) || $size < 2 || !$game['players']) {
             return;
         }
         $minutes = (int)(Configure::read('Ladder.competitive.minutes') ?? 15);
