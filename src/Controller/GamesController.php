@@ -110,7 +110,74 @@ class GamesController extends AppController
         // a much weaker player beating a much stronger one in their duel
         $upsets = $game->inaccurate ? [] : (new \App\Service\UpsetService())->forGame($game->id);
 
-        $this->set(compact('game', 'board', 'prevId', 'nextId', 'notQualified', 'upsets'));
+        [$timeline, $votes] = $this->timelineAndVotes($game);
+
+        $this->set(compact('game', 'board', 'prevId', 'nextId', 'notQualified', 'upsets', 'timeline', 'votes'));
+    }
+
+    /**
+     * The game's scoreboard of every minute (game_timelines, games since Oct
+     * 2026) and the votes called during it, players who opted out of
+     * tracking shown as Anonymous.
+     */
+    private function timelineAndVotes(\App\Model\Entity\Game $game): array
+    {
+        $conn = $this->Games->getConnection();
+        $json = $conn->execute('SELECT timeline FROM game_timelines WHERE game_id = ?', [$game->id])->fetch('assoc')['timeline'] ?? null;
+        $timeline = $json ? (json_decode($json, true) ?: []) : [];
+        $votes = $conn->execute(
+            "SELECT event_time, actor_id, target_id, details FROM events WHERE game_id = ? AND type = 'vote' ORDER BY event_time, id",
+            [$game->id])->fetchAll('assoc');
+
+        $ids = array_filter(array_merge(
+            array_column($votes, 'actor_id'), array_column($votes, 'target_id'),
+            ...array_map(fn($s) => array_column($s['p'], 'id'), $timeline)));
+        $players = $ids ? $this->fetchTable('Players')->find()
+            ->select(['id', 'name', 'country', 'track'])
+            ->where(['id IN' => array_values(array_unique($ids))])
+            ->all()->indexBy('id')->toArray() : [];
+        $known = fn(?string $id) => $id !== null && isset($players[$id]) && (int)$players[$id]->track === 1;
+
+        foreach ($timeline as &$snapshot) {
+            foreach ($snapshot['p'] as &$p) {
+                if ($known($p['id'])) {
+                    // the profile's name, as on the scoreboard (not the one used that minute)
+                    $p['n'] = $players[$p['id']]->name;
+                    $p['c'] = $players[$p['id']]->country;
+                } else {
+                    // not a profile we can show (opted out, default name): no link
+                    $anonymous = $p['id'] !== null;
+                    $p['id'] = null;
+                    $p['n'] = $anonymous ? 'Anonymous' : $p['n'];
+                }
+            }
+            unset($p);
+        }
+        unset($snapshot);
+
+        $start = $game->started_at ? $game->started_at->getTimestamp() : null;
+        $optedOut = fn(?string $id) => $id !== null && isset($players[$id]) && !$known($id);
+        foreach ($votes as &$v) {
+            $d = (json_decode((string)$v['details'], true) ?: []) + ['name' => '', 'kind' => 'other', 'target' => null];
+            if ($optedOut($v['actor_id'])) {
+                $d['name'] = 'Anonymous';
+            } elseif ($known($v['actor_id'])) {
+                $d['name'] = $players[$v['actor_id']]->name;
+            }
+            if ($optedOut($v['target_id'])) {
+                $d['target'] = 'Anonymous';
+            } elseif ($known($v['target_id'])) {
+                $d['target'] = $players[$v['target_id']]->name;
+            }
+            $v = [
+                'at' => $start ? max(0, strtotime((string)$v['event_time']) - $start) : null,
+                'actor_id' => $known($v['actor_id']) ? $v['actor_id'] : null,
+                'target_id' => $known($v['target_id']) ? $v['target_id'] : null,
+            ] + $d;
+        }
+        unset($v);
+
+        return [$timeline, $votes];
     }
 
     /**

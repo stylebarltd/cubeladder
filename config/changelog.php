@@ -6,6 +6,17 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-10-15',
+            'title' => 'Minute by minute',
+            'items' => [
+                'Game pages: the score over the whole game as a chart, and a slider to see the scoreboard of every minute - who scored when, and everyone\'s ping.',
+                'Game pages also list the votes of the game: map, kick, ban, shuffle and mastermode votes, who called them and whether they passed.',
+                'Player pages: your average ping over the last 90 days (hover it for each server).',
+                'Hunt the flag: hunting the flag now counts as a flag scored (5 points), like it shows in the game. Getting their flag carrier while your team doesn\'t have their flag on a player ("failed to score") gives 1 point.',
+                'New games only - the servers\' minute scoreboards were not kept before.',
+            ],
+        ],
+        [
             'date' => '2026-10-12',
             'title' => 'B[] New York joins the ladder!',
             'items' => [
@@ -65,7 +76,7 @@ return [
             'date' => '2026-10-11',
             'title' => 'Browse the players',
             'items' => [
-                'Player pages: arrows on the left and right to the previous and next player by CTF rating, with their picture - hover for the name, flag and rank. Also the ← and → keys (on the Games tab they still flip through the games).',
+                'Player pages: arrows on the left and right to the previous and next player by CTF rating - hover for their picture, name, flag and rank. Also the ← and → keys (on the Games tab they still flip through the games).',
                 'The name and flag now sit in one row above the picture.',
             ],
         ],

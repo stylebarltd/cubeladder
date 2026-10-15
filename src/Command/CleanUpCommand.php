@@ -76,6 +76,7 @@ class CleanUpCommand extends Command
             ['player_stats_per_game', 'x', 'game_id', 'games'],
             ['kill_pairs', 'x', 'game_id', 'games'],
             ['player_game_ratings', 'x', 'game_id', 'games'],
+            ['game_timelines', 'x', 'game_id', 'games'],
             ['player_stats_per_game', 'x', 'player_id', 'players'],
             ['player_game_ratings', 'x', 'player_id', 'players'],
             ['player_ratings', 'x', 'player_id', 'players'],

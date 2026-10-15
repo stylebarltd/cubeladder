@@ -56,11 +56,13 @@ $this->start('meta'); ?>
                 ['escape' => false, 'id' => 'game-next', 'title' => 'Older game (→)', 'aria-label' => 'Older game', 'class' => $navBtn . ' right-2']) ?>
         <?php endif; ?>
     </div>
+
+    <?= $this->element('game_timeline', ['timeline' => $timeline ?? [], 'votes' => $votes ?? [], 'flagMode' => $board['flagMode']]) ?>
 </div>
 
 <!-- the player card on hovering a name, as in the rankings -->
 <?= $this->element('hover_card_script') ?>
-<?php $this->start('scriptBottom'); ?>
+<?php $this->append('scriptBottom'); ?>
 <script>
 document.addEventListener('keydown', (e) => {
     if (e.target.closest('input, textarea, select')) return;

@@ -151,9 +151,14 @@ $rules = [
                 <td class="px-3 py-2">Flag returned</td>
             </tr>
             <tr>
+                <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-crosshairs text-blue-300 w-5 shrink-0 text-center"></i>failed_to_score</span></td>
+                <td class="px-3 py-2 text-center font-bold text-emerald-400">+1</td>
+                <td class="px-3 py-2">Hunt the flag: you got the flag carrier, but your team didn't have their flag on a player</td>
+            </tr>
+            <tr>
                 <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-flag-checkered text-green-400 w-5 shrink-0 text-center"></i>scored_with_the_flag</span></td>
                 <td class="px-3 py-2 text-center font-bold text-yellow-400">+5</td>
-                <td class="px-3 py-2">Flag captured</td>
+                <td class="px-3 py-2">Flag captured (hunt the flag: flag hunted; keep the flag: each carry)</td>
             </tr>
             <tr>
                 <td class="px-3 py-2 font-mono"><span class="flex items-center gap-2"><i class="fa-solid fa-flag text-zinc-500 w-5 shrink-0 text-center"></i>lost_the_flag</span></td>

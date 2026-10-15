@@ -61,27 +61,28 @@ endif;
 <div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-8">
 
     <?php if (!empty($rankingNav)):
-        // previous / next player by CTF rating, on the far sides in the middle of the screen: the arrow and
-        // their picture, the name, flag and rank slide out on hover (also the arrow keys, except on the Games tab)
+        // previous / next player by CTF rating, on the far sides in the middle of the screen:
+        // only the arrow until hover, then their picture, name, flag and rank slide out (also the arrow keys, except on the Games tab)
         $navArrow = function (?\App\Model\Entity\Player $p, int $rank, string $dir) {
             if ($p === null) {
                 return '';
             }
             $left = $dir === 'prev';
-            $chevron = '<i class="fas fa-chevron-' . ($left ? 'left' : 'right') . ' w-3 shrink-0 text-center text-sm"></i>';
-            $avatar = '<img src="' . $this->Layout->playerPicture($p) . '" alt="" class="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-white/25 md:h-12 md:w-12">';
-            $preview = '<span class="hidden max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover:max-w-56 group-hover:opacity-100 group-focus-visible:max-w-56 group-focus-visible:opacity-100 md:block ' . ($left ? 'text-left' : 'text-right') . '">'
-                . '<span class="block truncate text-sm font-bold text-white">' . h($p->name) . ' ' . $this->Layout->flag($p->country) . '</span>'
+            $chevron = '<i class="fas fa-chevron-' . ($left ? 'left' : 'right') . ' flex h-10 w-6 shrink-0 items-center justify-center text-sm md:h-12"></i>';
+            // picture, name, flag and rank stay folded away until hover / keyboard focus
+            $preview = '<span class="hidden max-w-0 items-center gap-2 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover:max-w-72 group-hover:opacity-100 group-focus-visible:max-w-72 group-focus-visible:opacity-100 md:flex ' . ($left ? 'flex-row pl-2 text-left' : 'flex-row-reverse pr-2 text-right') . '">'
+                . '<img src="' . $this->Layout->playerPicture($p) . '" alt="" class="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-white/25">'
+                . '<span class="block min-w-0"><span class="block truncate text-sm font-bold text-white">' . h($p->name) . ' ' . $this->Layout->flag($p->country) . '</span>'
                 . '<span class="block text-[11px] uppercase tracking-wider text-zinc-400">#' . $rank
-                . ($p->rating !== null ? ' &middot; CTF ' . number_format($p->rating, 1) : '') . '</span></span>';
+                . ($p->rating !== null ? ' &middot; CTF ' . number_format($p->rating, 1) : '') . '</span></span></span>';
 
-            return $this->Html->link($left ? $chevron . $avatar . $preview : $preview . $avatar . $chevron,
+            return $this->Html->link($left ? $chevron . $preview : $preview . $chevron,
                 ['action' => 'view', $p->id],
                 ['escape' => false, 'id' => 'player-' . $dir,
                  'title' => ($left ? 'Previous' : 'Next') . ' player by CTF rating: ' . $p->name . ' (' . ($left ? '←' : '→') . ')',
                  'aria-label' => ($left ? 'Previous' : 'Next') . ' player: ' . $p->name,
-                 'class' => 'group fixed top-1/2 z-30 flex -translate-y-1/2 items-center gap-2 rounded-full bg-black/70 p-1.5 text-zinc-300 shadow-lg backdrop-blur-sm transition hover:bg-black/90 hover:text-white '
-                     . ($left ? 'left-1 pl-2 md:left-3' : 'right-1 pr-2 md:right-3')]);
+                 'class' => 'group fixed top-1/2 z-30 flex -translate-y-1/2 items-center rounded-full bg-black/70 p-1.5 text-zinc-300 shadow-lg backdrop-blur-sm transition hover:bg-black/90 hover:text-white '
+                     . ($left ? 'left-1 md:left-3' : 'right-1 md:right-3')]);
         };
         ?>
         <?= $navArrow($rankingNav['prev'], $rankingNav['rank'] - 1, 'prev') ?>
@@ -139,6 +140,12 @@ endif;
                 <?php endif; ?>
                 <?php if (!empty($timePlayed['all'])): ?>
                     <span title="time on a team, all counted games"><i class="fa-solid fa-clock mr-1"></i><?= $this->Layout->duration($timePlayed['all']) ?> played</span>
+                <?php endif; ?>
+                <?php if (!empty($ping)):
+                    $pingTitle = 'Average ping, last ' . \App\Controller\PlayersController::PING_DAYS . ' days: '
+                        . implode(', ', array_map(fn($p) => $this->Layout->serverName($p['server']) . ' ' . $p['ping'] . ' ms', $ping['servers']));
+                    ?>
+                    <span title="<?= h($pingTitle) ?>"><i class="fa-solid fa-signal mr-1"></i><?= (int)$ping['all'] ?> ms ping</span>
                 <?php endif; ?>
                 <?php if (!empty($lastSeen)):
                     $seenAt = new \Cake\I18n\DateTime($lastSeen['started_at']);

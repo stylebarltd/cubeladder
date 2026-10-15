@@ -78,7 +78,7 @@ class LogProcessorService
             // hangs on them too (their chat moves to the new id, see AcLogParser)
             $conn = $gamesTable->getConnection();
             foreach ($games as $game) {
-                foreach (['kill_pairs', 'player_stats_per_game', 'player_game_ratings'] as $table) {
+                foreach (['kill_pairs', 'player_stats_per_game', 'player_game_ratings', 'game_timelines'] as $table) {
                     $conn->execute("DELETE FROM $table WHERE game_id = ?", [$game->id]);
                 }
                 $gamesTable->delete($game);

@@ -781,6 +781,35 @@ class PlayersController extends AppController
         ]);
     }
 
+    /** Days of games the average ping is taken over (connections change) */
+    public const PING_DAYS = 90;
+
+    /**
+     * The player's average ping over the last PING_DAYS, per server and over
+     * all (weighted by minutes played): avg_ping is the mean of a game's minute
+     * scoreboards, filled since Oct 2026. Null without such games.
+     */
+    private function averagePing(string $playerId): ?array
+    {
+        $rows = $this->Players->getConnection()->execute(
+            'SELECT g.server_name, SUM(s.avg_ping * s.minutes_played) / SUM(s.minutes_played) ping, SUM(s.minutes_played) minutes
+             FROM player_stats_per_game s
+             INNER JOIN games g ON g.id = s.game_id
+             WHERE s.player_id = ? AND s.avg_ping IS NOT NULL AND s.minutes_played > 0
+               AND g.started_at > NOW() - INTERVAL ' . self::PING_DAYS . ' DAY
+             GROUP BY g.server_name ORDER BY minutes DESC',
+            [$playerId])->fetchAll('assoc');
+        $minutes = array_sum(array_column($rows, 'minutes'));
+        if (!$minutes) {
+            return null;
+        }
+
+        return [
+            'all' => (int)round(array_sum(array_map(fn($r) => $r['ping'] * $r['minutes'], $rows)) / $minutes),
+            'servers' => array_map(fn($r) => ['server' => $r['server_name'], 'ping' => (int)round((float)$r['ping'])], $rows),
+        ];
+    }
+
     public function view(string $id)
     {
         // a merged profile: on to the one it is part of now
@@ -1024,8 +1053,10 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $this->set('upsets', $upsets);
         $this->set('rankingNav', $this->rankingNeighbours((string)$player->id));
 
+        $ping = $this->averagePing((string)$player->id);
+
         $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
-            'milestones', 'milestoneProgress', 'funFacts', 'lastSeen', 'weapons'));
+            'milestones', 'milestoneProgress', 'funFacts', 'lastSeen', 'weapons', 'ping'));
         $this->set(compact(
             'player',
             'totalKills',

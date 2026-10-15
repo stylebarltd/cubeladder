@@ -97,6 +97,20 @@ class AcLogParser
     // (team totals) follows it and is saved to its team_scores.
     protected $finishedGame = null;
     protected array $finalTeamScores = [];
+    // Scoreboard of every minute of the game (game_timelines): the columns of
+    // the latest "cn name team flag ..." header, the snapshots and which game
+    // they belong to (the finished game keeps its final block)
+    protected ?array $statusCols = null;
+    protected array $timeline = [];
+    protected $timelineGame = null;
+
+    // Votes called and waiting for their result (map loaded, player kicked ...)
+    protected array $pendingVotes = [];
+    /** A vote without a visible result after this many seconds failed */
+    public const VOTE_TIMEOUT = 90;
+    /** Pings at or above this (lag, 9999 = unknown) don't count for avg_ping */
+    public const MAX_PING = 1000;
+
     public const MAX_FREE_FLAGS = 4;
     /** Share of the minutes with a team of one player or none that makes a team game inaccurate */
     public const UNEVEN_SHARE = 0.5;
@@ -113,6 +127,7 @@ class AcLogParser
     protected string $chatRegex;
     protected string $gameStartRegex;
     protected string $gameFinishedRegex;
+    protected string $voteRegex;
 
     // Dates
     protected ?Chronos $currentTimestamp = null;
@@ -143,6 +158,7 @@ class AcLogParser
         'scored_with_the_flag' => 5, //awesome
         'lost_the_flag' => -1, //pitty
         'returned_the_flag' => 2, //well done
+        'failed_to_score' => 1, //hunt the flag: got the enemy flag carrier while their flag wasn't on one of ours
         'teamkills' => -1, //don't do it
         'suicided' => -1, //omg
     ];
@@ -201,6 +217,7 @@ class AcLogParser
 
         if ($ts) {
             $this->currentTimestamp = $ts;
+            $this->expireVotes($ts);
         }
 
         if (!$ts && preg_match($this->gameStartRegex, $rest)) {
@@ -228,6 +245,12 @@ class AcLogParser
             $this->unevenBlocks = 0;
             $this->finishedGame = null;
 
+            // the previous game's timeline is complete (its final block included)
+            $this->saveTimeline();
+            $this->timeline = [];
+            $this->timelineGame = null;
+            $this->resolveMapVotes($rawMode, trim($m[2]), $ts);
+
             // skip tiny games
             if ($players < Configure::read('Ladder.minPlayersToRankGame')) {
                 $this->currentGame = null;
@@ -250,6 +273,7 @@ class AcLogParser
                 $this->currentGame = $existing;
                 $this->currentGamePlayers = [];
                 $this->killBuffer = [];
+                $this->timelineGame = $existing; // rebuilt from its start
                 return;
             }
 
@@ -270,6 +294,7 @@ class AcLogParser
             $this->currentGamePlayers = [];
             $this->streakBuffer = [];
             $this->killBuffer = [];
+            $this->timelineGame = $game;
 
             $this->eventsParsed++;
 
@@ -304,6 +329,20 @@ class AcLogParser
             // ensure stats row exists in buffer
             $this->ensurePlayerStatsBuffered($player->id);
 
+            return;
+        }
+
+        // votes: "[ip] client X called a vote: load map 'ac_casa' in mode 'capture the flag'"
+        if (preg_match($this->voteRegex, $rest, $m)) {
+            $this->recordVote(trim($m[2]), $m[3] === 'failed to call', $m[4], $ts);
+            $this->eventsParsed++;
+            return;
+        }
+
+        // kicked / banned by vote: the vote against them passed
+        if (preg_match('~^\[[0-9a-f:\.]+\]\s+disconnecting client (\S+) \((kicked|banned) by vote\)~i', $rest, $m)) {
+            $this->resolveVote(fn($v) => in_array($v['kind'], ['kick', 'ban'], true) && $v['target'] === $m[1], 'passed');
+            $this->eventsParsed++;
             return;
         }
 
@@ -501,6 +540,10 @@ class AcLogParser
                 }
                 $verb = 'scored with the flag';
             }
+            // hunt the flag: bringing your flag home while yours hunt theirs is the team's flag score
+            if ($verb === 'hunted the flag') {
+                $verb = 'scored with the flag';
+            }
 
             $playerId = $this->getPlayerIdByNameCached($playerName);
             if (!$playerId) return;
@@ -514,7 +557,13 @@ class AcLogParser
                 'stole the flag' => 'stole_the_flag',
                 'scored with the flag' => 'scored_with_the_flag',
                 'lost the flag' => 'lost_the_flag',
-                'returned the flag' => 'returned_the_flag'
+                'returned the flag' => 'returned_the_flag',
+                // picking a dropped flag up again and dropping it on purpose: counted
+                // only; failed to score (hunt the flag: got their carrier, but the team
+                // didn't hold their flag): 1 point
+                'picked up the flag' => 'picked_up_the_flag',
+                'dropped the flag' => 'dropped_the_flag',
+                'failed to score' => 'failed_to_score',
             ];
 
             if (!isset($map[$verb])) return;
@@ -560,6 +609,7 @@ class AcLogParser
                 $this->eventsParsed++;
 
                 // flush stats & events for finished game immediately
+                $this->applyAvgPings();
                 $this->flushStats();
                 $this->flushKills();
                 $this->flushChats();
@@ -571,6 +621,9 @@ class AcLogParser
                 $this->currentGame = null;
                 $this->currentGamePlayers = [];
                 $this->streakBuffer = [];
+
+                // the final scoreboard follows: the timeline's last minute
+                $this->startSnapshot($ts);
             }
             return;
         }
@@ -579,6 +632,11 @@ class AcLogParser
         // (no flags part in non-flag modes)
         if (preg_match('~^Team\s+(CLA|RVSF):\s+(\d+) players,\s+(-?\d+) frags(?:,\s+(-?\d+) flags)?~', $rest, $m)) {
             $this->teamPlayers[$m[1]] = (int)$m[2];
+            if ($this->timeline && $this->timelineGame && !$this->skipCurrentGame) {
+                $this->timeline[array_key_last($this->timeline)]['t'][$m[1]] = [
+                    (int)$m[2], (int)$m[3], isset($m[4]) && $m[4] !== '' ? (int)$m[4] : null,
+                ];
+            }
             // RVSF closes a status block of a running team game: were the teams even?
             if ($m[1] === 'RVSF' && $this->currentGame && isset($this->teamPlayers['CLA'])) {
                 $this->statusBlocks++;
@@ -596,6 +654,7 @@ class AcLogParser
                     $this->finishedGame->team_scores = json_encode($this->finalTeamScores);
                     $this->Games->save($this->finishedGame);
                     $this->finishedGame = null;
+                    $this->saveTimeline();
                 }
             }
             return;
@@ -606,13 +665,16 @@ class AcLogParser
         //   other modes " 0 pacman            25    36   96 normal  1.2.3.4"
         // remembers the player's (last) team and counts a minute played -
         // spectators (SPEC / CSPC / RSPC) are listed but not playing
-        if ($this->currentGame && (
-            preg_match('~^\d+\s+(\S+)\s+(CLA|RVSF|SPEC|CSPC|RSPC)\s+-?\d+~', $rest, $m)
-            || preg_match('~^\d+\s+(\S+)\s+-?\d+\s+-?\d+\s+\d+\s+[a-z]+\s~i', $rest, $m)
-        )) {
-            $playerId = $this->getPlayerIdByNameCached($m[1]);
-            $team = $m[2] ?? null;
-            if ($playerId && !$this->skipCurrentGame && !in_array($team, ['SPEC', 'CSPC', 'RSPC'], true)) {
+        // (its columns come from the header line before the rows, they differ per mode)
+        if (str_starts_with($rest, 'cn name ')) {
+            $this->statusCols = preg_split('~\s+~', $rest);
+            return;
+        }
+        if ($this->statusCols && ($row = $this->parseStatusRow($rest))) {
+            $playerId = $this->getPlayerIdByNameCached($row['name']);
+            $team = $row['team'];
+            $playing = !in_array($team, ['SPEC', 'CSPC', 'RSPC'], true);
+            if ($playerId && $this->currentGame && !$this->skipCurrentGame && $playing) {
                 $this->ensurePlayerStatsBuffered($playerId);
                 $key = $this->currentGame->id . ':' . $playerId;
                 if ($team !== null) {
@@ -620,11 +682,23 @@ class AcLogParser
                 }
                 $this->statsBuffer[$key]['minutes_played'] = (int)($this->statsBuffer[$key]['minutes_played'] ?? 0) + 1;
             }
+            if ($playing && $this->timeline && $this->timelineGame && !$this->skipCurrentGame) {
+                $this->timeline[array_key_last($this->timeline)]['p'][] = [
+                    'id' => $playerId, 'n' => $row['name'], 'team' => $team,
+                    'fl' => $row['flag'], 'fr' => $row['frag'], 'd' => $row['death'], 'tk' => $row['tk'], 'ping' => $row['ping'],
+                ];
+            }
             return;
         }
 
-        // periodic status block
+        // periodic status block: "Game status: capture the flag on ac_casa, 12 minutes remaining, open, 9 clients"
         if (strpos($rest, 'Game status:') === 0) {
+            if ($this->currentGame && !$this->skipCurrentGame && str_contains($rest, ' remaining, ')) {
+                $this->startSnapshot($ts);
+            }
+            if (preg_match('~(?:remaining|game finished), (\w+), \d+ clients~', $rest, $m)) {
+                $this->resolveVote(fn($v) => $v['kind'] === 'mastermode' && $v['target'] === $m[1], 'passed');
+            }
             $this->eventsParsed++;
             return;
         }
@@ -722,7 +796,8 @@ class AcLogParser
                     'splattered' => 0, 'slashed' => 0, 'gibbed' => 0, 'picked_off' => 0,
                     'suicided' => 0, 'stole_the_flag' => 0, 'lost_the_flag' => 0,
                     'returned_the_flag' => 0, 'scored_with_the_flag' => 0, 'longest_streak' => 0,
-                    'team' => null, 'minutes_played' => 0,
+                    'picked_up_the_flag' => 0, 'dropped_the_flag' => 0, 'failed_to_score' => 0,
+                    'team' => null, 'minutes_played' => 0, 'avg_ping' => null,
                     'total_score' => 0, 'kd_ratio' => 0
                 ];
             }
@@ -780,6 +855,194 @@ class AcLogParser
         $this->streakBuffer[$playerId] = 0;
     }
 
+    // -------------------------------
+    // Minute scoreboards (game_timelines) and ping
+    // -------------------------------
+
+    /**
+     * One player row of a status block, read by the columns of its header:
+     *   "cn name team flag frag death tk ping role host" (columns vary per mode)
+     * Fixed columns are taken from the end, so the name is whatever is left.
+     * Null for anything that isn't such a row.
+     */
+    protected function parseStatusRow(string $rest): ?array
+    {
+        $cols = $this->statusCols;
+        if (!preg_match('~^\d+\s+\S.*\s-?\d+\s+(?:normal|admin)\s+\S+$~', $rest)) {
+            return null;
+        }
+        $tokens = preg_split('~\s+~', $rest);
+        $tail = count($cols) - 2; // everything after cn and name
+        if (count($tokens) < $tail + 2) {
+            return null;
+        }
+        $values = array_combine(array_slice($cols, 2), array_slice($tokens, -$tail));
+        $int = fn(string $c) => isset($values[$c]) ? (int)$values[$c] : null;
+
+        return [
+            'name' => implode(' ', array_slice($tokens, 1, count($tokens) - 1 - $tail)),
+            'team' => $values['team'] ?? null,
+            'flag' => $int('flag'),
+            'frag' => (int)($values['frag'] ?? 0),
+            'death' => (int)($values['death'] ?? 0),
+            'tk' => $int('tk'),
+            'ping' => (int)($values['ping'] ?? 0),
+        ];
+    }
+
+    /**
+     * A new minute of the timeline, 's' seconds into the game (the server's
+     * "N minutes remaining" is rounded up, the log time is exact): rows and
+     * team totals of the status block follow.
+     */
+    protected function startSnapshot(?Chronos $ts): void
+    {
+        if (!$this->timelineGame || !$ts || !$this->timelineGame->started_at) {
+            return;
+        }
+        $seconds = max(0, $ts->getTimestamp() - $this->timelineGame->started_at->getTimestamp());
+        // two blocks in the same second (game end): keep the later one
+        if ($this->timeline && $this->timeline[array_key_last($this->timeline)]['s'] === $seconds) {
+            array_pop($this->timeline);
+        }
+        $this->timeline[] = ['s' => $seconds, 't' => [], 'p' => []];
+    }
+
+    /** Writes the timeline of the game it belongs to (again - idempotent) */
+    protected function saveTimeline(): void
+    {
+        if (!$this->timelineGame || $this->timelineGame->id === null || !$this->timeline) {
+            return;
+        }
+        try {
+            ConnectionManager::get('default')->execute(
+                'REPLACE INTO game_timelines (game_id, timeline) VALUES (?, ?)',
+                [$this->timelineGame->id, json_encode($this->timeline, JSON_UNESCAPED_UNICODE)]);
+        } catch (\Exception $e) {
+            // never break log processing over the timeline
+        }
+    }
+
+    /**
+     * Each player's mean ping over the minutes of the running game (avg_ping).
+     * Pings of 0 (not measured yet) and from MAX_PING on (lag) are left out.
+     */
+    protected function applyAvgPings(): void
+    {
+        if (!$this->currentGame || $this->timelineGame !== $this->currentGame) {
+            return;
+        }
+        $pings = [];
+        foreach ($this->timeline as $snapshot) {
+            foreach ($snapshot['p'] as $p) {
+                if ($p['id'] && $p['ping'] > 0 && $p['ping'] < self::MAX_PING) {
+                    $pings[$p['id']][] = $p['ping'];
+                }
+            }
+        }
+        foreach ($pings as $playerId => $list) {
+            $this->ensurePlayerStatsBuffered($playerId);
+            $this->statsBuffer[$this->currentGame->id . ':' . $playerId]['avg_ping'] = (int)round(array_sum($list) / count($list));
+        }
+    }
+
+    // -------------------------------
+    // Votes (events type 'vote')
+    // -------------------------------
+
+    /**
+     * What a vote was about, from its description:
+     *   load map 'ac_casa' in mode 'capture the flag' / kick player X, reason: Y /
+     *   ban player X, reason: Y / shuffle teams / change mastermode to 'match'
+     */
+    public static function describeVote(string $desc): array
+    {
+        $vote = ['kind' => 'other', 'desc' => $desc, 'map' => null, 'mode' => null, 'target' => null, 'reason' => null];
+        if (preg_match("~^load map '(.+)' in mode '(.+)'$~", $desc, $m)) {
+            $vote = ['kind' => 'map', 'map' => $m[1], 'mode' => $m[2]] + $vote;
+        } elseif (preg_match('~^(kick|ban) player (\S+)(?:, reason: (.*))?$~', $desc, $m)) {
+            $vote = ['kind' => $m[1], 'target' => $m[2], 'reason' => ($m[3] ?? '') !== '' ? $m[3] : null] + $vote;
+        } elseif ($desc === 'shuffle teams') {
+            $vote['kind'] = 'shuffle';
+        } elseif (preg_match("~^change mastermode to '(\w+)'$~", $desc, $m)) {
+            $vote = ['kind' => 'mastermode', 'target' => $m[1]] + $vote;
+        }
+
+        return $vote;
+    }
+
+    /**
+     * A vote called (waits for its result) or refused by the server
+     * ("failed to call a vote: ... (can't vote that often)" - saved right away).
+     */
+    protected function recordVote(string $name, bool $refused, string $desc, ?Chronos $ts): void
+    {
+        $error = null;
+        if ($refused && preg_match('~^(.*) \(([^()]*)\)$~', $desc, $m)) {
+            [$desc, $error] = [$m[1], $m[2]];
+        }
+        $vote = self::describeVote($desc) + [
+            'name' => $name,
+            'error' => $error,
+            'result' => $refused ? 'refused' : null,
+            'at' => $ts,
+            'game_id' => $this->currentGame->id ?? $this->finishedGame->id ?? null,
+        ];
+        if ($refused) {
+            $this->queueVote($vote);
+        } else {
+            $this->pendingVotes[] = $vote;
+        }
+    }
+
+    /** Pending votes for which $match is true get $result and are saved */
+    protected function resolveVote(callable $match, string $result): void
+    {
+        foreach ($this->pendingVotes as $i => $vote) {
+            if ($match($vote)) {
+                $vote['result'] = $result;
+                $this->queueVote($vote);
+                unset($this->pendingVotes[$i]);
+            }
+        }
+    }
+
+    /** A new game: the map vote for exactly it passed, other map votes failed */
+    protected function resolveMapVotes(string $mode, string $map, ?Chronos $ts): void
+    {
+        $this->resolveVote(fn($v) => $v['kind'] === 'map' && $v['map'] === $map && strcasecmp($v['mode'], $mode) === 0, 'passed');
+        $this->resolveVote(fn($v) => $v['kind'] === 'map', 'failed');
+    }
+
+    /** Votes without a result after VOTE_TIMEOUT: failed (shuffle shows none - unknown) */
+    protected function expireVotes(Chronos $now): void
+    {
+        foreach ($this->pendingVotes as $i => $vote) {
+            if ($vote['at'] && $now->getTimestamp() - $vote['at']->getTimestamp() > self::VOTE_TIMEOUT) {
+                $vote['result'] = in_array($vote['kind'], ['map', 'kick', 'ban', 'mastermode'], true) ? 'failed' : null;
+                $this->queueVote($vote);
+                unset($this->pendingVotes[$i]);
+            }
+        }
+    }
+
+    protected function queueVote(array $vote): void
+    {
+        $ts = $vote['at'];
+        $actorId = strtolower($vote['name']) === 'unarmed' ? null : $this->getPlayerIdByNameCached($vote['name']);
+        $targetId = in_array($vote['kind'], ['kick', 'ban'], true) && $vote['target'] ? $this->getPlayerIdByNameCached($vote['target']) : null;
+        $details = array_intersect_key($vote, array_flip(['name', 'kind', 'desc', 'map', 'mode', 'target', 'reason', 'error', 'result']));
+        $this->chatBuffer[] = [
+            'game_id' => $vote['game_id'],
+            'event_time' => $ts ? $ts->format('Y-m-d H:i:s') : null,
+            'event_hash' => md5($this->getServerName() . '|vote|' . ($ts ? $ts->format('c') : '') . '|' . $vote['name'] . '|' . $vote['desc']),
+            'type' => 'vote',
+            'actor_id' => $actorId,
+            'target_id' => $targetId,
+            'details' => json_encode(array_filter($details, fn($v) => $v !== null), JSON_UNESCAPED_UNICODE),
+        ];
+    }
+
     protected function recalculateTotalScoreInMemory(string $key): void
     {
         $row = &$this->statsBuffer[$key];
@@ -809,9 +1072,10 @@ class AcLogParser
             'game_id','player_id','kills','teamkills','deaths','headshot','busted','shredded',
             'sprayed','punctured','splattered','peppered','slashed','gibbed','picked_off','suicided',
             'stole_the_flag','lost_the_flag','returned_the_flag','scored_with_the_flag',
-            'longest_streak','total_score','kd_ratio','team','minutes_played'
+            'picked_up_the_flag','dropped_the_flag','failed_to_score',
+            'longest_streak','total_score','kd_ratio','team','minutes_played','avg_ping'
         ];
-        $value = fn(array $row, string $col) => $col === 'team' ? ($row['team'] ?? null) : ($row[$col] ?? 0);
+        $value = fn(array $row, string $col) => in_array($col, ['team', 'avg_ping'], true) ? ($row[$col] ?? null) : ($row[$col] ?? 0);
 
         $placeholders = [];
         $bindings = [];
@@ -1191,7 +1455,8 @@ class AcLogParser
             . '\s+(.+)$~i';
 
         // (team) keep the flag scores every 15 s of carrying: "X scored, carrying for 15 seconds, new score 1"
-        $this->specialRegex = '~^\[([0-9a-f:\.]+)\]\s+(.+?)\s+(suicided|stole the flag|scored with the flag|scored, carrying for \d+ seconds|lost the flag|returned the flag)(?: for (\w+),.*|, new score \d+)?$~i';
+        $this->specialRegex = '~^\[([0-9a-f:\.]+)\]\s+(.+?)\s+(suicided|stole the flag|scored with the flag|hunted the flag|scored, carrying for \d+ seconds|lost the flag|returned the flag|picked up the flag|dropped the flag|failed to score)(?: for (\w+),.*|, new score \d+)?$~i';
+        $this->voteRegex = '~^\[([0-9a-f:\.]+)\]\s+client (.+?) (called|failed to call) a vote: (.+)$~i';
         $this->gameFinishedRegex = '~Game status: .*game finished,.* (\d+) clients~i';
         //$this->changeNameRegex = '~^\[([0-9a-f:\.]+)\]\s+([^\s]+)\s+changed name\s+(.+)$/';
     }
@@ -1262,13 +1527,15 @@ class AcLogParser
         $placeholders = [];
         $bindings = [];
         foreach ($this->chatBuffer as $row) {
-            $placeholders[] = '(?,?,?,?,?,?)';
-            array_push($bindings, $row['game_id'], $row['event_time'], $row['event_hash'], $row['type'], $row['actor_id'], $row['details']);
+            $placeholders[] = '(?,?,?,?,?,?,?)';
+            array_push($bindings, $row['game_id'], $row['event_time'], $row['event_hash'], $row['type'], $row['actor_id'], $row['target_id'] ?? null, $row['details']);
         }
-        // a re-parsed running game gets a new id: its chat moves along to it
-        $sql = 'INSERT INTO events (game_id, event_time, event_hash, type, actor_id, details) VALUES '
+        // a re-parsed running game gets a new id: its chat moves along to it (an
+        // already imported game is skipped on a re-parse: no id, keep the one we have)
+        // and a vote saved while still open gets its result
+        $sql = 'INSERT INTO events (game_id, event_time, event_hash, type, actor_id, target_id, details) VALUES '
             . implode(',', $placeholders)
-            . ' ON DUPLICATE KEY UPDATE game_id = VALUES(game_id)';
+            . ' ON DUPLICATE KEY UPDATE game_id = COALESCE(VALUES(game_id), game_id), details = VALUES(details)';
         try {
             $conn->execute($sql, $bindings);
         } catch (\Exception $e) {
@@ -1279,7 +1546,14 @@ class AcLogParser
 
     public function flush(): void
     {
-        // Only flush stats buffer
+        // a running game: its minutes so far (the next run writes them again)
+        $this->applyAvgPings();
+        $this->saveTimeline();
+        // votes still open are saved without a result, the next run adds it
+        foreach ($this->pendingVotes as $vote) {
+            $this->queueVote($vote);
+        }
+        $this->pendingVotes = [];
         $this->flushStats();
         $this->flushKills();
         $this->flushChats();
