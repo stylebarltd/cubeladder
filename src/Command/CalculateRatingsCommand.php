@@ -336,7 +336,7 @@ class CalculateRatingsCommand extends Command
                    SUM(mins) AS mins, SUM(headshot) AS headshot,
                    AVG(longest_streak) AS streak, COUNT(longest_streak) AS streak_games
             FROM ranked
-            INNER JOIN players pl ON pl.id = ranked.player_id AND pl.track = 1
+            INNER JOIN players pl ON pl.id = ranked.player_id AND pl.track = 1 AND pl.cheater = 0
             WHERE rn <= :window
             GROUP BY ranked.player_id
             HAVING COUNT(*) >= :min_games";

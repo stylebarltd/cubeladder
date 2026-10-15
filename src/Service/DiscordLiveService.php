@@ -727,7 +727,7 @@ class DiscordLiveService
             $rows = $this->fetchTable('Players')->find()
                 ->select(['Players.id', 'total_score' => 'SUM(PlayerStatsPerGame.total_score)'])
                 ->innerJoinWith('PlayerStatsPerGame.Games', fn($q) => $q->where(['Games.started_at >' => date('Y')]))
-                ->where(['Players.track' => 1])
+                ->where(['Players.track' => 1, 'Players.cheater' => false])
                 ->groupBy(['Players.id'])
                 ->having(['SUM(PlayerStatsPerGame.total_score) >=' => 5000])
                 ->orderBy(['total_score' => 'DESC'])

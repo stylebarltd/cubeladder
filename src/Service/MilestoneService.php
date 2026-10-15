@@ -199,6 +199,13 @@ class MilestoneService
             $progress[$player] = $this->summary($state, $ladderServers);
         }
 
+        // marked cheaters get none (computed with everyone, so others' MVPs stay right)
+        $cheaters = array_flip(array_column($connection->execute('SELECT id FROM players WHERE cheater = 1')->fetchAll('assoc'), 'id'));
+        if ($cheaters) {
+            $milestones = array_values(array_filter($milestones, fn($m) => !isset($cheaters[$m['player_id']])));
+            $progress = array_diff_key($progress, $cheaters);
+        }
+
         return ['milestones' => $milestones, 'progress' => $progress];
     }
 

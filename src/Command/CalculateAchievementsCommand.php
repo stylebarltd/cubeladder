@@ -99,6 +99,7 @@ class CalculateAchievementsCommand extends Command
             $where = [
                 'game_id IN' => $theLast100GameIds,
                 'Players.name IS NOT' => "unarmed",
+                'Players.cheater' => false,
             ];
             if ($eventType == 'kd_ratio') {
                 // average K/D: games under 3 minutes would skew it
@@ -210,7 +211,8 @@ class CalculateAchievementsCommand extends Command
                     ]);
                 })
                 ->where([
-                    'Players.name IS NOT' => 'unarmed'
+                    'Players.name IS NOT' => 'unarmed',
+                    'Players.cheater' => false,
                 ])
                 ->group('player_id')
                 ->contain(['Players'])

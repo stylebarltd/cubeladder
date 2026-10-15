@@ -90,7 +90,7 @@ class PagesController extends AppController
 
             //debug(date('Y-m-d', strtotime('last week sunday')));
 
-            $achievementPlayers = $achievementTable->find()->contain(['Players'])->where(['week_end'=>date('Y-m-d', strtotime('last week sunday'))])->toArray();
+            $achievementPlayers = $achievementTable->find()->contain(['Players'])->where(['week_end'=>date('Y-m-d', strtotime('last week sunday')), 'Players.cheater' => false])->toArray();
 
 //dd($achievements);
             $lastGameDateRange = $this->getGameDateRange();
@@ -108,7 +108,7 @@ class PagesController extends AppController
                         'Games.started_at',
                     ])
                     ->contain(['Players', 'Games'])
-                    ->where(['Players.track' => 1, 'PlayerStatsPerGame.longest_streak >' => 0])
+                    ->where(['Players.track' => 1, 'Players.cheater' => false, 'PlayerStatsPerGame.longest_streak >' => 0])
                     ->orderBy(['PlayerStatsPerGame.longest_streak' => 'DESC', 'Games.started_at' => 'ASC'])
                     ->enableHydration(false)
                     ->first();

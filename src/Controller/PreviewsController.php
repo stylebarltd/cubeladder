@@ -57,7 +57,7 @@ class PreviewsController extends AppController
             ])
             ->innerJoinWith('PlayerStatsPerGame.Games', fn($q) => $q->where(['Games.started_at >=' => date('Y') . '-01-01']))
             ->leftJoin(['r' => 'player_ratings'], ['r.player_id = Players.id'])
-            ->where(['Players.track' => 1])
+            ->where(['Players.track' => 1, 'Players.cheater' => false])
             ->groupBy(['Players.id', 'Players.name'])
             // active players only (a game in the last Activity::ACTIVE_DAYS), as on the page
             ->having(['SUM(PlayerStatsPerGame.total_score) >=' => 5000, 'MAX(Games.started_at) >=' => \App\Utility\Activity::since()])

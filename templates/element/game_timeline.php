@@ -37,7 +37,7 @@ $voteWhat = function (array $v): string {
     <?php if (count($timeline) >= 2): ?>
         <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <h3 class="text-lg font-bold"><i class="fa-solid fa-chart-line mr-1 text-sky-300"></i>Minute by minute</h3>
-            <span class="text-xs text-zinc-400" id="tl-legend"></span>
+            <span class="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-zinc-400" id="tl-legend"></span>
         </div>
         <svg id="tl-chart" class="block h-44 w-full" role="img" aria-label="Score over the game"></svg>
 
@@ -134,8 +134,8 @@ $voteWhat = function (array $v): string {
         }));
     }
     document.getElementById('tl-legend').innerHTML = series.map(s =>
-        `<span class="ml-3 whitespace-nowrap"><span class="mr-1 inline-block h-2 w-3 rounded-sm align-middle" style="background:${s.color}"></span>${esc(s.label)}</span>`
-    ).join('') + `<span class="ml-3">${teamGame ? (flagMode ? 'flags' : 'frags') : 'frags'}</span>`;
+        `<span class="whitespace-nowrap"><span class="mr-1.5 inline-block h-2 w-3 rounded-sm align-middle" style="background:${s.color}"></span>${esc(s.label)}</span>`
+    ).join('') + `<span class="border-l border-white/20 pl-5 uppercase tracking-wide text-zinc-500">${teamGame && flagMode ? 'flags' : 'frags'}</span>`;
 
     const maxS = Math.max(1, last.s);
     const maxY = Math.max(1, ...series.flatMap(s => s.points.filter(v => v !== null)));

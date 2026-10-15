@@ -105,6 +105,7 @@ class HallOfFameService
             ->where([
                 'PlayerStatsPerGame.game_id IN' => $gameIds,
                 'Players.track' => 1,
+                'Players.cheater' => false,
             ])
             ->orderBy([
                 'value' => 'DESC',
@@ -150,7 +151,7 @@ class HallOfFameService
             ->select($select)
             ->innerJoinWith('Players')
             ->innerJoinWith('Games')
-            ->where(['Games.started_at >=' => $since, 'Players.track' => 1])
+            ->where(['Games.started_at >=' => $since, 'Players.track' => 1, 'Players.cheater' => false])
             ->groupBy(['PlayerStatsPerGame.player_id'])
             ->enableHydration(false)
             ->all()
@@ -173,7 +174,7 @@ class HallOfFameService
             ->select($select)
             ->innerJoinWith('Players')
             ->innerJoinWith('Games.Maps')
-            ->where(['Games.inaccurate' => true, 'Games.started_at >=' => $since, 'Players.track' => 1])
+            ->where(['Games.inaccurate' => true, 'Games.started_at >=' => $since, 'Players.track' => 1, 'Players.cheater' => false])
             ->enableHydration(false)
             ->all()
             ->toArray();

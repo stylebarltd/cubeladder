@@ -25,6 +25,7 @@ class PlayersController extends AppController
                     'PlayerStatsPerGame.game_id IN' => $gameIds
                 ]);
             })
+            ->where(['Players.cheater' => false])
             ->group(['Players.id'])
             ->order(['total_score' => 'DESC'])
             ->all()
@@ -146,7 +147,7 @@ class PlayersController extends AppController
                 ->select($select)
                 ->innerJoinWith('Players')
                 ->innerJoinWith('Games')
-                ->where(['Games.started_at >=' => $since, 'Players.track' => 1])
+                ->where(['Games.started_at >=' => $since, 'Players.track' => 1, 'Players.cheater' => false])
                 ->groupBy(['PlayerStatsPerGame.player_id'])
                 ->enableHydration(false)
                 ->all()
@@ -396,7 +397,7 @@ class PlayersController extends AppController
                 ->innerJoinWith('PlayerStatsPerGame.Games', function ($q) {
                     return $q->where(['Games.started_at >=' => date('Y') . '-01-01']);
                 })
-                ->where(['Players.track' => 1])
+                ->where(['Players.track' => 1, 'Players.cheater' => false])
                 ->group(['Players.id'])
                 ->having([
                     'SUM(PlayerStatsPerGame.total_score) >=' => $minPoints
@@ -522,6 +523,7 @@ class PlayersController extends AppController
                     'PlayerStatsPerGame.game_id IN' => $gameIds
                 ]);
             })
+            ->where(['Players.cheater' => false])
             ->groupBy(['Players.id'])
             ->orderDesc('total_score');
 
@@ -631,7 +633,7 @@ class PlayersController extends AppController
                     'PlayerStatsPerGame.game_id IN' => $theLast100GameIds
                 ]);
             })
-            ->where(['track'=>1])
+            ->where(['track'=>1, 'cheater' => false])
             ->group(['Players.id'])
             ->order($order)
             ->contain([

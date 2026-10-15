@@ -74,7 +74,7 @@ class MapsController extends AppController
              INNER JOIN games g ON g.id = r.game_id
              INNER JOIN players pl ON pl.id = r.player_id
              INNER JOIN player_ratings active ON active.player_id = pl.id -- rated = active (Activity)
-             WHERE g.map_id = ? AND pl.track = 1
+             WHERE g.map_id = ? AND pl.track = 1 AND pl.cheater = 0
              GROUP BY pl.id, pl.name, pl.country
              HAVING COUNT(*) >= ?
              ORDER BY rating DESC, games DESC
@@ -104,7 +104,7 @@ class MapsController extends AppController
                            ) AS rn
                     FROM player_stats_per_game p
                     INNER JOIN games g ON g.id = p.game_id
-                    INNER JOIN players pl ON pl.id = p.player_id
+                    INNER JOIN players pl ON pl.id = p.player_id AND pl.cheater = 0
                     WHERE g.map_id IN ($placeholders)
                       AND g.inaccurate = 0
                     GROUP BY g.map_id, p.player_id, pl.name, pl.country
@@ -157,7 +157,7 @@ class MapsController extends AppController
                                ORDER BY a.week_end DESC
                            ) AS rn
                     FROM achievements a
-                    INNER JOIN players pl ON pl.id = a.player_id
+                    INNER JOIN players pl ON pl.id = a.player_id AND pl.cheater = 0
                     WHERE a.event_type = 'best_on_map'
                       AND a.map_id IN ($placeholders)
                 ) t
@@ -237,7 +237,7 @@ class MapsController extends AppController
                                ) AS rn
                         FROM player_stats_per_game p
                         INNER JOIN games g ON g.id = p.game_id
-                        INNER JOIN players pl ON pl.id = p.player_id
+                        INNER JOIN players pl ON pl.id = p.player_id AND pl.cheater = 0
                         WHERE g.map_id IN ($placeholders)
                           AND g.inaccurate = 0
                           AND p.$field > 0

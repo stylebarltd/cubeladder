@@ -29,7 +29,7 @@ class AdminController extends AppController
             return $this->redirect(['action' => 'login']);
         }
         // the duplicates form has a checkbox and buttons per row (CSRF still applies)
-        $this->FormProtection->setConfig('unlockedActions', ['pair']);
+        $this->FormProtection->setConfig('unlockedActions', ['pair', 'review']);
     }
 
     /** bcrypt hash of the admin password: config/admin_password.php (bin/cake admin_password) */
@@ -252,6 +252,75 @@ class AdminController extends AppController
         $this->Flash->success(sprintf('%d pair%s %s.', $count, $count === 1 ? '' : 's', $label));
 
         return $this->redirect(['action' => 'duplicates']);
+    }
+
+    /** Review verdicts on the suspicious list */
+    public const REVIEW_STATUSES = ['ok' => 'OK', 'watch' => 'Watch', 'cheater' => 'Cheater'];
+
+    /**
+     * Players whose numbers look like cheating (SuspicionService), with the
+     * server's warnings as evidence. ?all=1 also shows the ones marked OK.
+     */
+    public function suspicious()
+    {
+        $all = (bool)$this->request->getQuery('all');
+        $players = (new \App\Service\SuspicionService())->players($all);
+
+        // the latest server warnings / kill bursts of each, to look at
+        $evidence = [];
+        if ($players) {
+            $ids = array_column($players, 'player_id');
+            $rows = $this->fetchTable('Games')->getConnection()->execute(
+                "SELECT * FROM (SELECT e.actor_id, e.game_id, e.event_time, e.details, m.name map,
+                        ROW_NUMBER() OVER (PARTITION BY e.actor_id ORDER BY e.event_time DESC) rn
+                 FROM events e
+                 LEFT JOIN games g ON g.id = e.game_id
+                 LEFT JOIN maps m ON m.id = g.map_id
+                 WHERE e.type = 'anticheat' AND e.actor_id IN (" . implode(',', array_fill(0, count($ids), '?')) . ")) x
+                 WHERE rn <= 12", $ids)->fetchAll('assoc');
+            foreach ($rows as $r) {
+                $evidence[$r['actor_id']][] = ['details' => json_decode((string)$r['details'], true) ?: []] + $r;
+            }
+        }
+
+        $this->set(compact('players', 'evidence', 'all'));
+        $this->set('statuses', self::REVIEW_STATUSES);
+        $this->set('tab', 'suspicious');
+    }
+
+    /** Saves the verdict on a player of the suspicious list ('' removes it) */
+    public function review()
+    {
+        $this->request->allowMethod(['post']);
+        $playerId = (string)$this->request->getData('player_id');
+        $status = (string)$this->request->getData('status');
+        $note = trim((string)$this->request->getData('note'));
+        $conn = $this->fetchTable('Games')->getConnection();
+        if ($status === '') {
+            $conn->execute('DELETE FROM player_reviews WHERE player_id = ?', [$playerId]);
+        } elseif (isset(self::REVIEW_STATUSES[$status])) {
+            $conn->execute(
+                'REPLACE INTO player_reviews (player_id, status, note, reviewed_at) VALUES (?, ?, ?, ?)',
+                [$playerId, $status, mb_substr($note, 0, 500) ?: null, date('Y-m-d H:i:s')]);
+        } else {
+            return $this->redirect(['action' => 'suspicious']);
+        }
+
+        // a cheater is left out of rankings, Hall of Fame, rating, achievements
+        // and milestones (players.cheater); the lists show it at once, the rating
+        // and milestones with the next import (CalculateRatings / CalculateMilestones)
+        $cheater = $status === 'cheater';
+        $was = (bool)$conn->execute('SELECT cheater FROM players WHERE id = ?', [$playerId])->fetchColumn(0);
+        if ($cheater !== $was) {
+            $conn->execute('UPDATE players SET cheater = ? WHERE id = ?', [(int)$cheater, $playerId]);
+            Cache::clear('rankings');
+            Cache::clear();
+        }
+        $this->Flash->success($cheater && !$was
+            ? 'Marked as cheater: out of the rankings and the Hall of Fame now, rating and milestones with the next import.'
+            : (!$cheater && $was ? 'Back in the rankings - rating and milestones with the next import.' : 'Saved.'));
+
+        return $this->redirect(['action' => 'suspicious', '?' => $this->request->getQuery()] + ['#' => 'p-' . $playerId]);
     }
 
     private function closeRequest($request, string $status): void

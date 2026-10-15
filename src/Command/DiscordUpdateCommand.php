@@ -133,7 +133,7 @@ class DiscordUpdateCommand extends Command
     private function playerCard(string $which, string $site, Client $http): ?array
     {
         $Players = $this->fetchTable('Players');
-        $query = $Players->find()->select(['Players.id', 'Players.name'])->where(['Players.track' => 1]);
+        $query = $Players->find()->select(['Players.id', 'Players.name'])->where(['Players.track' => 1, 'Players.cheater' => false]);
         if ($which === 'random') {
             $query->innerJoin(['r' => 'player_ratings'], ['r.player_id = Players.id'])->orderBy('RAND()');
         } else {

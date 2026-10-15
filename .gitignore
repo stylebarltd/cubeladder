@@ -2,6 +2,7 @@
 ##########################
 /config/app_local.php
 /config/admin_password.php
+/config/anticheat.php
 /config/.env
 /logs/*
 /tmp/*

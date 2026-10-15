@@ -104,6 +104,9 @@ class AcLogParser
     protected array $timeline = [];
     protected $timelineGame = null;
 
+    // Far flag touches / pickups and kill bursts (events type 'anticheat')
+    protected CheatSignals $cheatSignals;
+
     // Votes called and waiting for their result (map loaded, player kicked ...)
     protected array $pendingVotes = [];
     /** A vote without a visible result after this many seconds failed */
@@ -195,6 +198,7 @@ class AcLogParser
         $this->PlayerStatsPerGame = $this->fetchTable('PlayerStatsPerGame');
         $this->Demos = $this->fetchTable('Demos');
 
+        $this->cheatSignals = new CheatSignals();
         $this->compileRegexes();
         $this->preloadPlayerCache();
         $this->preloadMapCache();
@@ -250,6 +254,7 @@ class AcLogParser
             $this->timeline = [];
             $this->timelineGame = null;
             $this->resolveMapVotes($rawMode, trim($m[2]), $ts);
+            $this->cheatSignals->reset();
 
             // skip tiny games
             if ($players < Configure::read('Ladder.minPlayersToRankGame')) {
@@ -339,6 +344,13 @@ class AcLogParser
             return;
         }
 
+        // the server's far flag touch / item pickup warnings
+        if ($ts && ($signal = $this->cheatSignals->farPickup($rest, $ts->getTimestamp()))) {
+            $this->queueCheatSignal($signal, $ts);
+            $this->eventsParsed++;
+            return;
+        }
+
         // kicked / banned by vote: the vote against them passed
         if (preg_match('~^\[[0-9a-f:\.]+\]\s+disconnecting client (\S+) \((kicked|banned) by vote\)~i', $rest, $m)) {
             $this->resolveVote(fn($v) => in_array($v['kind'], ['kick', 'ban'], true) && $v['target'] === $m[1], 'passed');
@@ -390,6 +402,12 @@ class AcLogParser
             $killerName = trim($m[2]);
             $verb       = strtolower($m[3]);
             $victimRaw  = trim($m[4]);
+
+            // many kills within seconds (teamkills left out)
+            if ($ts && !str_starts_with(strtolower($victimRaw), 'their teammate ') && !in_array(strtolower($killerName), $this->ignoredNames, true)
+                && ($signal = $this->cheatSignals->kill($killerName, $verb, $ts->getTimestamp()))) {
+                $this->queueCheatSignal($signal, $ts);
+            }
 
             $killerIsUnarmed = strtolower($killerName) === 'unarmed';
 
@@ -670,6 +688,7 @@ class AcLogParser
             $this->statusCols = preg_split('~\s+~', $rest);
             return;
         }
+        $this->cheatSignals->notePing($rest); // the ping that goes with a later warning
         if ($this->statusCols && ($row = $this->parseStatusRow($rest))) {
             $playerId = $this->getPlayerIdByNameCached($row['name']);
             $team = $row['team'];
@@ -1024,6 +1043,19 @@ class AcLogParser
                 unset($this->pendingVotes[$i]);
             }
         }
+    }
+
+    /** A CheatSignals event for the events table (type 'anticheat') */
+    protected function queueCheatSignal(array $signal, Chronos $ts): void
+    {
+        $this->chatBuffer[] = [
+            'game_id' => $this->currentGame->id ?? null,
+            'event_time' => $ts->format('Y-m-d H:i:s'),
+            'event_hash' => CheatSignals::hash($this->getServerName(), $signal),
+            'type' => 'anticheat',
+            'actor_id' => in_array(strtolower($signal['name']), $this->ignoredNames, true) ? null : $this->getPlayerIdByNameCached($signal['name']),
+            'details' => json_encode($signal['details'], JSON_UNESCAPED_UNICODE),
+        ];
     }
 
     protected function queueVote(array $vote): void

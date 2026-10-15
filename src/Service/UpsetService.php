@@ -64,7 +64,7 @@ class UpsetService
             LEFT JOIN maps m ON m.id = g.map_id
             INNER JOIN player_ratings rw ON rw.player_id = a.killer_id
             INNER JOIN player_ratings rl ON rl.player_id = a.victim_id
-            INNER JOIN players w ON w.id = a.killer_id AND w.track = 1
+            INNER JOIN players w ON w.id = a.killer_id AND w.track = 1 AND w.cheater = 0
             INNER JOIN players l ON l.id = a.victim_id AND l.track = 1
             WHERE $where AND a.killer_id <> a.victim_id
               AND rl.skill - rw.skill >= :gap AND a.kills >= :min_kills AND a.kills - COALESCE(b.kills, 0) >= :min_lead

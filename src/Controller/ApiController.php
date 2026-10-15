@@ -27,7 +27,7 @@ class ApiController extends AppController
                     'PlayerStatsPerGame.game_id IN' => $theLast100GameIds
                 ]);
             })
-            ->where(['track'=>1])
+            ->where(['track'=>1, 'cheater' => false])
             ->group(['Players.id'])
             ->orderByDesc('total_score')
             ->contain([
