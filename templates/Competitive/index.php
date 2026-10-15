@@ -5,7 +5,10 @@
  * tracker is watching right now.
  *
  * @var \App\View\AppView $this
- * @var array $ratings comp_ratings rows (+ profile_name, country)
+ * @var array $ratings comp_ratings rows (+ profile_name, country): ranked
+ * @var array $provisional active players with fewer than $minGames games
+ * @var int $inactive ranked players without a game in $activeDays days
+ * @var int $activeDays
  * @var array $games comp_games rows, latest first
  * @var array $players comp_player_stats by game id
  * @var array $running comp_running rows
@@ -30,7 +33,7 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
             <p class="mt-1 max-w-3xl text-sm text-zinc-400">
                 Team games of 2 vs 2 and up on the clan match servers (<?= h(implode(', ', array_map($serverName, $servers))) ?>), apart from the ladder.
                 A game counts when it starts with even teams and runs its full 15 minutes. Earlier games come from actionfps.com, the clan scene's old ladder. Rating: Elo &ndash; everyone starts at
-                <?= (int)\App\Controller\CompetitiveController::start() ?>, beating a stronger team brings more. Ranked from <?= $minGames ?> games on.
+                <?= (int)\App\Controller\CompetitiveController::start() ?>, beating a stronger team brings more. Ranked from <?= $minGames ?> games on (the first ones only find your level), with a game in the last <?= $activeDays ?> days.
             </p>
         </div>
         <?php if (!$public): ?>
@@ -58,7 +61,7 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
     <section class="rounded-xl border border-white/10 bg-black/50 p-4">
         <h2 class="mb-3 text-lg font-bold">Elo ranking</h2>
         <?php if (!$ratings): ?>
-            <p class="text-sm text-zinc-500">Nobody has <?= $minGames ?> counted games yet.</p>
+            <p class="text-sm text-zinc-500">Nobody active has <?= $minGames ?> counted games yet.</p>
         <?php else: ?>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
@@ -87,6 +90,23 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
                     <?php endforeach; ?>
                     </tbody>
                 </table>
+            </div>
+        <?php endif; ?>
+        <?php if ($inactive): ?>
+            <p class="mt-3 text-xs text-zinc-500"><?= $inactive ?> more without a game in the last <?= $activeDays ?> days - they are back as soon as they play.</p>
+        <?php endif; ?>
+
+        <?php if ($provisional): ?>
+            <h3 class="mt-6 mb-1 text-sm font-bold uppercase tracking-wide text-zinc-400">Provisional</h3>
+            <p class="mb-2 text-xs text-zinc-500">Fewer than <?= $minGames ?> games: their Elo is still finding its level.</p>
+            <div class="flex flex-wrap gap-1.5 text-xs">
+                <?php foreach ($provisional as $r): ?>
+                    <span class="rounded-md bg-white/5 px-2 py-1 text-zinc-400">
+                        <?= $playerLink($r['player_id'], (string)($r['profile_name'] ?? $r['name']), $r['country'], 'hover:text-blue-300') ?>
+                        <span class="ml-1 font-mono text-zinc-500"><?= (int)round((float)$r['rating']) ?></span>
+                        <span class="font-mono text-zinc-600">&middot; <?= (int)$r['games'] ?>/<?= $minGames ?></span>
+                    </span>
+                <?php endforeach; ?>
             </div>
         <?php endif; ?>
     </section>

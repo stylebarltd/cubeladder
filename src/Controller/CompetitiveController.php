@@ -16,8 +16,10 @@ use Cake\Http\Exception\NotFoundException;
  */
 class CompetitiveController extends AppController
 {
-    /** Ratings shown, and games a player needs to be ranked */
-    public const MIN_GAMES = 3;
+    /** Games a player needs to be ranked: the Elo moves fast for the first ones (CompetitiveRatings::NEW_GAMES) */
+    public const MIN_GAMES = 10;
+    /** Ranked and provisional players: a game in the last ACTIVE_DAYS days */
+    public const ACTIVE_DAYS = 90;
 
     public function beforeFilter(EventInterface $event)
     {
@@ -36,17 +38,23 @@ class CompetitiveController extends AppController
     public function index()
     {
         $conn = $this->fetchTable('Games')->getConnection();
-        $ratings = $conn->execute(
+        // active players: ranked from MIN_GAMES on, the others provisional
+        $active = $conn->execute(
             'SELECT r.*, p.name profile_name, p.country, p.track FROM comp_ratings r
              LEFT JOIN players p ON p.id = r.player_id
-             WHERE r.games >= ? AND COALESCE(p.cheater, 0) = 0 AND COALESCE(p.track, 1) = 1
-             ORDER BY r.rating DESC', [self::MIN_GAMES])->fetchAll('assoc');
+             WHERE r.last_game_at >= ? AND COALESCE(p.cheater, 0) = 0 AND COALESCE(p.track, 1) = 1
+             ORDER BY r.rating DESC', [date('Y-m-d H:i:s', strtotime('-' . self::ACTIVE_DAYS . ' days'))])->fetchAll('assoc');
+        $ratings = array_values(array_filter($active, fn($r) => (int)$r['games'] >= self::MIN_GAMES));
+        $provisional = array_values(array_filter($active, fn($r) => (int)$r['games'] < self::MIN_GAMES));
+        $inactive = (int)$conn->execute('SELECT COUNT(*) FROM comp_ratings WHERE games >= ? AND last_game_at < ?',
+            [self::MIN_GAMES, date('Y-m-d H:i:s', strtotime('-' . self::ACTIVE_DAYS . ' days'))])->fetchColumn(0);
         $games = $conn->execute(
             'SELECT * FROM comp_games ORDER BY ended_at DESC LIMIT 30')->fetchAll('assoc');
         $players = $this->gamePlayers(array_column($games, 'id'));
         $running = $conn->execute('SELECT server_name, state, updated_at FROM comp_running')->fetchAll('assoc');
 
-        $this->set(compact('ratings', 'games', 'players', 'running'));
+        $this->set(compact('ratings', 'provisional', 'inactive', 'games', 'players', 'running'));
+        $this->set('activeDays', self::ACTIVE_DAYS);
         $this->set('servers', CompetitiveTracker::servers());
         $this->set('minGames', self::MIN_GAMES);
         $this->set('public', self::isPublic());
