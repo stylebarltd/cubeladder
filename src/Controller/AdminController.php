@@ -29,7 +29,7 @@ class AdminController extends AppController
             return $this->redirect(['action' => 'login']);
         }
         // the duplicates form has a checkbox and buttons per row (CSRF still applies)
-        $this->FormProtection->setConfig('unlockedActions', ['pair', 'review']);
+        $this->FormProtection->setConfig('unlockedActions', ['pair', 'review', 'competitive']);
     }
 
     /** bcrypt hash of the admin password: config/admin_password.php (bin/cake admin_password) */
@@ -321,6 +321,49 @@ class AdminController extends AppController
             : (!$cheater && $was ? 'Back in the rankings - rating and milestones with the next import.' : 'Saved.'));
 
         return $this->redirect(['action' => 'suspicious', '?' => $this->request->getQuery()] + ['#' => 'p-' . $playerId]);
+    }
+
+    /**
+     * Competitive players and every name they used, sorted so that similar
+     * names stand together: tick the ones that are one person and merge them
+     * (into one of them, or into a ladder profile - then their names become
+     * that profile's aliases too).
+     */
+    public function competitive()
+    {
+        $identity = new \App\Service\CompetitiveIdentity();
+        if ($this->request->is('post')) {
+            $keys = array_values(array_filter(array_map('strval', (array)$this->request->getData('keys'))));
+            $into = (string)$this->request->getData('into');
+            $profile = trim((string)$this->request->getData('profile'));
+            if ($profile !== '') {
+                $into = (string)($this->fetchTable('Players')->find()->select(['id'])
+                    ->where(['OR' => ['id' => $profile, 'name' => $profile]])->orderByDesc('last_seen')->first()?->id ?? '');
+                if ($into === '') {
+                    $this->Flash->error('No ladder profile "' . $profile . '".');
+
+                    return $this->redirect(['action' => 'competitive', '?' => $this->request->getQuery()]);
+                }
+            }
+            if ($into === '' || !$keys || ($profile === '' && (count($keys) < 2 || !in_array($into, $keys, true)))) {
+                $this->Flash->error('Tick at least two players (or one and a ladder profile), and choose who they are.');
+
+                return $this->redirect(['action' => 'competitive', '?' => $this->request->getQuery()]);
+            }
+            $moved = 0;
+            foreach ($keys as $key) {
+                $moved += $identity->merge($key, $into);
+            }
+            $aliases = $identity->addLadderAliases($into);
+            (new \App\Service\CompetitiveRatings())->recalculate();
+            $this->Flash->success(sprintf('Merged %d players (%d games moved)%s. Elo recalculated.', count(array_diff($keys, [$into])), $moved,
+                $aliases ? ', ' . $aliases . ' new names on the ladder profile' : ''));
+
+            return $this->redirect(['action' => 'competitive', '?' => $this->request->getQuery()]);
+        }
+
+        $this->set('players', $identity->overview());
+        $this->set('tab', 'competitive');
     }
 
     private function closeRequest($request, string $status): void

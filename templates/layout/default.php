@@ -17,7 +17,7 @@
     <?= $this->Html->meta('csrfToken', $this->request->getAttribute('csrfToken')) ?>
 
     <!-- Tailwind CSS -->
-    <?= $this->Html->css('tailwind.css?ver=1.85') ?>
+    <?= $this->Html->css('tailwind.css?ver=1.86') ?>
 
     <!-- cubeLadder icon (webroot/img/brand) -->
     <?= $this->Html->meta('icon', '/favicon.ico') ?>
@@ -189,6 +189,7 @@
                     </span>
                 </a>
                 <a href="/maps" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Maps</a>
+                <a href="/stats" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-users"></i> Community stats</a>
                 <a href="/about" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-circle-question"></i> About, rules &amp; what's new</a>
                 <?php if (!empty($authPlayer)): ?>
                     <a href="<?= $this->Url->build(['controller' => 'Messages', 'action' => 'inbox']) ?>" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md">

@@ -7,6 +7,13 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-15',
+            'title' => 'Community stats',
+            'items' => [
+                'Where do all those players on the front page come from? Click the numbers: the new stats page shows how many play regularly, how many are online at once by time of day, month by month and by server.',
+            ],
+        ],
+        [
+            'date' => '2026-10-15',
             'title' => 'Accuracy',
             'items' => [
                 'Game scoreboards show each player\'s accuracy (acc): the damage you did out of the damage your shots could have done, as the server counts it. Hover it for your damage.',

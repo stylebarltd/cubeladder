@@ -3,7 +3,7 @@
  * Admin area: title and tabs (AdminController).
  *
  * @var \App\View\AppView $this
- * @var string $tab requests | duplicates | messages | merge | suspicious
+ * @var string $tab requests | duplicates | messages | merge | suspicious | competitive
  */
 $this->assign('title', 'Admin · cubeLadder');
 $tabs = [
@@ -12,6 +12,7 @@ $tabs = [
     'messages' => ['messages', 'fa-inbox', 'Messages'],
     'merge' => ['merge', 'fa-wrench', 'Merge by hand'],
     'suspicious' => ['suspicious', 'fa-user-secret', 'Suspicious'],
+    'competitive' => ['competitive', 'fa-chess-knight', 'Competitive names'],
 ];
 ?>
 <div class="flex flex-wrap items-center justify-between gap-3">

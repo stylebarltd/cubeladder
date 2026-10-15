@@ -71,10 +71,10 @@ $features = [
             <?php if (!empty($heroStats)): ?>
                 <div class="mt-7 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center lg:justify-start sm:gap-3">
                     <?php foreach ([['games', 'fa-gamepad', 'games tracked'], ['players', 'fa-users', 'players'], ['maps', 'fa-map', 'maps played']] as [$k, $icon, $label]): ?>
-                        <div class="sm:min-w-[7.5rem] rounded-xl border border-white/15 bg-black/55 backdrop-blur-[2px] px-2 py-2 sm:px-4 sm:py-2.5">
+                        <a href="/stats" title="Where these numbers come from" class="block sm:min-w-[7.5rem] rounded-xl border border-white/15 bg-black/55 backdrop-blur-[2px] px-2 py-2 sm:px-4 sm:py-2.5 hover:border-white/40 transition">
                             <div class="font-mono text-xl sm:text-2xl md:text-3xl font-extrabold text-white"><?= number_format((int)$heroStats[$k]) ?></div>
                             <div class="text-[9px] sm:text-[11px] uppercase tracking-wide sm:tracking-wider text-zinc-400"><span class="hidden sm:inline"><i class="fa-solid <?= $icon ?> mr-1"></i></span><?= $label ?></div>
-                        </div>
+                        </a>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
