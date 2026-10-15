@@ -37,7 +37,9 @@ class CompetitiveRatings
         foreach ($games as $g) {
             $teams = ['CLA' => [], 'RVSF' => []];
             foreach ($rows[$g['id']] ?? [] as $r) {
-                if ((float)$r['share'] >= CompetitiveTracker::MIN_SHARE && isset($teams[$r['team']])) {
+                // "unarmed" is the default name of countless players: never one player's rating
+                $nobody = strtolower((string)$r['name']) === 'unarmed' && str_starts_with((string)$r['player_key'], 'name:');
+                if (!$nobody && (float)$r['share'] >= CompetitiveTracker::MIN_SHARE && isset($teams[$r['team']])) {
                     $teams[$r['team']][] = $r;
                 } else {
                     $updates[] = [null, null, $r['id']];
