@@ -26,7 +26,7 @@ return [
             'date' => '2026-10-15',
             'title' => 'Accuracy',
             'items' => [
-                'Game scoreboards show each player\'s accuracy (acc): the damage you did out of the damage your shots could have done, as the server counts it. Hover it for your damage.',
+                'Game scoreboards show each player\'s accuracy (acc): the damage you did out of the damage your shots could have done, as the server counts it. The damage itself has its own column (dmg) on wide screens.',
                 'Player pages show your accuracy over all games with it - hover for your damage per minute.',
                 'It comes from the live view, so it starts with today\'s games, and clan matches (match mode) have none - the server keeps it secret there.',
             ],

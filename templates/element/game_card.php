@@ -69,6 +69,8 @@ $playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight, $rat
         <?php /* phones: with a rating column, k/d (frags / deaths) makes room */ ?>
         <td class="px-1 py-1 sm:px-2 text-right <?= $rated ? 'hidden sm:table-cell' : '' ?> <?= $ratioClass($row['kd_ratio']) ?>"><?= number_format($row['kd_ratio'], 2) ?></td>
         <?php if ($withAcc): ?>
+            <td class="hidden px-1 py-1 text-right text-zinc-300 md:table-cell sm:px-2"
+                title="<?= $row['accuracy'] === null ? 'not seen live' : 'damage done' ?>"><?= $row['accuracy'] !== null ? number_format($row['damage']) : '–' ?></td>
             <td class="hidden px-1 py-1 text-right text-zinc-300 sm:table-cell sm:px-2"
                 title="<?= $row['accuracy'] === null ? 'not seen live' : number_format($row['damage']) . ' damage - accuracy as the server counts it' ?>"><?= $row['accuracy'] !== null ? round($row['accuracy'] * 100) . '%' : '–' ?></td>
         <?php endif; ?>
@@ -92,6 +94,7 @@ $head = function () use ($flagMode, $rated, $withAcc) {
         <th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">k</span><span class="hidden sm:inline">frags</span></th>
         <th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">d</span><span class="hidden sm:inline">deaths</span></th>
         <th class="px-1 py-1 sm:px-2 text-right font-normal <?= $rated ? 'hidden sm:table-cell' : '' ?>"><span class="sm:hidden">k/d</span><span class="hidden sm:inline">ratio</span></th>
+        <?php if ($withAcc): ?><th class="hidden px-1 py-1 text-right font-normal md:table-cell sm:px-2" title="Damage done (seen by the live view)">dmg</th><?php endif; ?>
         <?php if ($withAcc): ?><th class="hidden px-1 py-1 text-right font-normal sm:table-cell sm:px-2" title="Accuracy: damage done / damage the shots could have done (seen by the live view)">acc</th><?php endif; ?>
         <th class="px-1 py-1 sm:px-2 text-right font-normal">pts</th>
         <?php if ($rated): ?><th class="px-1 py-1 sm:px-2 text-right font-normal" title="CTF rating of this game, 0-10 (5.0 = an average game) - see About">rtg</th><?php endif; ?>
