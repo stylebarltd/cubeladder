@@ -15,7 +15,8 @@ use Cake\Http\Client\FormData;
  * Site updates for the Discord updates channel, pushed by hand: posts a
  * "What's new" entry of config/changelog.php through the updates webhook
  * (Ladder.discord.updates.webhook, from DISCORD_UPDATES_WEBHOOK) as a silent
- * message (no notification sound). Remembers what it posted in
+ * message (no notification sound). An entry's 'link' ("/stats") is where its
+ * title leads, else the front page. Remembers what it posted in
  * tmp/discord_updates.json, so an entry goes out only once.
  *
  *   bin/cake discord_update            the newest entry
@@ -61,7 +62,7 @@ class DiscordUpdateCommand extends Command
             'avatar_url' => $site . '/img/brand/cubeladder-discord-icon-512.png',
             'embeds' => [[
                 'title' => $entry['title'],
-                'url' => $site,
+                'url' => $site . ($entry['link'] ?? ''),
                 // Discord allows 4096 characters
                 'description' => mb_substr(implode("\n", $items), 0, 4000),
                 'color' => 0x3B82F6,

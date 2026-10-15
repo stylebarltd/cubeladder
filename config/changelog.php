@@ -8,6 +8,7 @@ return [
         [
             'date' => '2026-10-15',
             'title' => 'Community stats',
+            'link' => '/stats',
             'items' => [
                 'Where do all those players on the front page come from? Click the numbers: the new stats page shows how many play regularly, how many are online at once by time of day, month by month and by server.',
             ],
