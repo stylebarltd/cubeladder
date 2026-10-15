@@ -33,7 +33,7 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
             <p class="mt-1 max-w-3xl text-sm text-zinc-400">
                 Team games of 2 vs 2 and up on the clan match servers (<?= h(implode(', ', array_map($serverName, $servers))) ?>), apart from the ladder.
                 A game counts when it starts with even teams and runs its full 15 minutes. Earlier games come from actionfps.com, the clan scene's old ladder. Rating: Elo &ndash; everyone starts at
-                <?= (int)\App\Controller\CompetitiveController::start() ?>, beating a stronger team brings more. Ranked from <?= $minGames ?> games on (the first ones only find your level), with a game in the last <?= $activeDays ?> days.
+                <?= (int)\App\Controller\CompetitiveController::start() ?>, beating a stronger team brings more. Ranked from <?= $minGames ?> games on (the first ones only find your level), with a game in the last <?= $activeDays ?> days &ndash; names grey out the longer someone hasn't played.
             </p>
         </div>
         <?php if (!$public): ?>
@@ -80,7 +80,10 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
                     <?php foreach ($ratings as $i => $r): ?>
                         <tr class="border-t border-white/5">
                             <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= $i + 1 ?></td>
-                            <td class="px-2 py-1"><?= $playerLink($r['player_id'], (string)($r['profile_name'] ?? $r['name']), $r['country']) ?></td>
+                            <?php // the longer since the last game, the greyer the name: 20 / 40 / 60 / 80 days
+                            $idle = (int)floor((time() - strtotime((string)$r['last_game_at'])) / 86400);
+                            $shade = $idle >= 80 ? 'text-zinc-600' : ($idle >= 60 ? 'text-zinc-500' : ($idle >= 40 ? 'text-zinc-400' : ($idle >= 20 ? 'text-zinc-300' : 'text-white'))); ?>
+                            <td class="px-2 py-1 <?= $shade ?>" title="last game <?= $idle ?> days ago"><?= $playerLink($r['player_id'], (string)($r['profile_name'] ?? $r['name']), $r['country']) ?></td>
                             <td class="px-2 py-1 text-right font-mono font-bold text-amber-300"><?= (int)round((float)$r['rating']) ?></td>
                             <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= (int)round((float)$r['peak']) ?></td>
                             <td class="px-2 py-1 text-right font-mono"><?= (int)$r['games'] ?></td>
