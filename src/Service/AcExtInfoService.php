@@ -325,7 +325,9 @@ class AcExtInfoService
                 'role'      => self::getint($p, $pos),
                 'state'     => self::getint($p, $pos),
             ];
-            $pos += 3; // first 3 bytes of the ip (privacy protected) – not used
+            // first 3 bytes of the ip (the server keeps the last one private): the /24 network
+            $pl['ip3'] = $pos + 3 <= strlen($p) ? implode('.', array_map('ord', str_split(substr($p, $pos, 3)))) : null;
+            $pos += 3;
             $pl['damage'] = $pos < strlen($p) ? self::getint($p, $pos) : null;
             $pl['shotdamage'] = $pos < strlen($p) ? self::getint($p, $pos) : null;
 

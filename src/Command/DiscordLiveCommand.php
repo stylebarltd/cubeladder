@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\DiscordLiveService;
+use App\Service\CompetitiveTracker;
 use App\Service\LiveStatsRecorder;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
@@ -29,6 +30,9 @@ use Throwable;
  */
 class DiscordLiveCommand extends Command
 {
+    /** Seconds between two polls of the competitive servers */
+    public const COMP_EVERY = 5;
+
     public static function defaultName(): string
     {
         return 'discord_live';
@@ -94,6 +98,29 @@ class DiscordLiveCommand extends Command
         }
 
         $deadline = ($every > 0 && $for > 0) ? time() + $for : null;
+
+        // the competitive ladder (clan match servers, no logs): a poll every
+        // COMP_EVERY seconds while waiting, so a game's 10-second final
+        // scoreboard is always seen (CompetitiveTracker)
+        $tracker = $every > 0 && $only === null ? new CompetitiveTracker() : null;
+        $waitUntil = function (int $until) use ($tracker, $io): void {
+            while (($left = $until - time()) > 0) {
+                $tick = time();
+                if ($tracker) {
+                    try {
+                        $tracker->tick();
+                    } catch (Throwable $e) {
+                        $io->err('[' . date('H:i:s') . '] competitive: ' . $e->getMessage());
+                    }
+                }
+                $left = $until - time();
+                if ($left <= 0) {
+                    break;
+                }
+                sleep(max(1, min($left, self::COMP_EVERY - (time() - $tick))));
+            }
+        };
+
         do {
             $started = time();
             $failed = false;
@@ -125,10 +152,12 @@ class DiscordLiveCommand extends Command
             $forceNew = false;
             if ($every > 0) {
                 if ($deadline !== null && time() + $every >= $deadline) {
+                    // the competitive polls go on until the run ends
+                    $waitUntil($deadline);
                     break;
                 }
                 // fixed rhythm: the run time is part of the interval
-                sleep(max(1, $started + $every - time()));
+                $waitUntil($started + $every);
             }
         } while ($every > 0);
 

@@ -26,4 +26,9 @@ $tabs = [
             <i class="fa-solid <?= $icon ?> mr-1.5"></i><?= $label ?>
         </a>
     <?php endforeach; ?>
+    <?php // the competitive ladder lives on its own page (hidden from players until Ladder.competitive.public) ?>
+    <a href="<?= $this->Url->build(['controller' => 'Competitive', 'action' => 'index']) ?>"
+       class="rounded-lg bg-white/5 px-3 py-1.5 text-sm font-semibold text-zinc-300 transition hover:bg-white/10">
+        <i class="fa-solid fa-chess-knight mr-1.5"></i>Competitive
+    </a>
 </nav>
