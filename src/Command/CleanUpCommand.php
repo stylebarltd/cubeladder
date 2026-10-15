@@ -51,6 +51,21 @@ class CleanUpCommand extends Command
         $this->purge($conn, $io, $dry, 'empty player rows', 'player_stats_per_game s',
             's.total_score = 0 AND s.kills = 0 AND s.deaths = 0 AND s.scored_with_the_flag = 0');
 
+        // the import log (process_logs.sh appends to it every 10 minutes, so does
+        // this): keep its last part
+        $log = LOGS . 'logfile_server_processor.log';
+        if (is_file($log) && filesize($log) > self::LOG_MAX_MB * 1048576) {
+            $io->out(sprintf('# CleanUp: import log %d MB, keeping the last %d MB%s', filesize($log) / 1048576, self::LOG_KEEP_MB, $dry ? ' (dry run)' : ''));
+            if (!$dry) {
+                $fh = fopen($log, 'r');
+                fseek($fh, -self::LOG_KEEP_MB * 1048576, SEEK_END);
+                fgets($fh); // from a whole line on
+                $tail = stream_get_contents($fh);
+                fclose($fh);
+                file_put_contents($log, $tail);
+            }
+        }
+
         if (!$args->getOption('deep')) {
             return self::CODE_SUCCESS;
         }
@@ -103,20 +118,6 @@ class CleanUpCommand extends Command
             }
         }
         $io->out(sprintf('# CleanUp: %d old preview pictures%s', $old, $dry ? ' (dry run)' : ' deleted'));
-
-        // the import log (process_logs.sh appends to it every 10 minutes): keep its last part
-        $log = LOGS . 'logfile_server_processor.log';
-        if (is_file($log) && filesize($log) > self::LOG_MAX_MB * 1048576) {
-            $io->out(sprintf('# CleanUp: import log %d MB, keeping the last %d MB%s', filesize($log) / 1048576, self::LOG_KEEP_MB, $dry ? ' (dry run)' : ''));
-            if (!$dry) {
-                $fh = fopen($log, 'r');
-                fseek($fh, -self::LOG_KEEP_MB * 1048576, SEEK_END);
-                fgets($fh); // from a whole line on
-                $tail = stream_get_contents($fh);
-                fclose($fh);
-                file_put_contents($log, $tail);
-            }
-        }
 
         return self::CODE_SUCCESS;
     }
