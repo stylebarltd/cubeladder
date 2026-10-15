@@ -7,6 +7,15 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-15',
+            'title' => 'Accuracy',
+            'items' => [
+                'Game scoreboards show each player\'s accuracy (acc): the damage you did out of the damage your shots could have done, as the server counts it. Hover it for your damage.',
+                'Player pages show your accuracy over all games with it - hover for your damage per minute.',
+                'It comes from the live view, so it starts with today\'s games, and clan matches (match mode) have none - the server keeps it secret there.',
+            ],
+        ],
+        [
+            'date' => '2026-10-15',
             'title' => 'Minute by minute',
             'items' => [
                 'Game pages: the score over the whole game as a chart, and a slider to see the scoreboard of every minute - who scored when, and everyone\'s ping.',

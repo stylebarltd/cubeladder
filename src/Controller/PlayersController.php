@@ -1057,8 +1057,20 @@ $gamesDataGlobal = [];        // games inside lastGameIds
 
         $ping = $this->averagePing((string)$player->id);
 
+        // accuracy and damage per minute over the games the live loop saw (since Oct 2026)
+        $live = $this->Players->getConnection()->execute(
+            'SELECT COUNT(*) games, SUM(s.damage) damage, SUM(s.shot_damage) shot, SUM(s.minutes_played) mins
+             FROM player_stats_per_game s INNER JOIN games g ON g.id = s.game_id
+             WHERE s.player_id = ? AND s.shot_damage > 0 AND g.inaccurate = 0',
+            [$player->id])->fetch('assoc');
+        $accuracy = !empty($live['shot']) ? [
+            'pct' => (int)round($live['damage'] / $live['shot'] * 100),
+            'games' => (int)$live['games'],
+            'dpm' => $live['mins'] > 0 ? (int)round($live['damage'] / $live['mins']) : null,
+        ] : null;
+
         $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
-            'milestones', 'milestoneProgress', 'funFacts', 'lastSeen', 'weapons', 'ping'));
+            'milestones', 'milestoneProgress', 'funFacts', 'lastSeen', 'weapons', 'ping', 'accuracy'));
         $this->set(compact(
             'player',
             'totalKills',

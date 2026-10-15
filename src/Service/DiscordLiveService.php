@@ -68,11 +68,15 @@ class DiscordLiveService
      *
      * @return array{action:string, message_id:string, players:int, online:int}
      */
+    /** The servers of the latest update() (DiscordLiveCommand keeps their damage numbers, LiveStatsRecorder) */
+    public array $lastPoll = [];
+
     public function update(bool $forceNew = false, ?int $nextIn = null): array
     {
         $this->nextIn = $nextIn !== null && $nextIn > 0 ? $nextIn : null;
         $state = $this->readState();
         $servers = $this->poll();
+        $this->lastPoll = $servers;
         $state['live'] = $this->trackFlags($servers, $state['live'] ?? []);
         $this->notifyJoins($servers, $state);
 

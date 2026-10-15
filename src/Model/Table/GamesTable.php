@@ -177,11 +177,15 @@ class GamesTable extends Table
                 'bonus' => (int)$stat->bonus, // placement bonus, included in score (bin/cake PlacementBonus)
                 'minutes' => $stat->minutes_played,
                 'rating' => isset($ratings[$stat->player_id]) ? (float)$ratings[$stat->player_id] : null,
+                // seen by the live loop (bin/cake link_live_stats) - games since Oct 2026, not match mode
+                'damage' => $stat->damage !== null ? (int)$stat->damage : null,
+                'accuracy' => $stat->shot_damage ? (int)$stat->damage / (int)$stat->shot_damage : null,
             ];
         }
 
         $flagMode = in_array($game->mode, self::FLAG_MODES, true);
-        $board = ['rows' => $rows, 'teams' => null, 'winner' => null, 'flagMode' => $flagMode, 'unassigned' => [], 'rated' => $ratings !== []];
+        $board = ['rows' => $rows, 'teams' => null, 'winner' => null, 'flagMode' => $flagMode, 'unassigned' => [], 'rated' => $ratings !== [],
+            'accuracy' => array_filter(array_column($rows, 'accuracy'), fn($a) => $a !== null) !== []];
 
         $teamScores = $game->team_scores ? json_decode($game->team_scores, true) : null;
         if (!$teamScores || !in_array($game->mode, self::TEAM_MODES, true)) {

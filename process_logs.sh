@@ -132,6 +132,12 @@ if ! "$BASE_DIR/bin/cake" PlacementBonus >> "$LOGFILE" 2>&1; then
     echo "PlacementBonus failed!" >> "$LOGFILE"
 fi
 
+echo "➡ link_live_stats"
+# damage / accuracy the live loop saw (live_player_runs) onto the finished games
+if ! "$BASE_DIR/bin/cake" link_live_stats >> "$LOGFILE" 2>&1; then
+    echo "link_live_stats failed!" >> "$LOGFILE"
+fi
+
 echo "➡ CalculateRatings"
 # CTF ratings and player types (a few seconds)
 if ! "$BASE_DIR/bin/cake" CalculateRatings >> "$LOGFILE" 2>&1; then

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\DiscordLiveService;
+use App\Service\LiveStatsRecorder;
 use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
@@ -110,6 +111,17 @@ class DiscordLiveCommand extends Command
                     $failed = true;
                 }
             }
+            // damage / accuracy of the ladder games, which the logs don't have
+            $polled = [];
+            foreach ($services as $service) {
+                $polled += $service->lastPoll;
+            }
+            try {
+                (new LiveStatsRecorder())->record($polled);
+            } catch (Throwable $e) {
+                $io->err('[' . date('H:i:s') . '] live stats: ' . $e->getMessage());
+            }
+
             $forceNew = false;
             if ($every > 0) {
                 if ($deadline !== null && time() + $every >= $deadline) {

@@ -147,6 +147,9 @@ endif;
                     ?>
                     <span title="<?= h($pingTitle) ?>"><i class="fa-solid fa-signal mr-1"></i><?= (int)$ping['all'] ?> ms ping</span>
                 <?php endif; ?>
+                <?php if (!empty($accuracy)): ?>
+                    <span title="Damage done / damage the shots could have done, <?= $accuracy['games'] ?> <?= $accuracy['games'] === 1 ? 'game' : 'games' ?> seen by the live view<?= $accuracy['dpm'] !== null ? ' - ' . $accuracy['dpm'] . ' damage per minute' : '' ?>"><i class="fa-solid fa-crosshairs mr-1"></i><?= $accuracy['pct'] ?>% accuracy</span>
+                <?php endif; ?>
                 <?php if (!empty($lastSeen)):
                     $seenAt = new \Cake\I18n\DateTime($lastSeen['started_at']);
                     $days = (int)floor((time() - $seenAt->getTimestamp()) / 86400);
