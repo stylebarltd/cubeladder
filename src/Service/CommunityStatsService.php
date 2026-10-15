@@ -18,6 +18,10 @@ class CommunityStatsService
     public const DAYS = 30;
     /** Regulars: played on at least this many of those days */
     public const REGULAR_DAYS = 8;
+    /** Weeks in the weekly trend */
+    public const WEEKS = 16;
+    /** Weeks behind the day x hour heatmap */
+    public const HEAT_WEEKS = 8;
 
     public function get(): array
     {
@@ -78,7 +82,52 @@ class CommunityStatsService
                              SELECT s.player_id $base WHERE g.started_at >= ? GROUP BY s.player_id HAVING COUNT(DISTINCT DATE(g.started_at)) >= ?
                          ) r INNER JOIN players p ON p.id = r.player_id GROUP BY country ORDER BY c DESC", [$since, self::REGULAR_DAYS]);
 
+        // week by week (Monday to Sunday, UTC): games, players, hours played, newcomers and how many of them came back
+        $monday = strtotime('monday this week', time());
+        $weeksSince = gmdate('Y-m-d H:i:s', $monday - (self::WEEKS - 1) * 7 * 86400);
+        $weeks = [];
+        for ($i = self::WEEKS - 1; $i >= 0; $i--) {
+            $weeks[gmdate('Y-m-d', $monday - $i * 7 * 86400)] = ['games' => 0, 'players' => 0, 'hours' => 0, 'new' => 0, 'back' => 0];
+        }
+        $weekOf = "DATE(DATE_SUB(%s, INTERVAL WEEKDAY(%s) DAY))";
+        foreach ($q('SELECT ' . sprintf($weekOf, 'g.started_at', 'g.started_at') . " AS w, COUNT(DISTINCT g.id) AS games, COUNT(DISTINCT s.player_id) AS players,
+                     SUM(s.minutes_played) / 60 AS hours $base WHERE g.started_at >= ? GROUP BY w", [$weeksSince]) as $r) {
+            if (isset($weeks[$r['w']])) {
+                $weeks[$r['w']] = ['games' => (int)$r['games'], 'players' => (int)$r['players'], 'hours' => (int)round((float)$r['hours'])] + $weeks[$r['w']];
+            }
+        }
+        // newcomers: their first game in that week; back = played again on another day later
+        foreach ($q('SELECT ' . sprintf($weekOf, 'f', 'f') . " AS w, COUNT(*) AS n, SUM(days > 1) AS back FROM (
+                         SELECT MIN(g.started_at) AS f, COUNT(DISTINCT DATE(g.started_at)) AS days $base GROUP BY s.player_id
+                     ) x WHERE f >= ? GROUP BY w", [$weeksSince]) as $r) {
+            if (isset($weeks[$r['w']])) {
+                $weeks[$r['w']]['new'] = (int)$r['n'];
+                $weeks[$r['w']]['back'] = (int)$r['back'];
+            }
+        }
+
+        // this week so far against the same days of last week
+        $now = time();
+        $span = fn(int $from, int $to) => $q("SELECT COUNT(DISTINCT g.id) AS games, COUNT(DISTINCT s.player_id) AS players $base
+                                               WHERE g.started_at >= ? AND g.started_at < ?", [gmdate('Y-m-d H:i:s', $from), gmdate('Y-m-d H:i:s', $to)])[0];
+        $newIn = fn(int $from, int $to) => (int)$q("SELECT COUNT(*) AS c FROM (SELECT MIN(g.started_at) AS f $base GROUP BY s.player_id) x
+                                                    WHERE f >= ? AND f < ?", [gmdate('Y-m-d H:i:s', $from), gmdate('Y-m-d H:i:s', $to)])[0]['c'];
+        $thisWeek = $span($monday, $now) + ['new' => $newIn($monday, $now)];
+        $lastWeek = $span($monday - 7 * 86400, $now - 7 * 86400) + ['new' => $newIn($monday - 7 * 86400, $now - 7 * 86400)];
+
+        // when they play: players in games at once by weekday (0 = Monday) and hour, UTC
+        $heat = array_fill(0, 7 * 24, 0.0);
+        foreach ($q("SELECT WEEKDAY(g.started_at) AS d, HOUR(g.started_at) AS h, SUM(s.minutes_played) AS m $base
+                     WHERE g.started_at >= ? AND g.started_at < ? GROUP BY d, h",
+                    [gmdate('Y-m-d H:i:s', $monday - self::HEAT_WEEKS * 7 * 86400), gmdate('Y-m-d H:i:s', $monday)]) as $r) {
+            $heat[(int)$r['d'] * 24 + (int)$r['h']] = round((float)$r['m'] / (self::HEAT_WEEKS * 60), 2);
+        }
+
         return [
+            'weeks' => $weeks,
+            'thisWeek' => array_map('intval', $thisWeek),
+            'lastWeek' => array_map('intval', $lastWeek),
+            'heat' => $heat,
             'first' => $first['first'],
             'players' => (int)$first['players'],
             'servers' => (int)$first['servers'],

@@ -7,6 +7,15 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-15',
+            'title' => 'Trends and the busiest hours',
+            'link' => '/stats',
+            'items' => [
+                'Community stats: this week so far against last week, players and games week by week, and how many newcomers come back.',
+                'A heatmap of every day and hour, in your own time zone: see when the servers are full before you join.',
+            ],
+        ],
+        [
+            'date' => '2026-10-15',
             'title' => 'Community stats',
             'link' => '/stats',
             'items' => [

@@ -60,10 +60,109 @@ $big = 'font-mono text-3xl md:text-4xl font-extrabold';
             </p>
             <p>
                 They don't all play at the same time though. Spread over the day and over <?= (int)$s['servers'] ?> servers, there are about
-                <b><?= $n($avgOnline) ?></b> players in games at once on average &ndash; around <b><?= $n($s['hours'][$peakHour]) ?></b> in the evening peak
+                <b><?= $n($avgOnline) ?></b> players in games at once on average &ndash; around <b><?= $n($s['hours'][$peakHour]) ?></b> in the busiest hour
                 (<?= sprintf('%02d:00', $peakHour) ?> UTC), only <b><?= $n($s['hours'][$quietHour]) ?></b> at <?= sprintf('%02d:00', $quietHour) ?> UTC.
                 Join at the peak to find full servers &ndash; <a href="/live" class="text-sky-300 hover:underline">Live</a> shows who's on right now.
             </p>
+        </div>
+    </section>
+
+    <!-- trends: this week so far, week by week -->
+    <?php
+    $weekMax = max([1, ...array_column($s['weeks'], 'players')]);
+    $gamesMax = max([1, ...array_column($s['weeks'], 'games')]);
+    $weekKeys = array_keys($s['weeks']);
+    $current = end($weekKeys);
+    $delta = function (int $now, int $before): string {
+        if ($before === 0) {
+            return $now ? '<span class="text-green-400">new</span>' : '';
+        }
+        $d = round(($now - $before) / $before * 100);
+
+        return '<span class="' . ($d > 0 ? 'text-green-400' : ($d < 0 ? 'text-red-400' : 'text-zinc-400')) . '">'
+            . ($d > 0 ? '▲ +' : ($d < 0 ? '▼ ' : '± ')) . $d . '%</span>';
+    };
+    ?>
+    <section class="<?= $card ?>">
+        <h2 class="text-lg font-bold">Trends</h2>
+        <p class="mb-4 text-xs text-zinc-500">This week so far (since Monday, UTC) against the same days of last week</p>
+        <div class="grid grid-cols-3 gap-3">
+            <?php foreach ([['games', 'games'], ['players', 'players'], ['new', 'new players']] as [$k, $label]): ?>
+                <div class="rounded-lg bg-white/5 px-3 py-2">
+                    <div class="flex flex-wrap items-baseline gap-x-2">
+                        <span class="font-mono text-2xl font-extrabold"><?= $n($s['thisWeek'][$k]) ?></span>
+                        <span class="text-xs font-bold"><?= $delta($s['thisWeek'][$k], $s['lastWeek'][$k]) ?></span>
+                    </div>
+                    <div class="text-[11px] uppercase tracking-wide text-zinc-400"><?= $label ?></div>
+                    <div class="text-[11px] text-zinc-500">last week by now: <?= $n($s['lastWeek'][$k]) ?></div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <div class="mt-6 grid gap-6 lg:grid-cols-2">
+            <div>
+                <h3 class="text-sm font-bold">Players per week</h3>
+                <p class="mb-2 text-xs text-zinc-500">Everyone who played <span class="inline-block h-2 w-2 rounded-sm bg-sky-500/70"></span>, of them new <span class="inline-block h-2 w-2 rounded-sm bg-green-500/80"></span></p>
+                <div class="flex h-36 items-end gap-1">
+                    <?php foreach ($s['weeks'] as $w => $r): ?>
+                        <div class="group relative flex h-full flex-1 flex-col justify-end">
+                            <div class="relative rounded-t <?= $w === $current ? 'bg-sky-500/35 outline-1 outline-dashed outline-sky-400/60' : 'bg-sky-500/70' ?>" style="height: <?= max(1, round($r['players'] / $weekMax * 100)) ?>%">
+                                <div class="absolute inset-x-0 bottom-0 bg-green-500/80" style="height: <?= $r['players'] ? round(min($r['new'], $r['players']) / $r['players'] * 100) : 0 ?>%"></div>
+                            </div>
+                            <span class="pointer-events-none absolute -top-10 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-[11px] leading-tight group-hover:block">
+                                week of <?= h(date('j M', strtotime($w))) ?><?= $w === $current ? ' (so far)' : '' ?><br><?= $r['players'] ?> players, <?= $r['new'] ?> new
+                            </span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="mt-1 flex gap-1 text-[10px] text-zinc-500">
+                    <?php foreach ($weekKeys as $i => $w): ?>
+                        <span class="flex-1 whitespace-nowrap text-center"><?= ($i % 5 === 0 && $i < count($weekKeys) - 2) || $w === $current ? h(date('j M', strtotime($w))) : '' ?></span>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold">Games per week</h3>
+                <p class="mb-2 text-xs text-zinc-500">And the hours played in them</p>
+                <div class="flex h-36 items-end gap-1">
+                    <?php foreach ($s['weeks'] as $w => $r): ?>
+                        <div class="group relative flex h-full flex-1 flex-col justify-end">
+                            <div class="rounded-t <?= $w === $current ? 'bg-amber-400/35 outline-1 outline-dashed outline-amber-300/60' : 'bg-amber-400/75' ?>" style="height: <?= max(1, round($r['games'] / $gamesMax * 100)) ?>%"></div>
+                            <span class="pointer-events-none absolute -top-10 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-[11px] leading-tight group-hover:block">
+                                week of <?= h(date('j M', strtotime($w))) ?><?= $w === $current ? ' (so far)' : '' ?><br><?= $r['games'] ?> games, <?= $n($r['hours']) ?> hours played
+                            </span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="mt-1 flex gap-1 text-[10px] text-zinc-500">
+                    <?php foreach ($weekKeys as $i => $w): ?>
+                        <span class="flex-1 whitespace-nowrap text-center"><?= ($i % 5 === 0 && $i < count($weekKeys) - 2) || $w === $current ? h(date('j M', strtotime($w))) : '' ?></span>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <h3 class="mt-6 text-sm font-bold">Do newcomers stay?</h3>
+        <p class="mb-2 text-xs text-zinc-500">Of the players who were new that week, how many played again on another day. The latest weeks are still low: their newcomers had less time to come back.</p>
+        <div class="flex gap-1">
+            <?php foreach ($s['weeks'] as $w => $r): $rate = $r['new'] ? round($r['back'] / $r['new'] * 100) : null; ?>
+                <div class="flex-1 rounded py-1 text-center font-mono text-[11px] <?= $rate === null ? 'bg-white/5 text-zinc-600' : ($rate >= 40 ? 'bg-green-500/30 text-green-200' : ($rate >= 25 ? 'bg-green-500/15 text-green-300' : 'bg-white/5 text-zinc-300')) ?>"
+                     title="week of <?= h(date('j M', strtotime($w))) ?>: <?= $r['back'] ?> of <?= $r['new'] ?> new players came back">
+                    <?= $rate === null ? '–' : $rate . '%' ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <p class="mt-3 text-xs text-zinc-500">Weeks with a server whose logs didn't come in for a while look lower than they were.</p>
+    </section>
+
+    <!-- when they play: weekday x hour -->
+    <section class="<?= $card ?>">
+        <h2 class="text-lg font-bold">When do most play?</h2>
+        <p class="mb-3 text-xs text-zinc-500">Players in games at the same time, average of the last <?= C::HEAT_WEEKS ?> full weeks, by day and hour (<span class="js-tz">UTC</span>)<span id="heat-best"></span></p>
+        <div class="overflow-x-auto">
+            <div id="heat" class="min-w-[36rem]" data-heat="<?= h(json_encode($s['heat'])) ?>"></div>
+        </div>
+        <div class="mt-2 flex items-center gap-2 text-[11px] text-zinc-500">
+            fewer <span class="inline-flex"><?php foreach ([0.08, 0.25, 0.45, 0.65, 0.9] as $a): ?><span class="h-3 w-5" style="background: rgba(56,189,248,<?= $a ?>)"></span><?php endforeach; ?></span> more
         </div>
     </section>
 
@@ -196,6 +295,34 @@ $big = 'font-mono text-3xl md:text-4xl font-extrabold';
         els.slice(24 - k).concat(els.slice(0, 24 - k)).forEach(el => parent.appendChild(el));
     };
     shift(bars);
+})();
+
+// the weekday x hour heatmap, in the visitor's time zone (whole-hour offsets)
+(() => {
+    const el = document.getElementById('heat');
+    if (!el) return;
+    const utc = JSON.parse(el.dataset.heat);
+    let off = -new Date().getTimezoneOffset() / 60;
+    if (off % 1) off = 0;
+    const local = new Array(168).fill(0); // Monday 0:00 local first
+    utc.forEach((v, i) => { local[((i + off) % 168 + 168) % 168] = v; });
+    const max = Math.max(...local, 0.01);
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    let html = '<div class="grid gap-[2px]" style="grid-template-columns: 2.5rem repeat(24, minmax(0, 1fr))">';
+    html += '<span></span>' + [...Array(24).keys()].map(h => `<span class="text-center font-mono text-[10px] text-zinc-500">${h % 3 === 0 ? h : ''}</span>`).join('');
+    days.forEach((d, di) => {
+        html += `<span class="pr-1 text-right text-[11px] leading-5 text-zinc-400">${d}</span>`;
+        for (let h = 0; h < 24; h++) {
+            const v = local[di * 24 + h];
+            const a = v ? 0.06 + 0.9 * v / max : 0.03;
+            html += `<span class="h-5 rounded-sm" style="background: rgba(56,189,248,${a.toFixed(2)})" title="${d} ${h}:00 – ${v.toFixed(1)} players"></span>`;
+        }
+    });
+    el.innerHTML = html + '</div>';
+    const best = local.indexOf(Math.max(...local));
+    if (local[best] > 0) {
+        document.getElementById('heat-best').textContent = ` · busiest: ${days[Math.floor(best / 24)]} ${best % 24}:00`;
+    }
     document.querySelectorAll('.js-tz').forEach(el => el.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time');
 })();
 </script>
