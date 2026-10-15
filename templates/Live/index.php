@@ -71,6 +71,8 @@
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
     // own servers are known up front (offline ones too); clan / elsewhere once polled
+    // the clan match servers of the competitive ladder (CompetitiveTracker)
+    const competitive = new Set(<?= json_encode(array_values(\App\Service\CompetitiveTracker::servers())) ?>);
     const own = <?= json_encode(array_map(fn($k, $c) => [
         'key' => $k, 'name' => $c['name'] ?? $k, 'online' => null, 'numplayers' => 0,
         'host' => $c['host'], 'port' => (int)$c['port'],
@@ -115,7 +117,9 @@
                         '<span class="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full ring-2 ring-zinc-900 ' + dotClass(s) + '"></span>' +
                     '</span>' +
                     '<span class="min-w-0 flex-1">' +
-                        '<span class="block truncate text-sm">' + esc(s.name) + '</span>' +
+                        '<span class="block truncate text-sm">' + esc(s.name) +
+                            (competitive.has(s.key) ? ' <span class="ml-1 rounded bg-amber-500/20 px-1 py-px align-middle text-[9px] font-bold uppercase tracking-wide text-amber-300">competitive</span>' : '') +
+                        '</span>' +
                         '<span class="block truncate text-[11px] text-zinc-500">' + esc(subText(s)) + '</span>' +
                     '</span>' +
                     '<span class="shrink-0 font-mono text-xs text-zinc-400">' + esc(countText(s)) + '</span>' +
@@ -177,7 +181,7 @@
             const ownPolled = new Map(data.servers.map(s => [s.key, s]));
             groups = [
                 {title: 'Our servers', servers: own.map(s => ({...s, ...(ownPolled.get(s.key) || {})}))},
-                {title: 'Clan match / inter', servers: ((data.clan && data.clan.servers) || []).filter(s => s.online)},
+                {title: 'Competitive · clan match / inter', servers: ((data.clan && data.clan.servers) || []).filter(s => s.online)},
                 {title: 'Elsewhere in AssaultCube', servers: (data.elsewhere && data.elsewhere.servers) || []},
             ];
             const ew = data.elsewhere;

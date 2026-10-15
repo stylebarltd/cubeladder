@@ -10,6 +10,7 @@ $flagMode = in_array($game['mode'], ['ctf', 'htf', 'tktf'], true);
 $scores = json_decode($game['team_scores'], true) ?: [];
 $map = $this->Layout->cleanMapName((string)$game['map']);
 $this->assign('title', $map . ' · Competitive · cubeLadder');
+$afps = ($game['source'] ?? 'live') === 'actionfps';
 $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'RVSF' => ['band' => 'bg-blue-600/45', 'text' => 'text-blue-400']];
 ?>
 <div class="relative min-h-[calc(100svh-4rem)] bg-zinc-950 text-white">
@@ -20,7 +21,7 @@ $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'R
         <p class="mt-1 flex flex-wrap gap-x-3 text-sm text-zinc-400">
             <span class="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-bold uppercase text-amber-200">Competitive</span>
             <span><?= h(strtoupper((string)$game['mode'])) ?> &middot; <?= h($game['team_size']) ?></span>
-            <span><?= h($this->Layout->serverName($game['server_name'])) ?></span>
+            <span><?= $afps ? 'from ActionFPS' : h($this->Layout->serverName($game['server_name'])) ?></span>
             <span><?= h(date('D, d M Y H:i', strtotime((string)$game['started_at']))) ?> UTC</span>
             <?php if (!$game['counted']): ?>
                 <span class="text-amber-300">not counted: <?= h((string)$game['reason']) ?></span>
@@ -56,7 +57,7 @@ $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'R
                             </td>
                             <?php if ($flagMode): ?><td class="px-2 py-1 text-right font-mono"><?= (int)$p['flags'] ?></td><?php endif; ?>
                             <td class="px-2 py-1 text-right font-mono"><?= (int)$p['frags'] ?></td>
-                            <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= (int)$p['deaths'] ?></td>
+                            <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= $afps ? '–' : (int)$p['deaths'] ?></td>
                             <td class="px-2 py-1 text-right font-mono <?= $delta === null ? 'text-zinc-600' : ($delta >= 0 ? 'text-green-400' : 'text-red-400') ?>"
                                 title="<?= $delta === null ? 'not rated (played under half of it, or the game was not counted)' : (int)round((float)$p['rating_before']) . ' → ' . (int)round((float)$p['rating_after']) ?>">
                                 <?= $delta === null ? '–' : ($delta >= 0 ? '+' : '') . number_format($delta, 1) ?>
@@ -68,6 +69,8 @@ $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'R
             </section>
         <?php endforeach; ?>
     </div>
-    <p class="text-xs text-zinc-500">Seen by the live view every few seconds (these servers have no logs we get): no kills by weapon, no accuracy.</p>
+    <p class="text-xs text-zinc-500"><?= $afps
+        ? 'From actionfps.com, the clan scene\'s old ladder: flags and frags only.'
+        : 'Seen by the live view every few seconds (these servers have no logs we get): no kills by weapon, no accuracy.' ?></p>
 </div>
 </div>

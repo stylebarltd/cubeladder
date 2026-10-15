@@ -20,8 +20,12 @@ use Cake\Utility\Text;
  * (minremain 0), polling every 5 s always catches it. Match mode doesn't
  * matter (it only hides accuracy / damage, which we don't use here).
  *
- * Players are names + the first three parts of their IP; a ladder profile
- * with that name on that network (or the only one with that name) is theirs.
+ * Players are names + the first three parts of their IP (CompetitiveIdentity).
+ *
+ * While a game that started with even teams runs, a message in the cubeLadder
+ * on-air channel (Ladder.competitive.onair_webhook, default the "cubeladder"
+ * live feed's webhook) links to it on the live page; it is deleted when the
+ * game ends.
  */
 class CompetitiveTracker
 {
@@ -95,6 +99,7 @@ class CompetitiveTracker
                         'players' => [], 'final' => null];
                 }
                 $this->update($game, $s, $now);
+                $this->announce($key, $game, $s);
             }
 
             if ($game) {
@@ -104,6 +109,72 @@ class CompetitiveTracker
                 $conn->execute('DELETE FROM comp_running WHERE server_name = ?', [$key]);
             }
         }
+    }
+
+    /**
+     * A game that started with even teams of 2+ (and was seen from its
+     * start): one message in the on-air channel, with a link to watch it.
+     */
+    private function announce(string $key, array &$game, array $s): void
+    {
+        $minutes = (int)(Configure::read('Ladder.competitive.minutes') ?? 15);
+        if (!empty($game['onair_id']) || !empty($game['onair_tried']) || $game['start']['CLA'] < 2
+            || $game['first_min'] !== $minutes || (int)$s['minremain'] === 0
+            || !in_array($game['mode'], AcExtInfoService::TEAM_MODES, true)) {
+            return;
+        }
+        $game['onair_tried'] = true; // once per game, also when Discord fails
+        $webhook = $this->onAirWebhook();
+        if (!$webhook) {
+            return;
+        }
+        $site = rtrim((string)(Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh'), '/');
+        $names = ['CLA' => [], 'RVSF' => []];
+        foreach ($s['players'] as $p) {
+            $team = strtoupper((string)$p['team']);
+            if (isset($names[$team])) {
+                $names[$team][] = str_replace(['*', '_', '`', '|', '~'], ['\*', '\_', '\`', '\|', '\~'], (string)$p['name']);
+            }
+        }
+        $serverName = Configure::read('Ladder.servers.' . $key . '.name') ?: $key;
+        $text = sprintf("⚔️ **Competitive game** on **%s** — %dv%d · %s · %s
+🔴 %s
+🔵 %s
+[▶ Watch now](%s/live#%s)",
+            $serverName, $game['start']['CLA'], $game['start']['RVSF'], $s['map'], AcExtInfoService::MODES[$game['mode']] ?? '',
+            implode(', ', $names['CLA']) ?: '–', implode(', ', $names['RVSF']) ?: '–', $site, rawurlencode($key));
+        try {
+            $res = (new \Cake\Http\Client(['timeout' => 5]))->post($webhook . '?wait=true', json_encode([
+                'username' => 'cubeLadder Live',
+                'content' => $text,
+                'allowed_mentions' => ['parse' => []],
+            ]), ['type' => 'json']);
+            if ($res->isOk()) {
+                $game['onair_id'] = (string)($res->getJson()['id'] ?? '');
+            } else {
+                \Cake\Log\Log::warning('competitive: on-air message failed: HTTP ' . $res->getStatusCode());
+            }
+        } catch (\Throwable $e) {
+            \Cake\Log\Log::warning('competitive: on-air message failed: ' . $e->getMessage());
+        }
+    }
+
+    private function deleteOnAir(string $id): void
+    {
+        $webhook = $this->onAirWebhook();
+        if (!$webhook || $id === '') {
+            return;
+        }
+        try {
+            (new \Cake\Http\Client(['timeout' => 5]))->delete($webhook . '/messages/' . $id);
+        } catch (\Throwable $e) {
+            \Cake\Log\Log::warning('competitive: deleting the on-air message failed: ' . $e->getMessage());
+        }
+    }
+
+    private function onAirWebhook(): ?string
+    {
+        return Configure::read('Ladder.competitive.onair_webhook') ?: (Configure::read('Ladder.discord.feeds.cubeladder.webhook') ?: null);
     }
 
     /** Adds one poll to the running game */
@@ -148,6 +219,9 @@ class CompetitiveTracker
      */
     private function finish(string $server, array $game, string $how): void
     {
+        if (!empty($game['onair_id'])) {
+            $this->deleteOnAir((string)$game['onair_id']);
+        }
         $modeCode = AcExtInfoService::MODE_CODES[$game['mode']] ?? null;
         $size = (int)$game['start']['CLA'];
         if (!in_array($game['mode'], AcExtInfoService::TEAM_MODES, true) || $size < 2 || !$game['players']) {
@@ -187,17 +261,18 @@ class CompetitiveTracker
         $conn = ConnectionManager::get('default');
         $id = Text::uuid();
         $conn->execute(
-            'INSERT INTO comp_games (id, server_name, map, mode, started_at, ended_at, duration_minutes, team_size, team_scores, winner, counted, reason)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO comp_games (id, server_name, source, map, mode, started_at, ended_at, duration_minutes, team_size, team_scores, winner, counted, reason)
+             VALUES (?, ?, \'live\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [$id, $server, $game['map'], $modeCode ?? (string)$game['mode'], gmdate('Y-m-d H:i:s', $game['started']),
              gmdate('Y-m-d H:i:s', $game['last_poll']), $game['first_min'], $size . 'v' . $size, json_encode($scores),
              $winner, $reason === null ? 1 : 0, $reason]);
+        $identity = new CompetitiveIdentity();
         foreach ($players as $p) {
-            $playerId = $this->profile($p['name'], $p['ip3']);
+            $who = $identity->resolve($p['name'], $p['ip3']);
             $conn->execute(
                 'INSERT INTO comp_player_stats (comp_game_id, player_key, player_id, name, team, flags, frags, deaths, teamkills, share, at_end)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [$id, $playerId ?? 'name:' . $p['name'], $playerId, $p['name'], $p['team'], $p['row']['flags'], $p['row']['frags'],
+                [$id, $who['key'], $who['player_id'], $p['name'], $p['team'], $p['row']['flags'], $p['row']['frags'],
                  $p['row']['deaths'], $p['row']['tk'], round($p['share'], 3), (int)$p['at_end']]);
         }
         if ($reason === null) {
@@ -205,27 +280,4 @@ class CompetitiveTracker
         }
     }
 
-    /**
-     * The ladder profile of a name: the one with this name on this /24
-     * network, else the only profile with this name (or alias).
-     */
-    public function profile(string $name, ?string $ip3): ?string
-    {
-        if (strtolower($name) === 'unarmed') {
-            return null;
-        }
-        $conn = ConnectionManager::get('default');
-        if ($ip3) {
-            $id = $conn->execute('SELECT id FROM players WHERE name = ? AND ip LIKE ? ORDER BY last_seen DESC LIMIT 1',
-                [$name, $ip3 . '.%'])->fetchColumn(0);
-            if ($id) {
-                return (string)$id;
-            }
-        }
-        $ids = $conn->execute(
-            'SELECT id FROM players WHERE name = ? UNION SELECT player_id FROM player_aliases WHERE alias = ? LIMIT 2',
-            [$name, $name])->fetchAll('num');
-
-        return count($ids) === 1 ? (string)$ids[0][0] : null;
-    }
 }

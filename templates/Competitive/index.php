@@ -29,7 +29,7 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
             <h1 class="text-3xl font-extrabold tracking-wide"><i class="fa-solid fa-chess-knight mr-2 text-amber-300"></i>Competitive</h1>
             <p class="mt-1 max-w-3xl text-sm text-zinc-400">
                 Team games of 2 vs 2 and up on the clan match servers (<?= h(implode(', ', array_map($serverName, $servers))) ?>), apart from the ladder.
-                A game counts when it starts with even teams and runs its full 15 minutes. Rating: Elo &ndash; everyone starts at
+                A game counts when it starts with even teams and runs its full 15 minutes. Earlier games come from actionfps.com, the clan scene's old ladder. Rating: Elo &ndash; everyone starts at
                 <?= (int)\App\Controller\CompetitiveController::start() ?>, beating a stronger team brings more. Ranked from <?= $minGames ?> games on.
             </p>
         </div>
@@ -114,7 +114,7 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
                         <?php if (!$g['counted']): ?>
                             <span class="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-zinc-400" title="<?= h((string)$g['reason']) ?>">not counted</span>
                         <?php endif; ?>
-                        <span class="text-xs text-zinc-500"><?= h($serverName($g['server_name'])) ?></span>
+                        <span class="text-xs text-zinc-500"><?= ($g['source'] ?? 'live') === 'actionfps' ? 'ActionFPS' : h($serverName($g['server_name'])) ?></span>
                     </a>
                 </li>
             <?php endforeach; ?>
