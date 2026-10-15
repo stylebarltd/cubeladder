@@ -70,7 +70,7 @@ endif;
             $left = $dir === 'prev';
             $chevron = '<i class="fas fa-chevron-' . ($left ? 'left' : 'right') . ' flex h-10 w-6 shrink-0 items-center justify-center text-sm md:h-12"></i>';
             // picture, name, flag and rank stay folded away until hover / keyboard focus
-            $preview = '<span class="hidden max-w-0 items-center gap-2 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover:max-w-72 group-hover:opacity-100 group-focus-visible:max-w-72 group-focus-visible:opacity-100 md:flex ' . ($left ? 'flex-row pl-2 text-left' : 'flex-row-reverse pr-2 text-right') . '">'
+            $preview = '<span class="hidden max-w-0 items-center gap-2 overflow-hidden whitespace-nowrap py-1 opacity-0 transition-all duration-200 group-hover:max-w-72 group-hover:opacity-100 group-focus-visible:max-w-72 group-focus-visible:opacity-100 md:flex ' . ($left ? 'flex-row pl-2 text-left' : 'flex-row-reverse pr-2 text-right') . '">'
                 . '<img src="' . $this->Layout->playerPicture($p) . '" alt="" class="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-white/25">'
                 . '<span class="block min-w-0"><span class="block truncate text-sm font-bold text-white">' . h($p->name) . ' ' . $this->Layout->flag($p->country) . '</span>'
                 . '<span class="block text-[11px] uppercase tracking-wider text-zinc-400">#' . $rank
