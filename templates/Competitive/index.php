@@ -32,7 +32,7 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
             <h1 class="text-3xl font-extrabold tracking-wide"><i class="fa-solid fa-chess-knight mr-2 text-amber-300"></i>Competitive</h1>
             <p class="mt-1 max-w-3xl text-sm text-zinc-400">
                 Team games of 2 vs 2 and up on the clan match servers (<?= h(implode(', ', array_map($serverName, $servers))) ?>), apart from the ladder.
-                A game counts when it starts with even teams and runs its full 15 minutes. Earlier games come from actionfps.com, the clan scene's old ladder. Rating: Elo &ndash; everyone starts at
+                A game counts when it starts with even teams and runs its full 15 minutes &ndash; seen live, every few seconds. Rating: Elo &ndash; everyone starts at
                 <?= (int)\App\Controller\CompetitiveController::start() ?>, beating a stronger team brings more. Ranked from <?= $minGames ?> games on (the first ones only find your level), with a game in the last <?= $activeDays ?> days &ndash; names grey out the longer someone hasn't played.
             </p>
         </div>
@@ -71,6 +71,8 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
                         <th class="px-2 py-1 text-left">Player</th>
                         <th class="px-2 py-1 text-right">Elo</th>
                         <th class="px-2 py-1 text-right">Peak</th>
+                        <th class="px-2 py-1 text-right" title="frags per death">K/D</th>
+                        <th class="hidden px-2 py-1 text-right md:table-cell" title="damage done out of the damage the shots could have done - not in match mode, the server hides it there">Acc</th>
                         <th class="px-2 py-1 text-right">Games</th>
                         <th class="px-2 py-1 text-right" title="wins - draws - losses">W-D-L</th>
                         <th class="hidden px-2 py-1 text-right sm:table-cell">Last game</th>
@@ -86,6 +88,8 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
                             <td class="px-2 py-1 <?= $shade ?>" title="last game <?= $idle ?> days ago"><?= $playerLink($r['player_id'], (string)($r['profile_name'] ?? $r['name']), $r['country']) ?></td>
                             <td class="px-2 py-1 text-right font-mono font-bold text-amber-300"><?= (int)round((float)$r['rating']) ?></td>
                             <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= (int)round((float)$r['peak']) ?></td>
+                            <td class="px-2 py-1 text-right font-mono"><?= $r['kd'] !== null ? number_format($r['kd'], 2) : '–' ?></td>
+                            <td class="hidden px-2 py-1 text-right font-mono text-zinc-300 md:table-cell"><?= $r['acc'] !== null ? round($r['acc']) . '%' : '<span class="text-zinc-600">–</span>' ?></td>
                             <td class="px-2 py-1 text-right font-mono"><?= (int)$r['games'] ?></td>
                             <td class="px-2 py-1 text-right font-mono"><span class="text-green-400"><?= (int)$r['wins'] ?></span>-<?= (int)$r['draws'] ?>-<span class="text-red-400"><?= (int)$r['losses'] ?></span></td>
                             <td class="hidden px-2 py-1 text-right text-zinc-400 sm:table-cell"><?= h(date('d M Y', strtotime((string)$r['last_game_at']))) ?></td>

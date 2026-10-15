@@ -21,6 +21,10 @@ use Cake\Utility\Text;
  * mode, both teams and every player's flags, frags and ActionFPS id.
  * Slowly: one request every --delay seconds.
  *
+ * NOT RUN ANY MORE (2026-10-15): the competitive ladder starts over with the
+ * live tracker only, which also has deaths and accuracy. Kept in case the
+ * history is wanted again (backup: resources/cubeladder-20261015-competitive-before-reset.sql.gz).
+ *
  *   bin/cake import_actionfps --games=1000      the latest 1000 games (backfill, once)
  *   bin/cake import_actionfps --recent          today and yesterday (process_logs.sh)
  *   bin/cake import_actionfps --dry-run ...

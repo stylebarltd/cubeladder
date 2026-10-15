@@ -11,6 +11,7 @@ $scores = json_decode($game['team_scores'], true) ?: [];
 $map = $this->Layout->cleanMapName((string)$game['map']);
 $this->assign('title', $map . ' · Competitive · cubeLadder');
 $afps = ($game['source'] ?? 'live') === 'actionfps';
+$hasAcc = (bool)array_filter($players, fn($p) => (int)($p['shot_damage'] ?? 0) > 0);
 $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'RVSF' => ['band' => 'bg-blue-600/45', 'text' => 'text-blue-400']];
 ?>
 <div class="relative min-h-[calc(100svh-4rem)] bg-zinc-950 text-white">
@@ -43,6 +44,7 @@ $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'R
                         <?php if ($flagMode): ?><th class="px-2 py-1 text-right">Flags</th><?php endif; ?>
                         <th class="px-2 py-1 text-right">Frags</th>
                         <th class="px-2 py-1 text-right">Deaths</th>
+                        <?php if ($hasAcc): ?><th class="px-2 py-1 text-right" title="damage done out of the damage the shots could have done">Acc</th><?php endif; ?>
                         <th class="px-2 py-1 text-right" title="Elo change in this game">Elo</th>
                     </tr>
                     </thead>
@@ -58,6 +60,7 @@ $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'R
                             <?php if ($flagMode): ?><td class="px-2 py-1 text-right font-mono"><?= (int)$p['flags'] ?></td><?php endif; ?>
                             <td class="px-2 py-1 text-right font-mono"><?= (int)$p['frags'] ?></td>
                             <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= $afps ? '–' : (int)$p['deaths'] ?></td>
+                            <?php if ($hasAcc): ?><td class="px-2 py-1 text-right font-mono text-zinc-300" title="<?= (int)$p['damage'] ?> of <?= (int)$p['shot_damage'] ?> damage"><?= (int)$p['shot_damage'] > 0 ? round((int)$p['damage'] / (int)$p['shot_damage'] * 100) . '%' : '–' ?></td><?php endif; ?>
                             <td class="px-2 py-1 text-right font-mono <?= $delta === null ? 'text-zinc-600' : ($delta >= 0 ? 'text-green-400' : 'text-red-400') ?>"
                                 title="<?= $delta === null ? 'not rated (played under half of it, or the game was not counted)' : (int)round((float)$p['rating_before']) . ' → ' . (int)round((float)$p['rating_after']) ?>">
                                 <?= $delta === null ? '–' : ($delta >= 0 ? '+' : '') . number_format($delta, 1) ?>
@@ -71,6 +74,6 @@ $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'R
     </div>
     <p class="text-xs text-zinc-500"><?= $afps
         ? 'From actionfps.com, the clan scene\'s old ladder: flags and frags only.'
-        : 'Seen by the live view every few seconds (these servers have no logs we get): no kills by weapon, no accuracy.' ?></p>
+        : 'Seen by the live view every few seconds (these servers have no logs we get): no kills by weapon' . ($hasAcc ? '.' : ', and no accuracy - the server hides it in match mode.') ?></p>
 </div>
 </div>

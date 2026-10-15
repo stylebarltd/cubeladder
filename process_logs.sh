@@ -138,12 +138,6 @@ if ! "$BASE_DIR/bin/cake" link_live_stats >> "$LOGFILE" 2>&1; then
     echo "link_live_stats failed!" >> "$LOGFILE"
 fi
 
-echo "➡ import_actionfps"
-# competitive games from actionfps.com our live tracker missed (2 requests)
-if ! "$BASE_DIR/bin/cake" import_actionfps --recent >> "$LOGFILE" 2>&1; then
-    echo "import_actionfps failed!" >> "$LOGFILE"
-fi
-
 echo "➡ CalculateRatings"
 # CTF ratings and player types (a few seconds)
 if ! "$BASE_DIR/bin/cake" CalculateRatings >> "$LOGFILE" 2>&1; then

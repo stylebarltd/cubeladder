@@ -18,7 +18,8 @@ use Cake\Utility\Text;
  * Ladder.competitive.minutes (15) seen from its first minute to its end - the
  * server shows the final scoreboard for 10 seconds after the game
  * (minremain 0), polling every 5 s always catches it. Match mode doesn't
- * matter (it only hides accuracy / damage, which we don't use here).
+ * matter for that; it only hides damage / accuracy, which are kept when the
+ * server shows them (null otherwise).
  *
  * Players are names + the first three parts of their IP (CompetitiveIdentity).
  *
@@ -199,7 +200,10 @@ class CompetitiveTracker
             $pl['seen']++;
             $pl['ip3'] = $p['ip3'] ?? $pl['ip3'];
             $pl['last'] = ['team' => $team, 'flags' => (int)$p['flags'], 'frags' => (int)$p['frags'],
-                'deaths' => (int)$p['deaths'], 'tk' => (int)$p['teamkills']];
+                'deaths' => (int)$p['deaths'], 'tk' => (int)$p['teamkills'],
+                // match mode sends 0 for both: unknown, not a miss
+                'dmg' => (int)($p['shotdamage'] ?? 0) > 0 ? (int)$p['damage'] : null,
+                'shot' => (int)($p['shotdamage'] ?? 0) > 0 ? (int)$p['shotdamage'] : null];
             $game['players'][$name] = $pl;
             $rows[$name] = $pl['last'];
         }
@@ -270,10 +274,10 @@ class CompetitiveTracker
         foreach ($players as $p) {
             $who = $identity->resolve($p['name'], $p['ip3']);
             $conn->execute(
-                'INSERT INTO comp_player_stats (comp_game_id, player_key, player_id, name, team, flags, frags, deaths, teamkills, share, at_end)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO comp_player_stats (comp_game_id, player_key, player_id, name, team, flags, frags, deaths, teamkills, damage, shot_damage, share, at_end)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [$id, $who['key'], $who['player_id'], $p['name'], $p['team'], $p['row']['flags'], $p['row']['frags'],
-                 $p['row']['deaths'], $p['row']['tk'], round($p['share'], 3), (int)$p['at_end']]);
+                 $p['row']['deaths'], $p['row']['tk'], $p['row']['dmg'] ?? null, $p['row']['shot'] ?? null, round($p['share'], 3), (int)$p['at_end']]);
         }
         if ($reason === null) {
             (new CompetitiveRatings())->recalculate();

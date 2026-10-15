@@ -44,6 +44,20 @@ class CompetitiveController extends AppController
              LEFT JOIN players p ON p.id = r.player_id
              WHERE r.last_game_at >= ? AND COALESCE(p.cheater, 0) = 0 AND COALESCE(p.track, 1) = 1
              ORDER BY r.rating DESC', [date('Y-m-d H:i:s', strtotime('-' . self::ACTIVE_DAYS . ' days'))])->fetchAll('assoc');
+        // K/D and accuracy over their counted games (accuracy only from games without match mode)
+        $totals = [];
+        foreach ($conn->execute(
+            'SELECT s.player_key, SUM(s.frags) frags, SUM(s.deaths) deaths, SUM(s.damage) damage, SUM(s.shot_damage) shot
+             FROM comp_player_stats s INNER JOIN comp_games g ON g.id = s.comp_game_id AND g.counted = 1
+             GROUP BY s.player_key')->fetchAll('assoc') as $t) {
+            $totals[$t['player_key']] = $t;
+        }
+        foreach ($active as &$r) {
+            $t = $totals[$r['player_key']] ?? null;
+            $r['kd'] = $t ? (int)$t['frags'] / max(1, (int)$t['deaths']) : null;
+            $r['acc'] = $t && (int)$t['shot'] > 0 ? (int)$t['damage'] / (int)$t['shot'] * 100 : null;
+        }
+        unset($r);
         $ratings = array_values(array_filter($active, fn($r) => (int)$r['games'] >= self::MIN_GAMES));
         $provisional = array_values(array_filter($active, fn($r) => (int)$r['games'] < self::MIN_GAMES));
         $inactive = (int)$conn->execute('SELECT COUNT(*) FROM comp_ratings WHERE games >= ? AND last_game_at < ?',
