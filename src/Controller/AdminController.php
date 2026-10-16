@@ -329,6 +329,14 @@ class AdminController extends AppController
      * (into one of them, or into a ladder profile - then their names become
      * that profile's aliases too).
      */
+    /** Who uses the site: visitors per day, players vs guests, pages, sources (SiteVisits) */
+    public function visitors()
+    {
+        $days = in_array((int)$this->request->getQuery('days'), [7, 30, 90, 365], true) ? (int)$this->request->getQuery('days') : 30;
+        $this->set('report', (new \App\Service\SiteVisits())->report($days));
+        $this->set('tab', 'visitors');
+    }
+
     public function competitive()
     {
         $identity = new \App\Service\CompetitiveIdentity();

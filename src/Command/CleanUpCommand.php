@@ -66,6 +66,11 @@ class CleanUpCommand extends Command
             }
         }
 
+        // visitor stats (SiteVisits) after a year or so
+        $keep = gmdate('Y-m-d', time() - \App\Service\SiteVisits::KEEP_DAYS * 86400);
+        $this->purge($conn, $io, $dry, 'old visitor rows', 'site_visitors v', "v.day < '$keep'");
+        $this->purge($conn, $io, $dry, 'old page view rows', 'site_page_views pv', "pv.day < '$keep'");
+
         if (!$args->getOption('deep')) {
             return self::CODE_SUCCESS;
         }

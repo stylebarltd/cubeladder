@@ -17,7 +17,7 @@
     <?= $this->Html->meta('csrfToken', $this->request->getAttribute('csrfToken')) ?>
 
     <!-- Tailwind CSS -->
-    <?= $this->Html->css('tailwind.css?ver=1.88') ?>
+    <?= $this->Html->css('tailwind.css?ver=1.89') ?>
 
     <!-- cubeLadder icon (webroot/img/brand) -->
     <?= $this->Html->meta('icon', '/favicon.ico') ?>
@@ -275,6 +275,12 @@
 
 
     // DOM elements
+
+    // visitor stats (SiteVisits): one ping per page, no IP stored
+    try {
+        fetch('/visits/hit?p=' + encodeURIComponent(location.pathname) + '&r=' + encodeURIComponent(document.referrer),
+            { cache: 'no-store', keepalive: true, credentials: 'same-origin' }).catch(() => {});
+    } catch (e) {}
 
     // "On air" dot on Live: refresh every 30 s (cheap, cached server side)
     (function () {
