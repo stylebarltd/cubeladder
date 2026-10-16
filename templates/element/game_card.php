@@ -70,9 +70,9 @@ $playerRow = function (array $row) use ($flagMode, $ratioClass, $highlight, $rat
         <td class="px-1 py-1 sm:px-2 text-right <?= $rated ? 'hidden sm:table-cell' : '' ?> <?= $ratioClass($row['kd_ratio']) ?>"><?= number_format($row['kd_ratio'], 2) ?></td>
         <?php if ($withAcc): ?>
             <td class="hidden px-1 py-1 text-right text-zinc-300 md:table-cell sm:px-2"
-                title="<?= $row['accuracy'] === null ? 'not seen live' : 'damage done' ?>"><?= $row['accuracy'] !== null ? number_format($row['damage']) : '–' ?></td>
+                title="<?= $row['accuracy'] === null ? 'not seen live' : 'damage done' ?>"><?= $row['accuracy'] !== null ? (int)$row['damage'] : '–' ?></td>
             <td class="hidden px-1 py-1 text-right text-zinc-300 sm:table-cell sm:px-2"
-                title="<?= $row['accuracy'] === null ? 'not seen live' : number_format($row['damage']) . ' damage - accuracy as the server counts it' ?>"><?= $row['accuracy'] !== null ? round($row['accuracy'] * 100) . '%' : '–' ?></td>
+                title="<?= $row['accuracy'] === null ? 'not seen live' : (int)$row['damage'] . ' damage - accuracy as the server counts it' ?>"><?= $row['accuracy'] !== null ? round($row['accuracy'] * 100) . '%' : '–' ?></td>
         <?php endif; ?>
         <td class="px-1 py-1 sm:px-2 text-right font-bold text-sky-300 whitespace-nowrap"><?= $row['score'] ?><?php if (!empty($row['bonus'])): ?><span class="ml-1 text-[10px] font-semibold text-amber-300" title="Placement bonus: <?= $row['bonus'] === 20 ? '1st' : ($row['bonus'] === 15 ? '2nd' : '3rd') ?> place (included)">+<?= (int)$row['bonus'] ?></span><?php endif; ?></td>
         <?php if ($rated): ?>
@@ -90,15 +90,17 @@ $head = function () use ($flagMode, $rated, $withAcc) {
     ob_start(); ?>
     <tr class="text-zinc-400">
         <th class="px-1.5 py-1 sm:px-2 text-left font-normal">name</th>
-        <?php if ($flagMode): ?><th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">fl</span><span class="hidden sm:inline">flags</span></th><?php endif; ?>
-        <th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">k</span><span class="hidden sm:inline">frags</span></th>
-        <th class="px-1 py-1 sm:px-2 text-right font-normal"><span class="sm:hidden">d</span><span class="hidden sm:inline">deaths</span></th>
-        <th class="px-1 py-1 sm:px-2 text-right font-normal <?= $rated ? 'hidden sm:table-cell' : '' ?>"><span class="sm:hidden">k/d</span><span class="hidden sm:inline">ratio</span></th>
-        <?php if ($withAcc): ?><th class="hidden px-1 py-1 text-right font-normal md:table-cell sm:px-2" title="Damage done (seen by the live view)">dmg</th><?php endif; ?>
-        <?php if ($withAcc): ?><th class="hidden px-1 py-1 text-right font-normal sm:table-cell sm:px-2" title="Accuracy: damage done / damage the shots could have done (seen by the live view)">acc</th><?php endif; ?>
-        <th class="px-1 py-1 sm:px-2 text-right font-normal">pts</th>
-        <?php if ($rated): ?><th class="px-1 py-1 sm:px-2 text-right font-normal" title="CTF rating of this game, 0-10 (5.0 = an average game) - see About">rtg</th><?php endif; ?>
-        <th class="px-1 py-1 sm:px-2 text-right font-normal" title="minutes played">min</th>
+        <?php /* icons, so the names get the room (the words are in the tooltips) */
+        $icon = fn(string $icon, string $label) => '<i class="' . $icon . '" aria-hidden="true"></i><span class="sr-only">' . $label . '</span>'; ?>
+        <?php if ($flagMode): ?><th class="px-1 py-1 sm:px-2 text-right font-normal" title="Flags scored"><?= $icon('fa-solid fa-flag', 'flags') ?></th><?php endif; ?>
+        <th class="px-1 py-1 sm:px-2 text-right font-normal" title="Frags"><?= $icon('fa-solid fa-crosshairs', 'frags') ?></th>
+        <th class="px-1 py-1 sm:px-2 text-right font-normal" title="Deaths"><?= $icon('fa-solid fa-skull', 'deaths') ?></th>
+        <th class="px-1 py-1 sm:px-2 text-right font-normal <?= $rated ? 'hidden sm:table-cell' : '' ?>" title="Frags / deaths">k/d</th>
+        <?php if ($withAcc): ?><th class="hidden px-1 py-1 text-right font-normal md:table-cell sm:px-2" title="Damage done (seen by the live view)"><?= $icon('fa-solid fa-burst', 'damage') ?></th><?php endif; ?>
+        <?php if ($withAcc): ?><th class="hidden px-1 py-1 text-right font-normal sm:table-cell sm:px-2" title="Accuracy: damage done / damage the shots could have done (seen by the live view)"><?= $icon('fa-solid fa-bullseye', 'accuracy') ?></th><?php endif; ?>
+        <th class="px-1 py-1 sm:px-2 text-right font-normal" title="Points">pts</th>
+        <?php if ($rated): ?><th class="px-1 py-1 sm:px-2 text-right font-normal" title="CTF rating of this game, 0-10 (5.0 = an average game) - see About"><?= $icon('fa-solid fa-gauge-high', 'rating') ?></th><?php endif; ?>
+        <th class="px-1 py-1 sm:px-2 text-right font-normal" title="Minutes played"><?= $icon('fa-regular fa-clock', 'minutes') ?></th>
     </tr>
     <?php return ob_get_clean();
 };
