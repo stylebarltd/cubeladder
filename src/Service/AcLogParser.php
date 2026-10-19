@@ -106,6 +106,10 @@ class AcLogParser
     protected array $intermissionLeavers = [];
     // flags of the final block's rows (player id => flags), saved with it
     protected array $finalFlags = [];
+    // a player's flag score before they left (name => banked), and the score
+    // to compare after a reconnect (the server continues it or starts at 0)
+    protected array $bankedFlags = [];
+    protected array $flagCheck = [];
     protected bool $intermission = false;
     // Scoreboard of every minute of the game (game_timelines): the columns of
     // the latest "cn name team flag ..." header, the snapshots and which game
@@ -260,6 +264,8 @@ class AcLogParser
 
             $this->teamPlayers = [];
             $this->lastRows = [];
+            $this->bankedFlags = [];
+            $this->flagCheck = [];
             $this->intermissionLeavers = [];
             $this->intermission = false;
             $this->freeFlags = 0;
@@ -411,6 +417,12 @@ class AcLogParser
             // left during the intermission: still counts for the team's result
             if ($this->currentGame && !$this->skipCurrentGame && isset($this->lastRows[$name]) && $this->inIntermission($ts)) {
                 $this->intermissionLeavers[$name] = $this->lastRows[$name];
+            }
+            // their flag score so far is kept: a reconnect may start them at 0
+            if ($this->currentGame && isset($this->lastRows[$name]) && $this->lastRows[$name]['fl'] !== null) {
+                $this->bankedFlags[$name] = ($this->bankedFlags[$name] ?? 0) + (int)$this->lastRows[$name]['fl'];
+                $this->flagCheck[$name] = (int)$this->lastRows[$name]['fl'];
+                $this->lastRows[$name]['fl'] = 0;
             }
             $this->eventsParsed++;
             return;
@@ -599,6 +611,12 @@ class AcLogParser
             }
             $playerName = trim($m[2]);
             $verb = strtolower($m[3]);
+            // "..., new score N" is the player's flag score right now: newer
+            // than their last minute row (matters when they leave before the end)
+            if (isset($this->lastRows[$playerName]) && preg_match('~, new score (-?\d+)$~', $rest, $sm)) {
+                $this->seeFlags($playerName, (int)$sm[1]);
+                $this->lastRows[$playerName]['fl'] = (int)$sm[1];
+            }
             if (str_starts_with($verb, 'scored, carrying')) {
                 // keep the flag scores every 15 s of carrying: each score is a flag,
                 // like on the server's scoreboard
@@ -777,11 +795,15 @@ class AcLogParser
                 'fl' => $row['flag'], 'fr' => $row['frag'], 'd' => $row['death'], 'tk' => $row['tk'], 'ping' => $row['ping'],
             ];
             if ($playing && $this->currentGame && !$this->skipCurrentGame) {
+                if ($row['flag'] !== null) {
+                    $this->seeFlags($row['name'], $row['flag']);
+                }
                 $this->lastRows[$row['name']] = $timelineRow;
             }
             // the final block comes after "game finished" (stats are saved by then)
             if ($playing && $playerId && $row['flag'] !== null && $this->finishedGame && !$this->currentGame) {
-                $this->finalFlags[$playerId] = max(0, $row['flag']);
+                $this->seeFlags($row['name'], $row['flag']);
+                $this->finalFlags[$playerId] = max(0, ($this->bankedFlags[$row['name']] ?? 0) + $row['flag']);
             }
             if ($playing && $this->timeline && $this->timelineGame && !$this->skipCurrentGame) {
                 $this->timeline[array_key_last($this->timeline)]['p'][] = $timelineRow;
@@ -1056,6 +1078,17 @@ class AcLogParser
      * Below 0 counts as 0. Players never on a minute scoreboard keep the count
      * from the events.
      */
+    /** A new flag score of a player: after a reconnect, did the server continue their old one? */
+    protected function seeFlags(string $name, int $flags): void
+    {
+        if (isset($this->flagCheck[$name])) {
+            if ($flags >= $this->flagCheck[$name]) {
+                $this->bankedFlags[$name] -= $this->flagCheck[$name]; // continued
+            }
+            unset($this->flagCheck[$name]);
+        }
+    }
+
     protected function applyServerFlags(): void
     {
         if (!$this->currentGame || $this->currentGame->id === null || $this->skipCurrentGame) {
@@ -1066,7 +1099,7 @@ class AcLogParser
             if ($row['id'] === null || $row['fl'] === null || !isset($this->statsBuffer[$key])) {
                 continue;
             }
-            $this->statsBuffer[$key]['scored_with_the_flag'] = max(0, (int)$row['fl']);
+            $this->statsBuffer[$key]['scored_with_the_flag'] = max(0, ($this->bankedFlags[$row['n']] ?? 0) + (int)$row['fl']);
             $this->recalculateTotalScoreInMemory($key);
         }
     }
