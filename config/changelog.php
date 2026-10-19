@@ -7,8 +7,10 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-19',
-            'title' => 'B[] New York: right times and results',
+            'title' => 'Keep the flag, name changes and B[] New York',
             'items' => [
+                'Keep the flag: every 15 seconds you carry the flag now counts as a flag, just like the scoreboard in the game (a suicide takes one off again, as on the server). Before, a whole carry counted as one flag.',
+                'Changing your name during a game no longer loses your stats from that moment on - also when you joined as "unarmed" and picked your name later.',
                 'Games on the B[] New York server showed up 6 hours too early - its log runs on New York time. They now sit at the right time between the other servers\' games, and get their accuracy and damage too.',
                 'Leaving during the end-of-game scoreboard no longer takes your flags and frags out of your team\'s result. The server drops whoever left from its final totals, so a won game could show up as lost.',
             ],

@@ -594,11 +594,8 @@ class AcLogParser
             $playerName = trim($m[2]);
             $verb = strtolower($m[3]);
             if (str_starts_with($verb, 'scored, carrying')) {
-                // keep the flag scores every 15 s of carrying: one flag per carry (its
-                // first score), else holding it for minutes would be dozens of "flags"
-                if ((int)preg_replace('~\D~', '', $verb) > 15) {
-                    return;
-                }
+                // keep the flag scores every 15 s of carrying: each score is a flag,
+                // like on the server's scoreboard
                 $verb = 'scored with the flag';
             }
             // hunt the flag: bringing your flag home while yours hunt theirs is the team's flag score
@@ -640,6 +637,12 @@ class AcLogParser
                 $this->incrementStatBuffered($playerId, 'deaths', 1);
                 $this->incrementStatBuffered($playerId, 'kills', -1);
                 $this->breakStreak($playerId);
+                // (team) keep the flag: the server takes a flag off for a suicide
+                $key = ($this->currentGame->id ?? '') . ':' . $playerId;
+                if (in_array($this->currentGame->mode ?? null, ['ktf', 'tktf'], true)
+                    && (int)($this->statsBuffer[$key]['scored_with_the_flag'] ?? 0) > 0) {
+                    $this->incrementStatBuffered($playerId, 'scored_with_the_flag', -1);
+                }
             }
 
             $this->incrementStatBuffered($playerId, $statCol, 1);
