@@ -104,6 +104,8 @@ class AcLogParser
     // minute's row in their team's total. Name => that row (timeline format).
     protected array $lastRows = [];
     protected array $intermissionLeavers = [];
+    // flags of the final block's rows (player id => flags), saved with it
+    protected array $finalFlags = [];
     protected bool $intermission = false;
     // Scoreboard of every minute of the game (game_timelines): the columns of
     // the latest "cn name team flag ..." header, the snapshots and which game
@@ -263,6 +265,10 @@ class AcLogParser
             $this->freeFlags = 0;
             $this->statusBlocks = 0;
             $this->unevenBlocks = 0;
+            // free-for-all modes have no team lines to close the final block
+            if ($this->finishedGame && $this->finalFlags) {
+                $this->saveFinalFlags();
+            }
             $this->finishedGame = null;
 
             // the previous game's timeline is complete (its final block included)
@@ -674,12 +680,14 @@ class AcLogParser
 
                 // flush stats & events for finished game immediately
                 $this->applyAvgPings();
+                $this->applyServerFlags();
                 $this->flushStats();
                 $this->flushKills();
                 $this->flushChats();
 
                 $this->finishedGame = $this->currentGame;
                 $this->finalTeamScores = [];
+                $this->finalFlags = [];
 
                 // reset in-memory game
                 $this->currentGame = null;
@@ -733,6 +741,7 @@ class AcLogParser
                 if (count($this->finalTeamScores) === 2) {
                     $this->finishedGame->team_scores = json_encode($this->finalTeamScores);
                     $this->Games->save($this->finishedGame);
+                    $this->saveFinalFlags();
                     $this->finishedGame = null;
                     $this->saveTimeline();
                 }
@@ -769,6 +778,10 @@ class AcLogParser
             ];
             if ($playing && $this->currentGame && !$this->skipCurrentGame) {
                 $this->lastRows[$row['name']] = $timelineRow;
+            }
+            // the final block comes after "game finished" (stats are saved by then)
+            if ($playing && $playerId && $row['flag'] !== null && $this->finishedGame && !$this->currentGame) {
+                $this->finalFlags[$playerId] = max(0, $row['flag']);
             }
             if ($playing && $this->timeline && $this->timelineGame && !$this->skipCurrentGame) {
                 $this->timeline[array_key_last($this->timeline)]['p'][] = $timelineRow;
@@ -1035,6 +1048,52 @@ class AcLogParser
      * Each player's mean ping over the minutes of the running game (avg_ping).
      * Pings of 0 (not measured yet) and from MAX_PING on (lag) are left out.
      */
+    /**
+     * Flag modes: each player's flags as the server's scoreboard counts them,
+     * from their last minute row (the final one, or when they left). The
+     * server's rules differ per mode (hunt the flag: 2 for a hunt while you
+     * carry the flag, minus for teamkills), so the events can't rebuild it.
+     * Below 0 counts as 0. Players never on a minute scoreboard keep the count
+     * from the events.
+     */
+    protected function applyServerFlags(): void
+    {
+        if (!$this->currentGame || $this->currentGame->id === null || $this->skipCurrentGame) {
+            return;
+        }
+        foreach ($this->lastRows as $row) {
+            $key = $this->currentGame->id . ':' . $row['id'];
+            if ($row['id'] === null || $row['fl'] === null || !isset($this->statsBuffer[$key])) {
+                continue;
+            }
+            $this->statsBuffer[$key]['scored_with_the_flag'] = max(0, (int)$row['fl']);
+            $this->recalculateTotalScoreInMemory($key);
+        }
+    }
+
+    /**
+     * The final block's flags onto the finished game's saved stats (it comes
+     * after "game finished", when the stats are written already): a flag
+     * scored in the last minute only shows there.
+     */
+    protected function saveFinalFlags(): void
+    {
+        $game = $this->finishedGame;
+        foreach ($this->finalFlags as $playerId => $flags) {
+            $stats = $this->PlayerStatsPerGame->find()
+                ->applyOptions(['includeInaccurate' => true])
+                ->where(['game_id' => $game->id, 'player_id' => $playerId])
+                ->first();
+            if (!$stats || (int)$stats->scored_with_the_flag === $flags) {
+                continue;
+            }
+            $stats->total_score += ($flags - (int)$stats->scored_with_the_flag) * $this->pointsMap['scored_with_the_flag'];
+            $stats->scored_with_the_flag = $flags;
+            $this->PlayerStatsPerGame->save($stats);
+        }
+        $this->finalFlags = [];
+    }
+
     protected function applyAvgPings(): void
     {
         if (!$this->currentGame || $this->timelineGame !== $this->currentGame) {
@@ -1669,6 +1728,7 @@ class AcLogParser
     {
         // a running game: its minutes so far (the next run writes them again)
         $this->applyAvgPings();
+        $this->applyServerFlags();
         $this->saveTimeline();
         // votes still open are saved without a result, the next run adds it
         foreach ($this->pendingVotes as $vote) {
