@@ -87,3 +87,5 @@ __pycache__/
 
 # server logins for process_logs*.sh
 /.env.local
+# DDEV regenerates this seed for config/.env on every start
+/config/.env.ddev
