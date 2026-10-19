@@ -844,10 +844,10 @@ class PlayersController extends AppController
             ]
         ]);
         // Owner (identity + same IP) gets the edit button and still sees
-        // their page when they opted out of tracking
+        // their page when they opted out of tracking; so does the admin
         $canEdit = $this->ownsPlayer($player);
         $this->set('canEdit', $canEdit);
-        if ($player->track == 0 && !$canEdit) {
+        if ($player->track == 0 && !$canEdit && !$this->isAdmin()) {
             $this->Flash->error('No profile found!');
             return $this->redirect(['action' => 'index']);
         }

@@ -337,6 +337,23 @@ class AdminController extends AppController
         $this->set('tab', 'visitors');
     }
 
+    /** Players who ticked "Don't track me" on their profile (players.track = 0) */
+    public function untracked()
+    {
+        $players = $this->fetchTable('Players')->getConnection()->execute(
+            'SELECT p.*, COUNT(s.id) AS games, COALESCE(SUM(s.total_score), 0) AS points,
+                    MIN(g.started_at) AS first_game, MAX(g.started_at) AS last_game
+             FROM players p
+             LEFT JOIN player_stats_per_game s ON s.player_id = p.id
+             LEFT JOIN games g ON g.id = s.game_id
+             WHERE p.track = 0
+             GROUP BY p.id
+             ORDER BY last_game DESC, p.last_seen DESC')->fetchAll('assoc');
+
+        $this->set(compact('players'));
+        $this->set('tab', 'untracked');
+    }
+
     public function competitive()
     {
         $identity = new \App\Service\CompetitiveIdentity();
