@@ -24,7 +24,13 @@ if [[ -n "${B_FTP_HOST:-}" ]]; then
     # the newest log, and the one before it when the server just started a new one
     # (its last lines; the offset in log_offsets skips what is imported already).
     # Nothing older than B_FTP_SINCE: the ladder starts there for this server.
-    files=$(b_curl --max-time 30 --list-only "$B_FTP_URL" \
+    # curl's own error (-S) goes to the log, so an unreachable FTP doesn't
+    # look like an empty one (the error names host and port, never the login)
+    if ! listing=$(b_curl -S --max-time 30 --list-only "$B_FTP_URL" 2>&1); then
+        echo "FTP listing failed for barry-b: $(echo "$listing" | tail -n 1)" >> "$LOGFILE"
+        exit 0
+    fi
+    files=$(echo "$listing" \
         | tr -d '\r' | grep '^serverlog_.*\.txt$' | grep -- "${B_FTP_MATCH:-local}" | sort | tail -n 2 \
         | awk -v since="serverlog_${B_FTP_SINCE:-20261008}" '$0 >= since' || true)
 
@@ -33,12 +39,12 @@ if [[ -n "${B_FTP_HOST:-}" ]]; then
     fi
     for file in $files; do
         echo "✔ barry-b: $file"
-        if b_curl --max-time 120 -o "$TMP_DIR/$file" "$B_FTP_URL${file//#/%23}"; then
+        if err=$(b_curl -S --max-time 120 -o "$TMP_DIR/$file" "$B_FTP_URL${file//#/%23}" 2>&1); then
             echo "➡ Parsing barry-b → $file" >> "$LOGFILE"
             "$BASE_DIR/bin/cake" ProcessLogs barry-b "$file" "$TMP_DIR/$file" >> "$LOGFILE" 2>&1 \
                 || echo "ProcessLogs barry-b failed!" >> "$LOGFILE"
         else
-            echo "FTP download failed for barry-b: $file" >> "$LOGFILE"
+            echo "FTP download failed for barry-b: $file ($(echo "$err" | tail -n 1))" >> "$LOGFILE"
         fi
     done
 fi
