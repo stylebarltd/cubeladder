@@ -532,8 +532,9 @@ return [
             'acka-europa'    => ['name' => '[aCKa] Europa',      'host' => '54.36.188.74', 'port' => 28765],
             'chobbz-banana'  => ['name' => 'Banana',  'host' => 'ac.cbz.ovh',   'port' => 1111],
             'chobbz-potato'  => ['name' => 'POTATO',  'host' => 'ac.cbz.ovh',   'port' => 2222],
-            // Barry's B server (logs over FTP, see process_logs.sh)
-            'barry-b'        => ['name' => 'B[] New York', 'host' => '107.173.23.18', 'port' => 28763],
+            // Barry's B server (logs over FTP, see process_logs.sh); its log is in
+            // New York time, the parser stores it in Berlin time like the others
+            'barry-b'        => ['name' => 'B[] New York', 'host' => '107.173.23.18', 'port' => 28763, 'logTz' => 'America/New_York'],
             // clan match / inter servers: own sidebar box on /live ('live' => false)
             'mys-1111'  => ['name' => 'MyS 1111',  'host' => 'mysick.org',   'port' => 1111, 'live' => false],
             'mys-2222'  => ['name' => 'MyS 2222',  'host' => 'mysick.org',   'port' => 2222, 'live' => false],

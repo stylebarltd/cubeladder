@@ -6,6 +6,14 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-10-19',
+            'title' => 'B[] New York: right times and results',
+            'items' => [
+                'Games on the B[] New York server showed up 6 hours too early - its log runs on New York time. They now sit at the right time between the other servers\' games, and get their accuracy and damage too.',
+                'Leaving during the end-of-game scoreboard no longer takes your flags and frags out of your team\'s result. The server drops whoever left from its final totals, so a won game could show up as lost.',
+            ],
+        ],
+        [
             'date' => '2026-10-15',
             'title' => 'Trends and the busiest hours',
             'link' => '/stats',

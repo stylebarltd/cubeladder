@@ -97,6 +97,12 @@ class AcLogParser
     // (team totals) follows it and is saved to its team_scores.
     protected $finishedGame = null;
     protected array $finalTeamScores = [];
+    // The final block lists only who is still connected: players who leave
+    // during the intermission (after the result is decided) keep their last
+    // minute's row in their team's total. Name => that row (timeline format).
+    protected array $lastRows = [];
+    protected array $intermissionLeavers = [];
+    protected bool $intermission = false;
     // Scoreboard of every minute of the game (game_timelines): the columns of
     // the latest "cn name team flag ..." header, the snapshots and which game
     // they belong to (the finished game keeps its final block)
@@ -174,10 +180,15 @@ class AcLogParser
     private array $players = [];
 
     protected string $serverName;
+    // Time zone of the server's log when it isn't the one all game times are
+    // stored in (Ladder.servers.<key>.logTz, e.g. a server in New York)
+    protected ?\DateTimeZone $logTz = null;
 
     public function setServerName(string $server): void
     {
         $this->serverName = $server;
+        $logTz = Configure::read("Ladder.servers.$server.logTz");
+        $this->logTz = $logTz ? new \DateTimeZone($logTz) : null;
     }
 
     protected function getServerName(): string
@@ -244,6 +255,9 @@ class AcLogParser
             $duration = (int)$m[4];
 
             $this->teamPlayers = [];
+            $this->lastRows = [];
+            $this->intermissionLeavers = [];
+            $this->intermission = false;
             $this->freeFlags = 0;
             $this->statusBlocks = 0;
             $this->unevenBlocks = 0;
@@ -358,11 +372,21 @@ class AcLogParser
             return;
         }
 
+        if (str_contains($rest, 'demorecord_beginintermission')) {
+            $this->intermission = true;
+            $this->eventsParsed++;
+            return;
+        }
+
         // disconnect
         if (preg_match($this->disconnectRegex, $rest, $m)) {
             $name = $m[1];
             $seconds = (int)$m[2];
             $pid = $this->getPlayerIdByNameCached($name);
+            // left during the intermission: still counts for the team's result
+            if ($this->currentGame && !$this->skipCurrentGame && isset($this->lastRows[$name]) && $this->inIntermission($ts)) {
+                $this->intermissionLeavers[$name] = $this->lastRows[$name];
+            }
             $this->eventsParsed++;
             return;
         }
@@ -649,6 +673,22 @@ class AcLogParser
         // status block team summary: "Team  CLA:  2 players,    6 frags,    2 flags"
         // (no flags part in non-flag modes)
         if (preg_match('~^Team\s+(CLA|RVSF):\s+(\d+) players,\s+(-?\d+) frags(?:,\s+(-?\d+) flags)?~', $rest, $m)) {
+            // final block: add back who left during the intermission
+            if ($this->finishedGame && !$this->currentGame) {
+                foreach ($this->intermissionLeavers as $row) {
+                    if ($row['team'] !== $m[1]) {
+                        continue;
+                    }
+                    $m[2] = (string)((int)$m[2] + 1);
+                    $m[3] = (string)((int)$m[3] + $row['fr']);
+                    if (isset($m[4]) && $m[4] !== '') {
+                        $m[4] = (string)((int)$m[4] + (int)$row['fl']);
+                    }
+                    if ($this->timeline && $this->timelineGame && !$this->skipCurrentGame) {
+                        $this->timeline[array_key_last($this->timeline)]['p'][] = $row;
+                    }
+                }
+            }
             $this->teamPlayers[$m[1]] = (int)$m[2];
             if ($this->timeline && $this->timelineGame && !$this->skipCurrentGame) {
                 $this->timeline[array_key_last($this->timeline)]['t'][$m[1]] = [
@@ -701,11 +741,15 @@ class AcLogParser
                 }
                 $this->statsBuffer[$key]['minutes_played'] = (int)($this->statsBuffer[$key]['minutes_played'] ?? 0) + 1;
             }
+            $timelineRow = [
+                'id' => $playerId, 'n' => $row['name'], 'team' => $team,
+                'fl' => $row['flag'], 'fr' => $row['frag'], 'd' => $row['death'], 'tk' => $row['tk'], 'ping' => $row['ping'],
+            ];
+            if ($playing && $this->currentGame && !$this->skipCurrentGame) {
+                $this->lastRows[$row['name']] = $timelineRow;
+            }
             if ($playing && $this->timeline && $this->timelineGame && !$this->skipCurrentGame) {
-                $this->timeline[array_key_last($this->timeline)]['p'][] = [
-                    'id' => $playerId, 'n' => $row['name'], 'team' => $team,
-                    'fl' => $row['flag'], 'fr' => $row['frag'], 'd' => $row['death'], 'tk' => $row['tk'], 'ping' => $row['ping'],
-                ];
+                $this->timeline[array_key_last($this->timeline)]['p'][] = $timelineRow;
             }
             return;
         }
@@ -778,6 +822,12 @@ class AcLogParser
             $dt->minute,
             $dt->second
         );
+        // stored as wall time of the storage zone (LinkLiveStatsCommand::DEFAULT_TZ)
+        if ($this->logTz) {
+            $local = (new \DateTimeImmutable($fullDate->format('Y-m-d H:i:s'), $this->logTz))
+                ->setTimezone(new \DateTimeZone(\App\Command\LinkLiveStatsCommand::DEFAULT_TZ));
+            $fullDate = new Chronos($local->format('Y-m-d H:i:s'));
+        }
 
         return [
             $fullDate,
@@ -925,6 +975,23 @@ class AcLogParser
             array_pop($this->timeline);
         }
         $this->timeline[] = ['s' => $seconds, 't' => [], 'p' => []];
+    }
+
+    /**
+     * The game's time is up: the server logged the intermission (when it
+     * records demos), or the game's minutes have passed since its start.
+     */
+    protected function inIntermission(?Chronos $ts): bool
+    {
+        if ($this->intermission) {
+            return true;
+        }
+        $game = $this->currentGame;
+        if (!$ts || !$game || !$game->started_at || !$game->duration_minutes) {
+            return false;
+        }
+
+        return $ts->getTimestamp() >= $game->started_at->getTimestamp() + 60 * (int)$game->duration_minutes;
     }
 
     /** Writes the timeline of the game it belongs to (again - idempotent) */
@@ -1479,7 +1546,7 @@ class AcLogParser
         $this->gameStartRegex = '~^Game start:\s*(.+?)\s+on\s+([^,]+),\s*(\d+)\s+players,\s*(\d+)\s+minutes,\s*mastermode\s+(\d+),.*map rev\s+([0-9/\']+)~i';
         $this->connectRegex = '~^\[([0-9a-f:\.]+)\]\s+client connected~i';
         $this->loginRegex = '~^\[([0-9a-f:\.]+)\]\s+([^\s]+)\s+logged in \([^)]*\),\s*AC:\s*\d+\|\d+,\s*pubkey:\s*([0-9a-f]{64})$~i';
-        $this->disconnectRegex = '~^disconnected client ([^\s]+) cn \d+,\s*(\d+) seconds played, score saved~i';
+        $this->disconnectRegex = '~^(?:\[[0-9a-f:\.]+\]\s+)?disconnected client ([^\s]+) cn \d+,\s*(\d+) seconds played, score saved~i';
         $this->chatRegex = '~^\[([0-9a-f:\.]+)\]\s+(.+?)\s+says:\s+\'(.+)\'$~i';
 
         $this->killRegex = '~^\[([0-9a-f:\.]+)\]\s+(.+?)\s+'
