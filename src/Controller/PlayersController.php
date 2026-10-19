@@ -116,10 +116,27 @@ class PlayersController extends AppController
     /** Hall of Fame: only games since this date count (start of the current ladder rules) */
     public const HOF_SINCE = '2026-03-01';
 
+    /**
+     * SQL of a Hall of Fame category's value in one game (PlayerStatsPerGame,
+     * joined with Games): the sum of its fields, NULL in games of other modes
+     * when it is limited to some ('modes').
+     */
+    public static function hofExpr(array $cat): string
+    {
+        $expr = implode(' + ', array_map(fn($f) => "PlayerStatsPerGame.$f", $cat['fields']));
+        if (!empty($cat['modes'])) {
+            $modes = implode(', ', array_map(fn($m) => "'" . preg_replace('~\W~', '', $m) . "'", $cat['modes']));
+            $expr = "CASE WHEN Games.mode IN ($modes) THEN $expr END";
+        }
+
+        return $expr;
+    }
+
     public const HOF_CATEGORIES = [
         'kills' => ['title' => 'Most Kills', 'fields' => ['kills']],
         'headshot' => ['title' => 'Most Headshots', 'fields' => ['headshot']],
-        'scored_with_the_flag' => ['title' => 'Most Flags scored', 'fields' => ['scored_with_the_flag']],
+        // CTF only: a hunt (HTF) or 15 s of carrying (KTF) isn't a capture
+        'scored_with_the_flag' => ['title' => 'Most Flags scored', 'fields' => ['scored_with_the_flag'], 'modes' => ['ctf']],
         'longest_streak' => ['title' => 'Longest Streak', 'fields' => ['longest_streak']],
         'slashed' => ['title' => 'Most Slashes', 'fields' => ['slashed']],
         'gibbed' => ['title' => 'Most Gibbed', 'fields' => ['gibbed']],
@@ -140,8 +157,7 @@ class PlayersController extends AppController
             // Every tracked player's per-category maximum in one grouped query.
             $select = ['player_id' => 'PlayerStatsPerGame.player_id'];
             foreach (self::HOF_CATEGORIES as $key => $cat) {
-                $expr = implode(' + ', array_map(fn($f) => "PlayerStatsPerGame.$f", $cat['fields']));
-                $select[$key] = "MAX($expr)";
+                $select[$key] = 'MAX(' . self::hofExpr($cat) . ')';
             }
             $maxima = $psg->find()
                 ->select($select)
@@ -170,7 +186,7 @@ class PlayersController extends AppController
                 if ($value <= 0) {
                     continue;
                 }
-                $expr = implode(' + ', array_map(fn($f) => "PlayerStatsPerGame.$f", $cat['fields']));
+                $expr = self::hofExpr($cat);
 
                 $game = $psg->find()
                     ->select([

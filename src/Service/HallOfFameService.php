@@ -37,7 +37,7 @@ class HallOfFameService
         return [
             'kills' => $this->topPlayers('kills'),
             'headshot' => $this->topPlayers('headshot'),
-            'flags' => $this->topPlayers('scored_with_the_flag'),
+            'flags' => $this->topPlayers('scored_with_the_flag', modes: PlayersController::HOF_CATEGORIES['scored_with_the_flag']['modes']),
             'streak' => $this->topPlayers('longest_streak'),
             'slashed' => $this->topPlayers('slashed'),
             'gibbed' => $this->topPlayers('gibbed'),
@@ -45,13 +45,17 @@ class HallOfFameService
         ];
     }
 
-    private function topPlayers(string|array $fields, int $limit = 10): array
+    /** @param list<string> $modes only games of these modes (all when empty) */
+    private function topPlayers(string|array $fields, int $limit = 10, array $modes = []): array
     {
         // Subquery instead of a literal list of ~5000 game ids (twice per
         // category) - that list made the Hall of Fame take ~25s to render.
         $gameIds = $this->fetchTable('Games')->find()
             ->select(['Games.id'])
             ->where(['Games.started_at >=' => PlayersController::HOF_SINCE, 'Games.inaccurate' => false]);
+        if ($modes) {
+            $gameIds->where(['Games.mode IN' => $modes]);
+        }
 
         if (is_array($fields)) {
             $fieldExpr = implode(' + ', array_map(fn($f) => "PlayerStatsPerGame.$f", $fields));
@@ -140,7 +144,7 @@ class HallOfFameService
         $psg = $this->fetchTable('PlayerStatsPerGame');
         $since = PlayersController::HOF_SINCE;
         $categories = PlayersController::HOF_CATEGORIES;
-        $expr = fn(array $cat) => implode(' + ', array_map(fn($f) => "PlayerStatsPerGame.$f", $cat['fields']));
+        $expr = fn(array $cat) => PlayersController::hofExpr($cat);
 
         // Qualified per-player maxima (inaccurate games are filtered out by the table)
         $select = ['player_id' => 'PlayerStatsPerGame.player_id'];

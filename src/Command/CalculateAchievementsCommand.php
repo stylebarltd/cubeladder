@@ -96,8 +96,12 @@ class CalculateAchievementsCommand extends Command
                 $value = $PlayerStats->find()->func()->avg($field);
             }
 
+            // flags: CTF games only, like the Hall of Fame
+            $gameIds = $eventType === 'scored_with_the_flag'
+                ? ($Games->find()->select(['id'])->where(['id IN' => $theLast100GameIds, 'mode' => 'ctf'])->all()->extract('id')->toList() ?: ['-'])
+                : $theLast100GameIds;
             $where = [
-                'game_id IN' => $theLast100GameIds,
+                'game_id IN' => $gameIds,
                 'Players.name IS NOT' => "unarmed",
                 'Players.cheater' => false,
             ];

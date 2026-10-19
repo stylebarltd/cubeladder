@@ -222,6 +222,10 @@ class MapsController extends AppController
             $shortGames = $key === 'ratio'
                 ? "AND (p.minutes_played IS NULL OR p.minutes_played >= $minMinutes)"
                 : '';
+            // flags: CTF games only, like the Hall of Fame
+            if ($key === 'flags') {
+                $shortGames = "AND g.mode = 'ctf'";
+            }
             $sql = "SELECT map_id, val, game_id, played_at,
                            player_id, player_name, player_country FROM (
                         SELECT g.map_id AS map_id,

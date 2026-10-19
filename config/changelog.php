@@ -10,6 +10,7 @@ return [
             'title' => 'Keep the flag, name changes and B[] New York',
             'items' => [
                 'Your flags now come straight from the server\'s scoreboard in every flag mode, so they match what you saw in the game. Keep the flag: every 15 seconds you carry the flag is a flag (before, a whole carry was one). Hunt the flag: a hunt while you carry the flag counts 2, as on the server. Each flag is still worth 5 points.',
+                'Most Flags scored (Hall of Fame, map records and the weekly award) counts capture the flag games only - a hunt or 15 seconds of carrying isn\'t a capture.',
                 'Changing your name during a game no longer loses your stats from that moment on - also when you joined as "unarmed" and picked your name later.',
                 'Games on the B[] New York server showed up 6 hours too early - its log runs on New York time. They now sit at the right time between the other servers\' games, and get their accuracy and damage too.',
                 'Leaving during the end-of-game scoreboard no longer takes your flags and frags out of your team\'s result. The server drops whoever left from its final totals, so a won game could show up as lost.',
