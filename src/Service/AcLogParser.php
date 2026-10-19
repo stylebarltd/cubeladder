@@ -76,6 +76,8 @@ class AcLogParser
     // "unarmed" is the client default and is also the killer shown for
     // environmental deaths, so it is shared by countless distinct people.
     protected array $ignoredNames = ['unarmed'];
+    // IP => pubkey of its latest login, for name changes after it
+    protected array $ipPubkeys = [];
 
     // Current game in memory (ORM entity) and map for quick check
     protected $currentGame = null;
@@ -328,11 +330,28 @@ class AcLogParser
             return;
         }
 
+        // name change: "[ip] unarmed changed name to kpzohua" - the new name
+        // belongs to the profile of the key that logged in from that IP
+        if (preg_match('~^\[([0-9a-f:\.]+)\]\s+\S+ changed name to (\S+)$~', $rest, $m)) {
+            $pub = $this->ipPubkeys[$m[1]] ?? null;
+            if ($pub && !in_array(strtolower($m[2]), $this->ignoredNames, true)) {
+                $player = $this->findOrCreatePlayerCached($m[2], $pub, $m[1], $ts);
+                $this->currentGamePlayers[$m[2]] = $player->id;
+                if (!$this->skipCurrentGame) {
+                    $this->ensurePlayerStatsBuffered($player->id);
+                }
+            }
+            $this->eventsParsed++;
+            return;
+        }
+
         // login with pubkey
         if (preg_match($this->loginRegex, trim($rest), $m)) {
             $ip = $m[1];
             $name = $m[2];
             $pub = $m[3];
+            // for a later name change (also from the default name)
+            $this->ipPubkeys[$ip] = $pub;
 
             // Never mint a profile for a shared default name (e.g. "unarmed").
             if (in_array(strtolower($name), $this->ignoredNames, true)) {
