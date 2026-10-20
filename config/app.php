@@ -542,6 +542,36 @@ return [
         ],
 
         /*
+         * Other public servers for "Elsewhere in AssaultCube" on /live
+         * (AcMasterServerService). With `servers` set, this fixed list is used
+         * and the master server is never asked (it banned the webhost's IP on
+         * 2026-10-20). "ip:port" = game port, taken from the in-game server
+         * browser; ours are skipped automatically.
+         */
+        'master' => [
+            'servers' => [
+                '51.255.205.197:28763', // GEMA Kingdom
+                '51.79.163.179:5540', '51.79.163.179:5573', // Vortex Singapore
+                '54.37.245.45:5625', '54.37.245.45:5595', // Vortex United Kingdom
+                '104.243.39.28:5578', '104.243.39.28:5570', // Vortex Germany
+                '69.169.106.218:5625', '69.169.106.218:5574', // Vortex USA West
+                '64.20.59.2:5399', '64.20.59.2:5680', // Vortex USA East
+                '109.104.155.33:5170', '109.104.155.33:5533', // Vortex Brazil
+                '82.26.157.199:28763', // hugo.pro Paris
+                '51.178.81.68:28763', '51.178.81.68:28765', // [ESP]AC France CTF
+                '195.16.229.94:28763', // Christians AssaultCube-Server
+                '72.220.101.201:28763', // kk_gamertime USA
+                '95.217.62.206:28763', // futa.tips
+                '158.179.216.203:28763', // EXILUS
+                '47.17.34.216:28763', // ASS PUNISHERS, Inc.
+                '51.79.7.196:4000', // Muttsketeer
+                '51.79.7.196:5000', // FireBird
+                '82.67.199.14:28763', // WINCORHQ France
+                '164.163.9.12:28780', // BRAZUCAS 3
+            ],
+        ],
+
+        /*
          * Discord "live" message (bin/cake discord_live): one webhook message
          * that is posted once and then edited in place on every run.
          *  - webhook  : full Discord webhook URL – keep it in app_local.php / env, never commit it

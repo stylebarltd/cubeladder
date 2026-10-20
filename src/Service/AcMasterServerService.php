@@ -18,7 +18,8 @@ use Cake\Log\Log;
  *
  * Note the master answers with an empty 200 unless name AND version are given,
  * and a banned IP gets one fake server (see fetch()).
- * The list is cached (cache config "master") and refreshed every Ladder.master.ttl
+ * A fixed list in Ladder.master.servers ("ip:port") replaces the master.
+ * Otherwise the list is cached (cache config "master") and refreshed every Ladder.master.ttl
  * seconds; when the master is unreachable the last good list keeps being served.
  */
 class AcMasterServerService
@@ -35,6 +36,10 @@ class AcMasterServerService
         $cfg = Configure::read('Ladder.master') ?: [];
         if (isset($cfg['enabled']) && !$cfg['enabled']) {
             return [];
+        }
+        if (!empty($cfg['servers'])) {
+            return self::parse(implode("\n", array_map(
+                fn($addr) => 'addserver ' . str_replace(':', ' ', $addr), $cfg['servers'])));
         }
 
         $cached = Cache::read(self::CACHE_KEY, 'master');
