@@ -26,7 +26,14 @@ $this->assign('title', 'Aim trainer');
   background: linear-gradient(90deg, #b91c1c, #1d4ed8); color: #fff; border: 1px solid rgb(255 255 255 / .25); cursor: pointer; }
 .at-btn:hover { filter: brightness(1.15); }
 .at-btn:disabled { opacity: .6; cursor: wait; }
-.at-result { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; margin: .4rem 0; }
+.at-nade { position: absolute; right: .8rem; bottom: .8rem; width: 3.4rem; height: 3.4rem; border-radius: 999px; display: none;
+  align-items: center; justify-content: center; background: rgb(0 0 0 / .55); border: 2px solid rgb(255 255 255 / .35); cursor: pointer; }
+.at-nade img { width: 1.9rem; height: 1.9rem; }
+.at-nade.armed { border-color: #f97316; background: rgb(249 115 22 / .45); }
+.at-nade span { position: absolute; top: -.35rem; right: -.35rem; background: #f97316; color: #000; font-weight: 800; font-size: .7rem;
+  border-radius: 999px; padding: 0 .35rem; }
+.at-touch.at-playing .at-nade { display: flex; }
+.at-result { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .5rem; margin: .4rem 0; }
 .at-result div { background: rgb(255 255 255 / .07); border-radius: .5rem; padding: .45rem .8rem; }
 .at-result b { display: block; font-size: 1.35rem; color: #fff; font-variant-numeric: tabular-nums; }
 .at-result span { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: rgb(161 161 170); }
@@ -47,6 +54,8 @@ $this->assign('title', 'Aim trainer');
 .at-board td.c { text-align: right; color: rgb(212 212 216); }
 .at-result div.hs { background: rgb(250 204 21 / .15); }
 .at-result div.hs b { color: #facc15; }
+.at-result div.gib { background: rgb(249 115 22 / .15); }
+.at-result div.gib b { color: #fb923c; }
 .at-break { font-size: .78rem; color: rgb(212 212 216); }
 .at-break b { color: #fff; }
 .at-board tr.me td { background: rgb(250 204 21 / .1); }
@@ -55,7 +64,7 @@ $this->assign('title', 'Aim trainer');
 @media (max-width: 640px) {
   .at-overlay h2 { font-size: 1.4rem; }
   .at-score { font-size: 2.4rem; }
-  .at-result { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .at-result { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .at-overlay p { font-size: .8rem; }
 }
 </style>
@@ -69,6 +78,7 @@ $this->assign('title', 'Aim trainer');
         <p class="mt-2 text-sm text-zinc-300">
             <?= AimTrainer::ROUND_SECONDS ?> seconds, as many targets as you can.
             Head <?= AimTrainer::POINTS_HEADSHOT ?>, body <?= AimTrainer::POINTS_HIT ?>, every <?= AimTrainer::STREAK ?> hits in a row +<?= AimTrainer::POINTS_STREAK ?>.
+            <?= AimTrainer::GRENADES ?> grenades: <?= AimTrainer::POINTS_GIB ?> per gib, +<?= AimTrainer::POINTS_MULTI_GIB ?> for every further gib of the same grenade.
             Just for fun &ndash; not part of the ladder.
         </p>
     </div>
@@ -81,11 +91,14 @@ $this->assign('title', 'Aim trainer');
                     <h2>READY?</h2>
                     <p>Targets pop up on the map and run away fast. Click or tap them &ndash; a headshot counts double.
                         Every shot that hits nothing ends your streak.</p>
+                    <p><b>Grenades (<?= AimTrainer::GRENADES ?>):</b> right-click or press <b>G</b> &ndash; on a phone tap the grenade, then where it should land.
+                        It explodes after half a second: wait until targets stand close together.</p>
                     <p class="at-note"><?= $authPlayer
                         ? 'Playing as <b>' . h($authPlayer->name) . '</b> &ndash; your best round goes on the board.'
                         : 'You are playing as a guest: your score counts only for you. The board knows you once you have played on a cubeLadder server from this connection.' ?></p>
                     <button type="button" class="at-btn" id="at-go">START</button>
                 </div>
+                <button type="button" class="at-nade" id="at-nade" aria-label="Grenade"><img src="/img/weapons/grenade.svg" alt=""><span id="at-nade-n"></span></button>
                 <div class="at-overlay" id="at-end" hidden></div>
             </div>
         </div>
@@ -110,6 +123,8 @@ $this->assign('title', 'Aim trainer');
     const RULES = <?= json_encode([
         'seconds' => AimTrainer::ROUND_SECONDS, 'hit' => AimTrainer::POINTS_HIT, 'headshot' => AimTrainer::POINTS_HEADSHOT,
         'streakBonus' => AimTrainer::POINTS_STREAK, 'streak' => AimTrainer::STREAK,
+        'grenades' => AimTrainer::GRENADES, 'gib' => AimTrainer::POINTS_GIB, 'multiGib' => AimTrainer::POINTS_MULTI_GIB,
+        'maxAlive' => AimTrainer::MAX_ALIVE,
     ]) ?>;
     const MAPS = <?= json_encode($maps) ?>;
     const ME = <?= json_encode($authPlayer?->id) ?>;
@@ -124,13 +139,14 @@ $this->assign('title', 'Aim trainer');
     // --- boards --------------------------------------------------------
     function board(el, rows) {
         el.innerHTML = rows.length ? '<table class="at-board"><thead><tr>' +
-                '<th class="l">#</th><th class="l">Player</th><th>Points</th><th>Headshots</th><th>Accuracy</th>' +
+                '<th class="l">#</th><th class="l">Player</th><th>Points</th><th>Headshots</th><th>Gibs</th><th>Accuracy</th>' +
             '</tr></thead><tbody>' + rows.map((r, i) =>
             '<tr class="' + (r.player_id === ME ? 'me' : '') + '"' + (r.avg_reaction_ms ? ' title="reaction ' + r.avg_reaction_ms + ' ms"' : '') + '>' +
                 '<td class="n">' + (i + 1) + '</td>' +
                 '<td class="p"><a href="/players/view/' + esc(r.player_id) + '">' + esc(r.name) + '</a> ' + flag(r.country) + '</td>' +
                 '<td class="s">' + r.score + '</td>' +
                 '<td class="c">' + r.headshots + '</td>' +
+                '<td class="c">' + r.gibs + '</td>' +
                 '<td class="c">' + r.accuracy + '%</td>' +
             '</tr>').join('') + '</tbody></table>'
             : '<p class="at-empty">Nobody yet &ndash; be the first.</p>';
@@ -153,7 +169,8 @@ $this->assign('title', 'Aim trainer');
     resize();
 
     const img = (src) => { const i = new Image(); i.src = src; return i; };
-    const ICONS = {hs: img('/img/achievements/headshot.svg'), gun: img('/img/weapons/sniper.svg')};
+    const ICONS = {hs: img('/img/achievements/headshot.svg'), gun: img('/img/weapons/sniper.svg'),
+        gib: img('/img/achievements/gibbed.svg'), nade: img('/img/weapons/grenade.svg')};
     let bg = null, bgName = '';
     let mapIndex = Math.floor(Math.random() * Math.max(1, MAPS.length));
     function nextMap() {
@@ -177,8 +194,11 @@ $this->assign('title', 'Aim trainer');
     let state = 'idle', token = null, rnd = Math.random, t0 = 0, nextSpawn = 0;
     let targets = [], effects = [], feed = [];
     let events = '', reactions = [], score = 0, streak = 0, hits = 0, shots = 0, heads = 0;
+    let nades = 0, flying = [], gibs = 0, gibPoints = 0, armed = false;
     let mouse = null, shake = 0;
-    const MAX_ALIVE = 4;
+    const MAX_ALIVE = RULES.maxAlive;
+    const FUSE = 550;                 // ms from the throw to the bang
+    const BLAST = () => H * 0.2;      // blast radius
     const ms = () => performance.now() - t0;
     const progress = () => Math.min(1, ms() / (RULES.seconds * 1000));
 
@@ -187,7 +207,7 @@ $this->assign('title', 'Aim trainer');
         const h = H * (0.24 - 0.09 * p);            // targets shrink over the round
         const x = W * 0.07 + rnd() * W * 0.86;
         const y = H * 0.42 + rnd() * (H * 0.56 - h); // feet on the lower part of the map
-        targets.push({x, y, h, team: rnd() < 0.5 ? 'CLA' : 'RVSF', born: now, life: 1700 - 700 * p, dir: rnd() < 0.5 ? -1 : 1});
+        targets.push({x, y, h, team: rnd() < 0.5 ? 'CLA' : 'RVSF', born: now, life: 1700 - 650 * p, dir: rnd() < 0.5 ? -1 : 1});
     }
 
     // body and head of a target at time t
@@ -200,6 +220,50 @@ $this->assign('title', 'Aim trainer');
         const r = h * 0.15;
         return {cx, head: {x: cx, y: top + r, r}, body: {x: cx - h * 0.21, y: top + 2 * r + h * 0.02, w: h * 0.42, h: h - 2 * r - h * 0.02}};
     }
+
+    // a grenade flies from the bottom to (px, py) and explodes after FUSE
+    function throwNade(px, py) {
+        if (state !== 'play' || nades <= 0) return;
+        nades--;
+        armed = false;
+        flying.push({x0: W / 2, y0: H, x: px, y: py, t: ms()});
+        updateNadeButton();
+    }
+
+    function explode(n, now) {
+        const R = BLAST();
+        const gibbed = [];
+        targets = targets.filter(tg => {
+            const s = shape(tg, now);
+            const cy = s.body.y + s.body.h / 2;
+            if (Math.hypot(s.cx - n.x, cy - n.y) <= R + s.body.w / 2) { gibbed.push(tg); return false; }
+            return true;
+        });
+        events += 'n' + 'g'.repeat(gibbed.length);
+        let pts = 0;
+        gibbed.forEach((tg, i) => {
+            let p = RULES.gib + (i > 0 ? RULES.multiGib : 0);
+            gibPoints += p;
+            streak++;
+            if (streak % RULES.streak === 0) p += RULES.streakBonus;
+            pts += p;
+            feed.unshift({t: now, gib: true, team: tg.team});
+        });
+        feed.length = Math.min(feed.length, 5);
+        gibs += gibbed.length;
+        score += pts;
+        shake = 10;
+        const label = gibbed.length >= 3 ? 'MULTI GIB' : (gibbed.length === 2 ? 'DOUBLE GIB' : (gibbed.length ? 'GIBBED' : ''));
+        effects.push({x: n.x, y: n.y, t: now, boom: true, r: R});
+        if (pts) effects.push({x: n.x, y: n.y - R * 0.3, t: now, text: '+' + pts + ' ' + label, gib: true});
+    }
+
+    const nadeBtn = document.getElementById('at-nade');
+    function updateNadeButton() {
+        document.getElementById('at-nade-n').textContent = nades;
+        nadeBtn.classList.toggle('armed', armed);
+    }
+    nadeBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (state === 'play' && nades > 0) { armed = !armed; updateNadeButton(); } });
 
     function shoot(px, py) {
         if (state !== 'play') return;
@@ -237,7 +301,15 @@ $this->assign('title', 'Aim trainer');
     };
     canvas.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') mouse = pos(e); });
     canvas.addEventListener('pointerleave', () => { mouse = null; });
-    canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); shoot(...pos(e)); });
+    canvas.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (e.pointerType !== 'mouse') document.getElementById('at').classList.add('at-touch');
+        if (e.button === 2 || armed) throwNade(...pos(e)); else shoot(...pos(e));
+    });
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    document.addEventListener('keydown', (e) => {
+        if ((e.key === 'g' || e.key === 'G') && state === 'play' && mouse) throwNade(...mouse);
+    });
 
     // --- drawing -----------------------------------------------------------
     function drawBg() {
@@ -280,7 +352,14 @@ $this->assign('title', 'Aim trainer');
         ctx.fillText(score + ' pts', W * 0.025, H * 0.115);
         ctx.fillStyle = '#d4d4d8';
         const acc = shots ? Math.round(100 * hits / shots) : 100;
-        ctx.fillText(acc + '% · ' + heads + ' hs' + (streak >= RULES.streak ? '  🔥' + streak : ''), W * 0.025, H * 0.165);
+        ctx.fillText(acc + '% · ' + heads + ' hs' + (gibs ? ' · ' + gibs + (gibs === 1 ? ' gib' : ' gibs') : '') + (streak >= RULES.streak ? '  🔥' + streak : ''), W * 0.025, H * 0.165);
+        // grenades left, bottom right (on touch screens the button shows them)
+        const ns = H * 0.06;
+        for (let i = 0; i < RULES.grenades; i++) {
+            ctx.globalAlpha = i < nades ? 1 : 0.2;
+            if (ICONS.nade.complete) ctx.drawImage(ICONS.nade, W * 0.975 - (i + 1) * ns * 1.1, H * 0.92 - ns, ns, ns);
+        }
+        ctx.globalAlpha = 1;
         // kill feed, top right
         ctx.textAlign = 'right';
         ctx.font = '600 ' + Math.round(H * 0.03) + 'px ui-monospace, monospace';
@@ -293,7 +372,7 @@ $this->assign('title', 'Aim trainer');
             const victim = f.team + ' bot';
             ctx.fillText(victim, W * 0.975, y);
             const vw = ctx.measureText(victim).width;
-            const icon = f.hs ? ICONS.hs : ICONS.gun;
+            const icon = f.gib ? ICONS.gib : (f.hs ? ICONS.hs : ICONS.gun);
             if (icon.complete) ctx.drawImage(icon, W * 0.975 - vw - size * 1.25, y - size * 0.05, size, size);
             ctx.fillStyle = '#fff';
             ctx.fillText('you', W * 0.975 - vw - size * 1.5, y);
@@ -307,22 +386,41 @@ $this->assign('title', 'Aim trainer');
 
     function drawEffects(t) {
         effects = effects.filter(e => t - e.t < 700);
+        // grenades in the air: an arc to where they land, then the bang
+        flying = flying.filter(n => {
+            const k = (t - n.t) / FUSE;
+            if (k >= 1) { explode(n, t); return false; }
+            const x = n.x0 + (n.x - n.x0) * k, y = n.y0 + (n.y - n.y0) * k - Math.sin(k * Math.PI) * H * 0.25;
+            const ns = H * 0.05;
+            if (ICONS.nade.complete) { ctx.save(); ctx.translate(x, y); ctx.rotate(k * 9); ctx.drawImage(ICONS.nade, -ns / 2, -ns / 2, ns, ns); ctx.restore(); }
+            ctx.strokeStyle = 'rgba(249,115,22,.5)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(n.x, n.y, BLAST(), 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+            return true;
+        });
         effects.forEach(e => {
             const a = 1 - (t - e.t) / 700;
             ctx.globalAlpha = a;
-            if (e.miss) {
+            if (e.boom) {
+                const g = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r * (0.6 + 0.4 * (1 - a)));
+                g.addColorStop(0, 'rgba(255,240,180,' + a + ')');
+                g.addColorStop(0.4, 'rgba(249,115,22,' + a * 0.8 + ')');
+                g.addColorStop(1, 'rgba(120,30,0,0)');
+                ctx.fillStyle = g;
+                ctx.beginPath(); ctx.arc(e.x, e.y, e.r * (0.6 + 0.4 * (1 - a)), 0, Math.PI * 2); ctx.fill();
+            } else if (e.miss) {
                 ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.5;
                 ctx.beginPath(); ctx.arc(e.x, e.y, 4 + (1 - a) * 6, 0, Math.PI * 2); ctx.stroke();
             } else {
                 // hit marker and the points
                 ctx.strokeStyle = e.hs ? '#facc15' : '#fff'; ctx.lineWidth = 2.5;
+                if (e.gib) ctx.strokeStyle = 'rgba(0,0,0,0)';
                 const s = 7 + (1 - a) * 5, g = 4;
                 [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([dx, dy]) => {
                     ctx.beginPath(); ctx.moveTo(e.x + dx * g, e.y + dy * g); ctx.lineTo(e.x + dx * (g + s), e.y + dy * (g + s)); ctx.stroke();
                 });
-                ctx.font = '800 ' + Math.round(H * (e.hs ? 0.04 : 0.032)) + 'px ui-monospace, monospace';
+                ctx.font = '800 ' + Math.round(H * (e.hs || e.gib ? 0.04 : 0.032)) + 'px ui-monospace, monospace';
                 ctx.textAlign = 'center';
-                ctx.fillStyle = e.hs ? '#facc15' : '#fff';
+                ctx.fillStyle = e.gib ? '#fb923c' : (e.hs ? '#facc15' : '#fff');
                 ctx.fillText(e.text, e.x, e.y - 18 - (1 - a) * 30);
                 ctx.textAlign = 'left';
             }
@@ -333,7 +431,7 @@ $this->assign('title', 'Aim trainer');
     function drawCrosshair() {
         if (!mouse) return;
         const [x, y] = mouse;
-        ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 2;
+        ctx.strokeStyle = armed ? '#f97316' : '#4ade80'; ctx.lineWidth = 2;
         [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(([dx, dy]) => {
             ctx.beginPath(); ctx.moveTo(x + dx * 5, y + dy * 5); ctx.lineTo(x + dx * 14, y + dy * 14); ctx.stroke();
         });
@@ -348,10 +446,10 @@ $this->assign('title', 'Aim trainer');
             // spawn on the seed's schedule: faster towards the end
             while (t >= nextSpawn && t < RULES.seconds * 1000) {
                 if (targets.length < MAX_ALIVE) spawn(nextSpawn);
-                nextSpawn += 900 - 450 * Math.min(1, nextSpawn / (RULES.seconds * 1000));
+                nextSpawn += 800 - 400 * Math.min(1, nextSpawn / (RULES.seconds * 1000));
             }
             targets = targets.filter(tg => {
-                if (t - tg.born < tg.life) return true;
+                if (t - tg.born < tg.life || t >= RULES.seconds * 1000) return true;
                 events += 'e';
                 streak = 0;
                 return false;
@@ -359,7 +457,7 @@ $this->assign('title', 'Aim trainer');
             targets.forEach(tg => drawTarget(tg, t));
             drawEffects(t);
             drawHud(t);
-            if (t >= RULES.seconds * 1000) end();
+            if (t >= RULES.seconds * 1000 && !flying.length) end();
         }
         ctx.restore();
         if (state === 'play' || state === 'idle') drawCrosshair();
@@ -391,31 +489,37 @@ $this->assign('title', 'Aim trainer');
         nextMap();
         targets = []; effects = []; feed = [];
         events = ''; reactions = []; score = streak = hits = shots = heads = 0;
+        nades = RULES.grenades; flying = []; gibs = gibPoints = 0; armed = false;
+        updateNadeButton();
         startBox.hidden = true; endBox.hidden = true;
         t0 = performance.now(); nextSpawn = 400;
+        document.getElementById('at').classList.add('at-playing');
         state = 'play';
     }
 
     // where the points came from: "19 headshots × 20 = 380 · 8 body hits × 10 = 80 · streak bonus +110"
     function breakdown() {
         const body = hits - heads;
-        const bonus = score - heads * RULES.headshot - body * RULES.hit;
+        const bonus = score - heads * RULES.headshot - body * RULES.hit - gibPoints;
         const parts = [];
         if (heads) parts.push('<b>' + heads + '</b> headshot' + (heads === 1 ? '' : 's') + ' × ' + RULES.headshot + ' = ' + heads * RULES.headshot);
         if (body) parts.push('<b>' + body + '</b> body hit' + (body === 1 ? '' : 's') + ' × ' + RULES.hit + ' = ' + body * RULES.hit);
+        if (gibs) parts.push('<b>' + gibs + '</b> gib' + (gibs === 1 ? '' : 's') + ' = ' + gibPoints);
         if (bonus) parts.push('streak bonus <b>+' + bonus + '</b>');
         return parts.length ? '<p class="at-break">' + parts.join(' · ') + '</p>' : '';
     }
 
     async function end() {
         state = 'over';
+        document.getElementById('at').classList.remove('at-playing');
         targets = [];
         const acc = shots ? Math.round(100 * hits / shots) : 0;
         const avg = reactions.length ? Math.round(reactions.reduce((a, b) => a + b, 0) / reactions.length) : null;
         endBox.innerHTML = '<h2>TIME!</h2><div class="at-score">' + score + '</div>' +
             '<div class="at-result">' +
                 '<div class="hs"><b>' + heads + '</b><span>headshots</span></div>' +
-                '<div><b>' + hits + '</b><span>hits in total</span></div>' +
+                '<div class="gib"><b>' + gibs + '</b><span>gibs</span></div>' +
+                '<div><b>' + hits + '</b><span>shots hit</span></div>' +
                 '<div><b>' + acc + '%</b><span>accuracy</span></div>' +
                 '<div><b>' + (avg ?? '–') + (avg ? ' ms' : '') + '</b><span>reaction</span></div>' +
             '</div>' + breakdown() + '<p class="at-note js-at-rank">saving&hellip;</p>' +
