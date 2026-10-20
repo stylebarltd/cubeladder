@@ -41,7 +41,14 @@ $this->assign('title', 'Aim trainer');
 .at-board td.n { color: rgb(113 113 122); width: 1.8rem; }
 .at-board td.p { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .at-board td.s { text-align: right; font-weight: 800; color: #facc15; }
-.at-board td.a { text-align: right; color: rgb(161 161 170); font-size: .75rem; }
+.at-board th { font-size: .62rem; letter-spacing: .05em; text-transform: uppercase; color: rgb(113 113 122); font-weight: 600;
+  text-align: right; padding: 0 .25rem .3rem; white-space: nowrap; }
+.at-board th.l { text-align: left; }
+.at-board td.c { text-align: right; color: rgb(212 212 216); }
+.at-result div.hs { background: rgb(250 204 21 / .15); }
+.at-result div.hs b { color: #facc15; }
+.at-break { font-size: .78rem; color: rgb(212 212 216); }
+.at-break b { color: #fff; }
 .at-board tr.me td { background: rgb(250 204 21 / .1); }
 .at-board a:hover { color: #60a5fa; }
 .at-empty { font-size: .8rem; color: rgb(113 113 122); font-style: italic; }
@@ -116,12 +123,15 @@ $this->assign('title', 'Aim trainer');
 
     // --- boards --------------------------------------------------------
     function board(el, rows) {
-        el.innerHTML = rows.length ? '<table class="at-board"><tbody>' + rows.map((r, i) =>
-            '<tr class="' + (r.player_id === ME ? 'me' : '') + '">' +
+        el.innerHTML = rows.length ? '<table class="at-board"><thead><tr>' +
+                '<th class="l">#</th><th class="l">Player</th><th>Points</th><th>Headshots</th><th>Accuracy</th>' +
+            '</tr></thead><tbody>' + rows.map((r, i) =>
+            '<tr class="' + (r.player_id === ME ? 'me' : '') + '"' + (r.avg_reaction_ms ? ' title="reaction ' + r.avg_reaction_ms + ' ms"' : '') + '>' +
                 '<td class="n">' + (i + 1) + '</td>' +
                 '<td class="p"><a href="/players/view/' + esc(r.player_id) + '">' + esc(r.name) + '</a> ' + flag(r.country) + '</td>' +
-                '<td class="a" title="accuracy · headshots">' + r.accuracy + '% · ' + r.headshots + ' hs</td>' +
                 '<td class="s">' + r.score + '</td>' +
+                '<td class="c">' + r.headshots + '</td>' +
+                '<td class="c">' + r.accuracy + '%</td>' +
             '</tr>').join('') + '</tbody></table>'
             : '<p class="at-empty">Nobody yet &ndash; be the first.</p>';
     }
@@ -386,6 +396,17 @@ $this->assign('title', 'Aim trainer');
         state = 'play';
     }
 
+    // where the points came from: "19 headshots × 20 = 380 · 8 body hits × 10 = 80 · streak bonus +110"
+    function breakdown() {
+        const body = hits - heads;
+        const bonus = score - heads * RULES.headshot - body * RULES.hit;
+        const parts = [];
+        if (heads) parts.push('<b>' + heads + '</b> headshot' + (heads === 1 ? '' : 's') + ' × ' + RULES.headshot + ' = ' + heads * RULES.headshot);
+        if (body) parts.push('<b>' + body + '</b> body hit' + (body === 1 ? '' : 's') + ' × ' + RULES.hit + ' = ' + body * RULES.hit);
+        if (bonus) parts.push('streak bonus <b>+' + bonus + '</b>');
+        return parts.length ? '<p class="at-break">' + parts.join(' · ') + '</p>' : '';
+    }
+
     async function end() {
         state = 'over';
         targets = [];
@@ -393,11 +414,11 @@ $this->assign('title', 'Aim trainer');
         const avg = reactions.length ? Math.round(reactions.reduce((a, b) => a + b, 0) / reactions.length) : null;
         endBox.innerHTML = '<h2>TIME!</h2><div class="at-score">' + score + '</div>' +
             '<div class="at-result">' +
-                '<div><b>' + hits + '</b><span>hits</span></div>' +
-                '<div><b>' + heads + '</b><span>headshots</span></div>' +
+                '<div class="hs"><b>' + heads + '</b><span>headshots</span></div>' +
+                '<div><b>' + hits + '</b><span>hits in total</span></div>' +
                 '<div><b>' + acc + '%</b><span>accuracy</span></div>' +
                 '<div><b>' + (avg ?? '–') + (avg ? ' ms' : '') + '</b><span>reaction</span></div>' +
-            '</div><p class="at-note js-at-rank">saving&hellip;</p>' +
+            '</div>' + breakdown() + '<p class="at-note js-at-rank">saving&hellip;</p>' +
             '<button type="button" class="at-btn" id="at-again">PLAY AGAIN</button>';
         endBox.hidden = false;
         const again = document.getElementById('at-again');
