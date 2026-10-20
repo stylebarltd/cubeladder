@@ -46,6 +46,7 @@
 .lg-chat .v-hs { color: #fbbf24; } .lg-chat .v-tk { color: #f87171; } .lg-chat .v-flag { color: #4ade80; }
 .lg-chat .empty { color: rgb(113 113 122); font-style: italic; }
 .lg-chat .v-fire { color: #fb923c; }
+.lg-chat .t-cla { color: #f87171; } .lg-chat .t-rvsf { color: #60a5fa; }
 .lg-chat .ico { display: inline-block; height: 1.05em; width: auto; vertical-align: -0.2em; margin: 0 .2rem 0 .1rem; opacity: .9; }
 /* rating chip / type after a player's name, streak flame */
 .lg-rtg { display: inline-block; margin-left: .35rem; padding: 0 .3rem; border-radius: .25rem; font-size: .68rem; font-weight: 700;
@@ -203,6 +204,12 @@ window.initLiveMatch = function (root, key) {
         5: 'sniper', 6: 'rifle', 7: 'pistol', 8: 'grenade', 9: 'pistol'};
     const ico = (src, title) => '<img class="ico" src="' + src + '" alt="" title="' + esc(title) + '">';
     const gunIco = (gun) => GUN_ICONS[gun] ? ico('/img/weapons/' + GUN_ICONS[gun] + '.svg', GUN_ICONS[gun]) : '';
+    // a player's name in the team's colour (CLA red, RVSF blue; FFA: white)
+    const who = (name, team) => {
+        const t = (team || '').toUpperCase();
+        const cls = t.startsWith('CLA') ? 't-cla' : (t.startsWith('RVSF') ? 't-rvsf' : '');
+        return '<b' + (cls ? ' class="' + cls + '"' : '') + '>' + esc(name) + '</b>';
+    };
     const feat = (name) => ico('/img/achievements/' + name + '.svg', name.replace(/_/g, ' '));
     let prevStats = null;
     const chatLines = [];
@@ -230,7 +237,7 @@ window.initLiveMatch = function (root, key) {
                     const before = streaks[name] || 0;
                     streaks[name] = before + (s.frags - o.frags);
                     if (Math.floor(streaks[name] / 5) > Math.floor(before / 5)) {
-                        ev.push('<b>' + esc(name) + '</b> <span class="v-fire">is on fire: ' + streaks[name] + ' frags without dying</span>');
+                        ev.push(who(name, s.team) + ' <span class="v-fire">is on fire: ' + streaks[name] + ' frags without dying</span>');
                     }
                 }
                 for (let i = s.deaths - o.deaths; i > 0; i--) victims.push({name, team: s.team});
@@ -238,7 +245,7 @@ window.initLiveMatch = function (root, key) {
                     killers.push({name, team: s.team, gun: s.gun,
                         f: Math.max(0, s.frags - o.frags), t: Math.max(0, s.teamkills - o.teamkills)});
                 }
-                if (s.flags > o.flags) ev.push('<b>' + esc(name) + '</b> ' + feat('scored_with_the_flag') + '<span class="v-flag">scored with the flag</span>');
+                if (s.flags > o.flags) ev.push(who(name, s.team) + ' ' + feat('scored_with_the_flag') + '<span class="v-flag">scored with the flag</span>');
             }
             const take = (pred) => {
                 const i = victims.findIndex(pred);
@@ -248,22 +255,22 @@ window.initLiveMatch = function (root, key) {
                 const enemy = (x) => x.name !== k.name && (!k.team || x.team !== k.team);
                 for (let i = k.t; i > 0; i--) {
                     const v = take(x => x.name !== k.name && (!k.team || x.team === k.team));
-                    ev.push('<b>' + esc(k.name) + '</b> ' + feat('teamkills') + '<span class="v-tk">teamkilled</span> <b>' + esc(v ? v.name : 'a teammate') + '</b>');
+                    ev.push(who(k.name, k.team) + ' ' + feat('teamkills') + '<span class="v-tk">teamkilled</span> ' + who(v ? v.name : 'a teammate', v ? v.team : k.team));
                 }
                 for (let f = k.f; f > 0;) {
                     const v = take(enemy);
                     if (!v) break;
                     if (f >= 2 && !victims.some(enemy)) {
                         const gib = GIB_VERBS[k.gun] ?? 'gibbed';
-                        ev.push('<b>' + esc(k.name) + '</b> ' + feat(gib) + '<span class="v-hs">' + gib + '</span> <b>' + esc(v.name) + '</b>');
+                        ev.push(who(k.name, k.team) + ' ' + feat(gib) + '<span class="v-hs">' + gib + '</span> ' + who(v.name, v.team));
                         f -= 2;
                     } else {
-                        ev.push('<b>' + esc(k.name) + '</b> ' + gunIco(k.gun) + (GUN_VERBS[k.gun] ?? 'killed') + ' <b>' + esc(v.name) + '</b>');
+                        ev.push(who(k.name, k.team) + ' ' + gunIco(k.gun) + (GUN_VERBS[k.gun] ?? 'killed') + ' ' + who(v.name, v.team));
                         f -= 1;
                     }
                 }
             }
-            victims.forEach(v => ev.push('<b>' + esc(v.name) + '</b> ' + feat('suicided') + '<span class="v-tk">suicided</span>'));
+            victims.forEach(v => ev.push(who(v.name, v.team) + ' ' + feat('suicided') + '<span class="v-tk">suicided</span>'));
         }
         prevStats = cur;
         return ev;

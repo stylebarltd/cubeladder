@@ -9,7 +9,7 @@ return [
             'date' => '2026-10-21',
             'title' => 'Weapon icons and Hall of Fame pictures',
             'items' => [
-                'The live kill feed shows the weapon of every kill, and its own icon for headshots, knife kills, gibs, teamkills and flags.',
+                'The live kill feed shows the weapon of every kill, and its own icon for headshots, knife kills, gibs, teamkills and flags. Players are in their team\'s colour: CLA red, RVSF blue.',
                 'Hall of Fame news in Discord now comes with a picture: the new top 10 with every value, the players the news is about highlighted. Flag Helper also shows how many steals and returns made the score.',
             ],
         ],
