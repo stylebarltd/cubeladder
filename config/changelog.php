@@ -7,10 +7,11 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-20',
-            'title' => 'See who\'s watching',
+            'title' => 'See who\'s watching, and other AC servers',
             'link' => '/live',
             'items' => [
                 'Live match pages now show how many people are following the game on cubeladder.ovh right now, you included. Spectators in the game are listed separately, as before.',
+                'Other AC servers: the Live page now lists the other public AssaultCube servers too, busiest first - also the empty ones, like the server browser in the game.',
             ],
         ],
         [

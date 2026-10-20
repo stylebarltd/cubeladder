@@ -182,7 +182,7 @@
             groups = [
                 {title: 'Our servers', servers: own.map(s => ({...s, ...(ownPolled.get(s.key) || {})}))},
                 {title: 'Competitive · clan match / inter', servers: ((data.clan && data.clan.servers) || []).filter(s => s.online)},
-                {title: 'Elsewhere in AssaultCube', servers: (data.elsewhere && data.elsewhere.servers) || []},
+                {title: 'Other AC servers', servers: (data.elsewhere && data.elsewhere.servers) || []},
             ];
             const ew = data.elsewhere;
             document.getElementById('live-elsewhere-sub').textContent = ew && ew.online

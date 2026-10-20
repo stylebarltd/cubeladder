@@ -14,7 +14,7 @@ use Cake\Core\Configure;
  *
  * Our own servers (Ladder.servers) are always shown; every other public
  * server known to the AC master server (AcMasterServerService) is polled
- * too and listed under "elsewhere" when somebody is playing there.
+ * too and listed under "Other AC servers" while it answers.
  */
 class LiveController extends AppController
 {
@@ -187,13 +187,12 @@ class LiveController extends AppController
             }
             $online++;
             $players += $info['numplayers'];
-            if ($info['numplayers'] > 0) {
-                $info['own'] = false;
-                $info['name'] = trim((string)$info['description']) ?: $key;
-                $elsewhere[] = $info;
-            }
+            $info['own'] = false;
+            $info['name'] = trim((string)$info['description']) ?: $key;
+            $elsewhere[] = $info;
         }
-        usort($elsewhere, fn($a, $b) => $b['numplayers'] <=> $a['numplayers']);
+        // busiest first, then by name - like the in-game server browser
+        usort($elsewhere, fn($a, $b) => [$b['numplayers'], $a['name']] <=> [$a['numplayers'], $b['name']]);
 
         $this->linkProfiles($servers);
         $this->linkProfiles($elsewhere);
