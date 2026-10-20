@@ -183,8 +183,9 @@ $this->assign('title', 'Aim trainer');
     }
     nextMap();
 
-    // --- sound: "Headshot!" is AssaultCube's own (webroot/sounds, not in git - AC
-    // licence); without the file the browser says it. The boom is made here.
+    // --- sound: "Headshot!" from webroot/sounds/headshot.mp3 when there is one
+    // (our own recording - not AssaultCube's, that needs the AC team's OK),
+    // else the browser says it. The boom is made here.
     let soundOn = true;
     try { soundOn = localStorage.getItem('aimSound') !== 'off'; } catch (e) {}
     const soundBtn = document.getElementById('at-sound');

@@ -82,8 +82,6 @@ __pycache__/
 # kept out of the public repository (license / size) - live on the server only
 /config/GeoLite2-*.mmdb
 /webroot/img/players/
-# AssaultCube's own sounds (aim trainer): AC licence, served but not published here
-/webroot/sounds/
 /webroot/img/maps/
 /webroot/img/world-war-bullet-*.png
 
