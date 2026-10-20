@@ -272,6 +272,44 @@ $this->assign('title', 'Aim trainer');
         ws.curve = curve;
         return ws;
     }
+    // pistol shot for a body hit: crack, a short dirty bang, a small punch
+    function pistol() {
+        if (!soundOn) return;
+        try {
+            audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+            echo = echo || echoNode();
+            const now = audio.currentTime;
+            const out = audio.createGain();
+            out.gain.value = 0.6;
+            out.connect(audio.destination);
+            out.connect(echo);
+            const env = (node, peak, attack, decay) => {
+                const g = audio.createGain();
+                g.gain.setValueAtTime(0.0001, now);
+                g.gain.exponentialRampToValueAtTime(peak, now + attack);
+                g.gain.exponentialRampToValueAtTime(0.0001, now + attack + decay);
+                node.connect(g);
+                return g;
+            };
+            const crack = noise(0.08, false);
+            const hp = audio.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+            crack.connect(hp);
+            env(hp, 0.8, 0.001, 0.05).connect(out);
+            const bang = noise(0.3, false);
+            const lp = audio.createBiquadFilter(); lp.type = 'lowpass';
+            lp.frequency.setValueAtTime(5000, now);
+            lp.frequency.exponentialRampToValueAtTime(500, now + 0.15);
+            const drive = distortion(20);
+            bang.connect(lp).connect(drive);
+            env(drive, 0.9, 0.001, 0.18).connect(out);
+            const punch = noise(0.12, true);
+            const lp2 = audio.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = 250;
+            punch.connect(lp2);
+            env(lp2, 1.2, 0.002, 0.08).connect(out);
+            crack.start(now); bang.start(now); punch.start(now);
+        } catch (e) { /* no Web Audio: silent */ }
+    }
+
     function boom() {
         if (!soundOn) return;
         try {
@@ -416,7 +454,7 @@ $this->assign('title', 'Aim trainer');
             streak++;
             if (streak % RULES.streak === 0) pts += RULES.streakBonus;
             score += pts;
-            if (dh) { shake = 6; sayHeadshot(); }
+            if (dh) { shake = 6; sayHeadshot(); } else pistol();
             effects.push({x: px, y: py, t: now, text: '+' + pts + (dh ? ' HEADSHOT' : ''), hs: dh});
             feed.unshift({t: now, hs: dh, team: tg.team, streak});
             feed.length = Math.min(feed.length, 5);
