@@ -95,6 +95,9 @@ class HallOfFameService
                 'gibbed' => 'PlayerStatsPerGame.gibbed',
                 'picked_off' => 'PlayerStatsPerGame.picked_off',
                 'busted' => 'PlayerStatsPerGame.busted',
+                // Flag Helper's two parts (Discord: "12 steals + 9 returns")
+                'steals' => 'PlayerStatsPerGame.stole_the_flag',
+                'returns' => 'PlayerStatsPerGame.returned_the_flag',
             ])
             ->innerJoin(
                 ['sub' => $sub],

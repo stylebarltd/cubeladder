@@ -46,6 +46,7 @@
 .lg-chat .v-hs { color: #fbbf24; } .lg-chat .v-tk { color: #f87171; } .lg-chat .v-flag { color: #4ade80; }
 .lg-chat .empty { color: rgb(113 113 122); font-style: italic; }
 .lg-chat .v-fire { color: #fb923c; }
+.lg-chat .ico { display: inline-block; height: 1.05em; width: auto; vertical-align: -0.2em; margin: 0 .2rem 0 .1rem; opacity: .9; }
 /* rating chip / type after a player's name, streak flame */
 .lg-rtg { display: inline-block; margin-left: .35rem; padding: 0 .3rem; border-radius: .25rem; font-size: .68rem; font-weight: 700;
   background: rgb(255 255 255 / .1); color: rgb(228 228 231); vertical-align: middle; }
@@ -196,6 +197,13 @@ window.initLiveMatch = function (root, key) {
     const GUN_VERBS = {0: 'slashed', 1: 'busted', 2: 'picked off', 3: 'peppered', 4: 'sprayed',
         5: 'punctured', 6: 'shredded', 7: 'busted', 8: 'gibbed', 9: 'splattered'};
     const GIB_VERBS = {0: 'slashed', 5: 'headshot', 8: 'gibbed'};
+    // weapon icons (webroot/img/weapons, as on the About page) per gun id;
+    // gib kills, teamkills, suicides and flags use the achievement icons
+    const GUN_ICONS = {0: 'knife', 1: 'pistol', 2: 'carabine', 3: 'shotgun', 4: 'smg',
+        5: 'sniper', 6: 'rifle', 7: 'pistol', 8: 'grenade', 9: 'pistol'};
+    const ico = (src, title) => '<img class="ico" src="' + src + '" alt="" title="' + esc(title) + '">';
+    const gunIco = (gun) => GUN_ICONS[gun] ? ico('/img/weapons/' + GUN_ICONS[gun] + '.svg', GUN_ICONS[gun]) : '';
+    const feat = (name) => ico('/img/achievements/' + name + '.svg', name.replace(/_/g, ' '));
     let prevStats = null;
     const chatLines = [];
     // frags since the last death, per player, while this page is open
@@ -230,7 +238,7 @@ window.initLiveMatch = function (root, key) {
                     killers.push({name, team: s.team, gun: s.gun,
                         f: Math.max(0, s.frags - o.frags), t: Math.max(0, s.teamkills - o.teamkills)});
                 }
-                if (s.flags > o.flags) ev.push('<b>' + esc(name) + '</b> <span class="v-flag">scored with the flag</span>');
+                if (s.flags > o.flags) ev.push('<b>' + esc(name) + '</b> ' + feat('scored_with_the_flag') + '<span class="v-flag">scored with the flag</span>');
             }
             const take = (pred) => {
                 const i = victims.findIndex(pred);
@@ -240,21 +248,22 @@ window.initLiveMatch = function (root, key) {
                 const enemy = (x) => x.name !== k.name && (!k.team || x.team !== k.team);
                 for (let i = k.t; i > 0; i--) {
                     const v = take(x => x.name !== k.name && (!k.team || x.team === k.team));
-                    ev.push('<b>' + esc(k.name) + '</b> <span class="v-tk">teamkilled</span> <b>' + esc(v ? v.name : 'a teammate') + '</b>');
+                    ev.push('<b>' + esc(k.name) + '</b> ' + feat('teamkills') + '<span class="v-tk">teamkilled</span> <b>' + esc(v ? v.name : 'a teammate') + '</b>');
                 }
                 for (let f = k.f; f > 0;) {
                     const v = take(enemy);
                     if (!v) break;
                     if (f >= 2 && !victims.some(enemy)) {
-                        ev.push('<b>' + esc(k.name) + '</b> <span class="v-hs">' + (GIB_VERBS[k.gun] ?? 'gibbed') + '</span> <b>' + esc(v.name) + '</b>');
+                        const gib = GIB_VERBS[k.gun] ?? 'gibbed';
+                        ev.push('<b>' + esc(k.name) + '</b> ' + feat(gib) + '<span class="v-hs">' + gib + '</span> <b>' + esc(v.name) + '</b>');
                         f -= 2;
                     } else {
-                        ev.push('<b>' + esc(k.name) + '</b> ' + (GUN_VERBS[k.gun] ?? 'killed') + ' <b>' + esc(v.name) + '</b>');
+                        ev.push('<b>' + esc(k.name) + '</b> ' + gunIco(k.gun) + (GUN_VERBS[k.gun] ?? 'killed') + ' <b>' + esc(v.name) + '</b>');
                         f -= 1;
                     }
                 }
             }
-            victims.forEach(v => ev.push('<b>' + esc(v.name) + '</b> <span class="v-tk">suicided</span>'));
+            victims.forEach(v => ev.push('<b>' + esc(v.name) + '</b> ' + feat('suicided') + '<span class="v-tk">suicided</span>'));
         }
         prevStats = cur;
         return ev;
