@@ -184,10 +184,14 @@
                 {title: 'Competitive · clan match / inter', servers: ((data.clan && data.clan.servers) || []).filter(s => s.online)},
                 {title: 'Other AC servers', servers: (data.elsewhere && data.elsewhere.servers) || []},
             ];
-            const ew = data.elsewhere;
-            document.getElementById('live-elsewhere-sub').textContent = ew && ew.online
-                ? ew.players + ' player' + (ew.players === 1 ? '' : 's') + ' on ' + ew.online + ' other public server' + (ew.online === 1 ? '' : 's')
-                : '';
+            // "12 playing on our servers · 2 on other AC servers" - empty parts left out
+            const plural = (n) => n + ' player' + (n === 1 ? '' : 's');
+            const ownPlayers = data.servers.reduce((n, s) => n + (s.online ? s.numplayers : 0), 0);
+            const otherPlayers = (data.elsewhere && data.elsewhere.players) || 0;
+            document.getElementById('live-elsewhere-sub').textContent = [
+                ownPlayers ? plural(ownPlayers) + ' on our servers' : '',
+                otherPlayers ? plural(otherPlayers) + ' on other AC servers' : '',
+            ].filter(Boolean).join(' · ');
             renderButton();
             renderList();
             return data;
