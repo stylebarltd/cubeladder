@@ -16,7 +16,8 @@ use Cake\Log\Log;
  *
  *     addserver <ip> <port> [weight]
  *
- * Note the master answers with an empty 200 unless name AND version are given.
+ * Note the master answers with an empty 200 unless name AND version are given,
+ * and a banned IP gets one fake server (see fetch()).
  * The list is cached (cache config "master") and refreshed every Ladder.master.ttl
  * seconds; when the master is unreachable the last good list keeps being served.
  */
@@ -75,7 +76,13 @@ class AcMasterServerService
         if (!$res->isOk()) {
             return null;
         }
-        $list = self::parse((string)$res->getBody());
+        $body = (string)$res->getBody();
+        // a banned IP gets a fake "addserver your.IP.is.banned 8411" line plus an echo
+        if (stripos($body, 'banned') !== false) {
+            Log::error('AC master server has banned this IP: ' . trim(preg_replace('/\s+/', ' ', $body)));
+            return null;
+        }
+        $list = self::parse($body);
         return $list ?: null;
     }
 

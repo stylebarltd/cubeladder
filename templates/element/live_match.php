@@ -80,7 +80,7 @@
             </div>
             <div class="js-game text-zinc-300 text-sm"></div>
             <div class="text-xs text-zinc-400">
-                <span class="js-gamelink"></span>
+                <span class="js-watching" title="People on this page right now, you included"></span><span class="js-gamelink"></span>
             </div>
 
             <div class="lg-team lg-chat nice-scroll js-chatbox" hidden>
@@ -239,6 +239,7 @@ window.initLiveMatch = function (root, key) {
         const s = data.server;
         $('.js-updated').textContent = new Date(data.fetched_at).toLocaleTimeString();
         $('.js-title').textContent = s.name || key;
+        $('.js-watching').textContent = data.viewers ? '👁 ' + data.viewers + ' watching' : '';
         const st = $('.js-status');
         st.classList.remove('lg-pulse');
 
@@ -301,10 +302,12 @@ window.initLiveMatch = function (root, key) {
         }
     }
 
+    // random id of this open page, so the server can count who is watching
+    const viewer = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => (b % 36).toString(36)).join('');
     let timer = null;
     async function tick() {
         try {
-            const res = await fetch('/live/game_status/' + encodeURIComponent(key), {headers: {Accept: 'application/json'}, cache: 'no-store'});
+            const res = await fetch('/live/game_status/' + encodeURIComponent(key) + '?v=' + viewer, {headers: {Accept: 'application/json'}, cache: 'no-store'});
             if (res.ok) render(await res.json());
         } catch (e) { /* next tick */ }
     }

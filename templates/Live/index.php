@@ -185,7 +185,7 @@
                 {title: 'Elsewhere in AssaultCube', servers: (data.elsewhere && data.elsewhere.servers) || []},
             ];
             const ew = data.elsewhere;
-            document.getElementById('live-elsewhere-sub').textContent = ew && ew.polled
+            document.getElementById('live-elsewhere-sub').textContent = ew && ew.online
                 ? ew.players + ' player' + (ew.players === 1 ? '' : 's') + ' on ' + ew.online + ' other public server' + (ew.online === 1 ? '' : 's')
                 : '';
             renderButton();

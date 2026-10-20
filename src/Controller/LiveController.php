@@ -107,6 +107,9 @@ class LiveController extends AppController
 
             return ['fetched_at' => date('c'), 'server' => $list[0]];
         }, 'live');
+        // per request, not cached: everybody on this match page right now
+        $viewer = $this->request->getQuery('v');
+        $data['viewers'] = (new \App\Service\LiveViewers())->seen($key, is_string($viewer) ? $viewer : null);
 
         $this->viewBuilder()->setClassName('Json');
         $this->set('data', $data);

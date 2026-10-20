@@ -6,6 +6,14 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-10-20',
+            'title' => 'See who\'s watching',
+            'link' => '/live',
+            'items' => [
+                'Live match pages now show how many people are watching the game right now, you included.',
+            ],
+        ],
+        [
             'date' => '2026-10-19',
             'title' => 'Keep the flag, name changes and B[] New York',
             'items' => [
