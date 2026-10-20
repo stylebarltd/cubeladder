@@ -45,6 +45,32 @@
 .lg-chat .t { color: rgb(113 113 122); margin-right: .45rem; font-variant-numeric: tabular-nums; font-size: .72rem; }
 .lg-chat .v-hs { color: #fbbf24; } .lg-chat .v-tk { color: #f87171; } .lg-chat .v-flag { color: #4ade80; }
 .lg-chat .empty { color: rgb(113 113 122); font-style: italic; }
+.lg-chat .v-fire { color: #fb923c; }
+/* rating chip / type after a player's name, streak flame */
+.lg-rtg { display: inline-block; margin-left: .35rem; padding: 0 .3rem; border-radius: .25rem; font-size: .68rem; font-weight: 700;
+  background: rgb(255 255 255 / .1); color: rgb(228 228 231); vertical-align: middle; }
+.lg-rtg.hi { background: rgb(245 158 11 / .25); color: #fcd34d; }
+.lg-type { font-size: .7rem; color: rgb(113 113 122); margin-left: .3rem; }
+.lg-fire { margin-left: .3rem; font-size: .75rem; font-weight: 700; color: #fb923c; }
+/* win chance bar */
+.lg-win { margin-bottom: 1.5rem; }
+.lg-win-labels { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; font-size: .8rem; color: rgb(212 212 216); margin-bottom: .35rem; }
+.lg-win-labels b { font-size: 1.25rem; color: #fff; font-variant-numeric: tabular-nums; }
+.lg-win-cap { font-size: .7rem; color: rgb(161 161 170); text-align: center; }
+.lg-win-bar { height: .6rem; border-radius: 999px; overflow: hidden; background: linear-gradient(90deg, #1d4ed8, #172554); border: 1px solid rgb(255 255 255 / .15); }
+.lg-win-bar > div { height: 100%; background: linear-gradient(90deg, #7f1d1d, #b91c1c); transition: width .8s ease; }
+/* highlights */
+.lg-notes { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
+.lg-notes > span { font-size: .78rem; padding: .2rem .55rem; border-radius: 999px; background: rgb(255 255 255 / .08); color: rgb(228 228 231); }
+.lg-notes > span.last { color: rgb(161 161 170); }
+/* end of game */
+.lg-end { margin-bottom: 1.5rem; padding: 1.25rem 1.5rem; border-radius: .75rem; text-align: center; border: 1px solid rgb(255 255 255 / .2); }
+.lg-end.cla { background: linear-gradient(90deg, rgb(127 29 29 / .9), rgb(185 28 28 / .9)); }
+.lg-end.rvsf { background: linear-gradient(90deg, rgb(23 37 84 / .9), rgb(29 78 216 / .9)); }
+.lg-end.draw { background: rgb(39 39 42 / .9); }
+.lg-end h2 { font-size: 2rem; font-weight: 800; color: #fff; letter-spacing: .03em; }
+.lg-end p { color: rgb(244 244 245); font-size: .9rem; margin-top: .25rem; }
+.lg-end .upset { display: inline-block; margin-top: .5rem; padding: .15rem .6rem; border-radius: 999px; background: #f59e0b; color: #000; font-weight: 800; font-size: .8rem; }
 .lg-teams { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
 @media (min-width: 1100px) { .lg-teams { grid-template-columns: 1fr 1fr; } }
 
@@ -68,6 +94,8 @@
   .lg-table th:nth-child(n+4), .lg-table td:nth-child(n+4) { width: auto; padding-left: .25rem; padding-right: .25rem; }
   .lg-table th:last-child, .lg-table td:last-child { width: 2.5rem; padding-right: .45rem; }
   .lg-chat { max-height: 7rem; font-size: .75rem; }
+  .lg-type { display: none; }
+  .lg-end h2 { font-size: 1.5rem; }
 }
 </style>
 
@@ -83,10 +111,24 @@
                 <span class="js-watching" title="People following this game on cubeladder.ovh right now, you included (not the spectators in the game)"></span><span class="js-gamelink"></span>
             </div>
 
+            <div class="lg-notes js-notes" hidden></div>
+
             <div class="lg-team lg-chat nice-scroll js-chatbox" hidden>
                 <div class="empty">waiting for action&hellip;</div>
             </div>
         </div>
+    </div>
+
+    <div class="lg-end js-end" hidden></div>
+
+    <div class="lg-win js-win" hidden
+         title="From the teams' average rating and the flag lead, fitted on past CTF games on the ladder: a lead early on means little, in the last minutes it decides.">
+        <div class="lg-win-labels">
+            <span><b class="js-win-cla">50%</b> CLA</span>
+            <span class="lg-win-cap js-win-cap">win chance</span>
+            <span>RVSF <b class="js-win-rvsf">50%</b></span>
+        </div>
+        <div class="lg-win-bar"><div class="js-win-fill" style="width:50%"></div></div>
     </div>
 
     <div class="lg-teams js-teams" hidden>
@@ -156,6 +198,10 @@ window.initLiveMatch = function (root, key) {
     const GIB_VERBS = {0: 'slashed', 5: 'headshot', 8: 'gibbed'};
     let prevStats = null;
     const chatLines = [];
+    // frags since the last death, per player, while this page is open
+    const streaks = {};
+    let badges = {};      // player_id => {rating, rank, type}
+    let lastResult = '';  // "Last game: ..." once a game ended here
 
     function feedEvents(players) {
         const cur = {};
@@ -169,6 +215,16 @@ window.initLiveMatch = function (root, key) {
             for (const name in cur) {
                 const o = prevStats[name], s = cur[name];
                 if (!o) continue;
+                // on fire: every 5 frags without dying is worth a line
+                if (s.deaths > o.deaths || s.frags < o.frags) {
+                    streaks[name] = 0;
+                } else {
+                    const before = streaks[name] || 0;
+                    streaks[name] = before + (s.frags - o.frags);
+                    if (Math.floor(streaks[name] / 5) > Math.floor(before / 5)) {
+                        ev.push('<b>' + esc(name) + '</b> <span class="v-fire">is on fire: ' + streaks[name] + ' frags without dying</span>');
+                    }
+                }
                 for (let i = s.deaths - o.deaths; i > 0; i--) victims.push({name, team: s.team});
                 if (s.frags > o.frags || s.teamkills > o.teamkills) {
                     killers.push({name, team: s.team, gun: s.gun,
@@ -216,6 +272,61 @@ window.initLiveMatch = function (root, key) {
         box.scrollTop = box.scrollHeight;
     }
 
+    // "6.9" chip (hover: rank and type), the rank next to it on wide screens
+    const badgeHtml = (b) => !b ? '' :
+        '<span class="lg-rtg' + (b.rating >= 7 ? ' hi' : '') + '" title="Rating ' + b.rating.toFixed(1) + ' · #' + b.rank + ' on the ladder · ' + esc(b.type) + '">' +
+            b.rating.toFixed(1) + '</span><span class="lg-type">#' + b.rank + '</span>';
+
+    const pct = (x) => Math.round(x * 100) + '%';
+
+    function renderWin(s, win) {
+        const box = $('.js-win');
+        box.hidden = !(win && s.minremain > 0);
+        if (box.hidden) return;
+        $('.js-win-cla').textContent = pct(win.CLA);
+        $('.js-win-rvsf').textContent = pct(win.RVSF);
+        $('.js-win-fill').style.width = (win.CLA * 100).toFixed(1) + '%';
+        $('.js-win-cap').textContent = 'win chance · team rating ' + win.avg.CLA.toFixed(1) + ' vs ' + win.avg.RVSF.toFixed(1);
+    }
+
+    // the end-of-game scoreboard (0 minutes left): winner, top player, upset
+    function renderEnd(s, players, win) {
+        const box = $('.js-end');
+        const over = s.team_mode && players.length > 0 && s.minremain != null && s.minremain <= 0;
+        box.hidden = !over;
+        if (!over) return false;
+        const dec = s.by_flags ? 'flags' : 'frags';
+        const team = (t) => players.filter(p => (p.team || '').toUpperCase().startsWith(t));
+        const sum = (t, k) => team(t).reduce((n, p) => n + (p[k] || 0), 0);
+        const a = sum('CLA', dec), b = sum('RVSF', dec);
+        let winner = a === b ? null : (a > b ? 'CLA' : 'RVSF'), onFrags = false;
+        if (!winner && s.by_flags && sum('CLA', 'frags') !== sum('RVSF', 'frags')) {
+            // equal flags: the ladder decides on frags
+            winner = sum('CLA', 'frags') > sum('RVSF', 'frags') ? 'CLA' : 'RVSF';
+            onFrags = true;
+        }
+        const hi = Math.max(a, b), lo = Math.min(a, b);
+        const title = winner ? winner + ' wins ' + (onFrags ? 'on frags · ' : '') + hi + ' : ' + lo : 'Draw ' + a + ' : ' + b;
+        const points = (p) => (p.flags || 0) * 5 + (p.frags || 0);
+        const top = players.slice().sort((x, y) => points(y) - points(x))[0];
+        const topText = top.name + ' · ' + (s.by_flags ? top.flags + ' flag' + (top.flags === 1 ? '' : 's') + ', ' : '') + top.frags + ' frags';
+        const upset = winner && win && win.before[winner] < 0.35;
+        box.className = 'lg-end js-end ' + (winner ? winner.toLowerCase() : 'draw');
+        box.innerHTML = '<h2>' + esc(title) + '</h2>' +
+            '<p title="flags count 5, frags 1 - like the ladder\'s points">Top player: <b>' + esc(topText) + '</b></p>' +
+            (upset ? '<span class="upset">Upset! The team ratings gave ' + winner + ' ' + pct(win.before[winner]) + '</span>' : '');
+        lastResult = 'Last game on ' + (s.map || '?') + ': ' + title + ' · top player ' + top.name;
+        return true;
+    }
+
+    function renderNotes(notes, over) {
+        const box = $('.js-notes');
+        const items = notes.map(n => '<span>' + esc(n.icon) + ' ' + esc(n.text) + '</span>');
+        if (!over && lastResult) items.push('<span class="last">' + esc(lastResult) + '</span>');
+        box.hidden = items.length === 0;
+        box.innerHTML = items.join('');
+    }
+
     const rowHtml = (p, i, byFlags) => {
         const name = p.player_id
             ? '<a href="/players/view/' + esc(p.player_id) + '" class="hover:text-blue-400">' + esc(p.name) + '</a>'
@@ -224,7 +335,9 @@ window.initLiveMatch = function (root, key) {
         return '<tr class="' + (i === 0 ? 'top' : '') + (p.state_name === 'dead' ? ' lg-dead' : '') + '">' +
             '<td>' + (i + 1) + '</td>' +
             '<td>' + pic + name + ' ' + flag(p.country) +
-                (p.is_admin ? ' <span class="text-[10px] px-1 rounded bg-yellow-500/20 text-yellow-300">admin</span>' : '') + '</td>' +
+                (p.is_admin ? ' <span class="text-[10px] px-1 rounded bg-yellow-500/20 text-yellow-300">admin</span>' : '') +
+                badgeHtml(badges[p.player_id]) +
+                ((streaks[p.name] || 0) >= 5 ? '<span class="lg-fire" title="frags without dying">🔥' + streaks[p.name] + '</span>' : '') + '</td>' +
             '<td>' + pingBall(p.ping) + '</td>' +
             '<td class="' + (byFlags ? 'lg-decider' : '') + '">' + p.flags + '</td>' +
             '<td class="' + (!byFlags ? 'lg-decider' : '') + '">' + p.frags + '</td>' +
@@ -259,6 +372,9 @@ window.initLiveMatch = function (root, key) {
             $('.js-teams').hidden = true;
             $('.js-ffa').hidden = true;
             $('.js-specs').hidden = true;
+            $('.js-win').hidden = true;
+            $('.js-end').hidden = true;
+            $('.js-notes').hidden = true;
             chatBox.hidden = true;
             prevStats = null;
             return;
@@ -270,7 +386,7 @@ window.initLiveMatch = function (root, key) {
         setPageBg(s.numplayers > 0 ? s.map_image : null);
         $('.js-game').innerHTML =
             '<b class="text-white">' + esc(s.map || '—') + '</b> · ' + esc(s.mode_name || '?') +
-            (s.minremain != null ? ' · ' + esc(s.minremain) + ' min left' : '');
+            (s.minremain != null ? ' · ' + (s.minremain > 0 ? esc(s.minremain) + ' min left' : 'game over') : '');
         $('.js-gamelink').innerHTML = s.game_id
             ? ' &middot; <a class="text-blue-400 hover:underline" href="/games/view/' + esc(s.game_id) + '">this game on the ladder</a>' : '';
 
@@ -279,6 +395,10 @@ window.initLiveMatch = function (root, key) {
         const dec = s.by_flags ? 'flags' : 'frags';
         const sort = (a, b) => (b[dec] - a[dec]) || (b.frags - a.frags) || (a.deaths - b.deaths);
         renderFeed(players);
+        const ins = s.insights || {};
+        badges = ins.badges || {};
+        renderWin(s, ins.win);
+        renderNotes(ins.notes || [], renderEnd(s, players, ins.win));
 
         const specsEl = $('.js-specs');
         specsEl.hidden = specs.length === 0;
@@ -331,6 +451,8 @@ window.initLiveMatch = function (root, key) {
             key = k;
             prevStats = null;
             chatLines.length = 0;
+            for (const n in streaks) delete streaks[n];
+            lastResult = '';
             const box = chatBox;
             box.hidden = true;
             box.innerHTML = '<div class="empty">waiting for action&hellip;</div>';

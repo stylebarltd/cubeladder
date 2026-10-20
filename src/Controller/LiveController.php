@@ -101,9 +101,15 @@ class LiveController extends AppController
             $info['map_image'] = $info['map'] && is_file(WWW_ROOT . 'img/maps/' . $info['map'] . '.jpg')
                 ? \App\View\Helper\LayoutHelper::mapUrl($info['map'] . '.jpg')
                 : null; // no screenshot: the page keeps the bullet background
-            $info['game_id'] = $this->currentGameId($info);
+            $latest = $this->latestGame($info);
+            $info['game_id'] = $this->currentGameId($info, $latest);
             $list = [$info];
             $this->linkProfiles($list);
+            // win chance, rating badges, highlights; the game's length from the
+            // server's last game (default 15 minutes)
+            $running = $latest && $latest['ended_at'] === null && $info['game_id'] !== null ? $info['game_id'] : null;
+            $list[0]['insights'] = (new \App\Service\LiveInsights())->forServer(
+                $list[0], $running, (int)($latest['duration_minutes'] ?? 0) ?: 15);
 
             return ['fetched_at' => date('c'), 'server' => $list[0]];
         }, 'live');
@@ -126,23 +132,36 @@ class LiveController extends AppController
     }
 
     /**
-     * Id of this game on the ladder, when the log parser already created it
-     * (latest game of the server, same map + mode, still running).
+     * The server's latest game on the ladder, when it is this map + mode
+     * (it may be the running game or the previous round).
      */
-    private function currentGameId(array $info): ?string
+    private function latestGame(array $info): ?array
     {
         $mode = AcExtInfoService::MODE_CODES[(int)$info['mode']] ?? null;
         if ($mode === null || empty($info['map'])) {
             return null;
         }
         $game = $this->fetchTable('Games')->find()
-            ->select(['Games.id', 'Games.mode', 'Games.ended_at', 'Maps.name'])
+            ->select(['Games.id', 'Games.mode', 'Games.ended_at', 'Games.duration_minutes', 'Maps.name'])
             ->contain(['Maps'])
             ->where(['Games.server_name' => $info['key']])
             ->orderBy(['Games.started_at' => 'DESC'])
             ->enableHydration(false)
             ->first();
         if (!$game || $game['mode'] !== $mode || ($game['map']['name'] ?? null) !== $info['map']) {
+            return null;
+        }
+
+        return $game;
+    }
+
+    /**
+     * Id of this game on the ladder, when the log parser already created it
+     * (latest game of the server, same map + mode, still running).
+     */
+    private function currentGameId(array $info, ?array $game): ?string
+    {
+        if ($game === null) {
             return null;
         }
         // A running game is imported without an end; a finished one is the

@@ -7,6 +7,17 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-20',
+            'title' => 'Live: win chance, highlights and the final whistle',
+            'link' => '/live',
+            'items' => [
+                'Win chance on live CTF games: a bar above the teams, from the teams\' ratings and the flag lead - early on a lead means little, in the last minutes it decides. How it works is on the About page.',
+                'Highlights while you watch: hat-tricks, a map\'s flag record in danger or broken, career milestones in reach - and who is on fire (5+ frags without dying).',
+                'Rating and rank next to every player in the live scoreboard; hover for their player type.',
+                'When a game ends: the winner big, the top player, and an upset badge when the weaker team won.',
+            ],
+        ],
+        [
+            'date' => '2026-10-20',
             'title' => 'See who\'s watching, and other AC servers',
             'link' => '/live',
             'items' => [

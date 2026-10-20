@@ -261,6 +261,10 @@ $rules = [
                     <li class="flex gap-2"><i class="fa-solid fa-gun mt-1 w-4 text-zinc-300"></i><span><b>Weapon</b> &ndash; shown when one weapon makes 40%+ of your kills.</span></li>
                 </ul>
             </div>
+            <p class="mt-4 text-sm text-zinc-200"><i class="fa-solid fa-chart-line mr-1 text-red-300"></i><b>Live win chance:</b> on a live CTF game the bar
+                above the teams comes from the teams&rsquo; average rating (players without one count as 5.0) and the flag lead, weighed by the minutes left.
+                It was fitted on our own games (6,764 CTF games, 149 of them minute by minute): early on a lead means little &ndash; 3 flags ahead with
+                12 minutes left wins 56% &ndash;, in the last minute it decides (87%). When it said 80&ndash;90%, the favourite won 83% of the time.</p>
         </section>
 
         <section id="skill" class="scroll-mt-20 rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-3">
