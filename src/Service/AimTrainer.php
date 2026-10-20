@@ -7,7 +7,7 @@ use Cake\Datasource\ConnectionManager;
 
 /**
  * Aim trainer (/play): 30-second rounds of targets on a map screenshot,
- * with 3 grenades.
+ * with 5 grenades.
  *
  * A round starts with a one-time token and a seed (the targets come from
  * the seed, the same in every browser); at the end the page sends the
@@ -30,15 +30,18 @@ class AimTrainer
     public const POINTS_STREAK = 10;
     public const STREAK = 5;
     /** Grenades per round; a gib, and the bonus for every further gib of the same grenade */
-    public const GRENADES = 3;
+    public const GRENADES = 5;
     public const POINTS_GIB = 15;
     public const POINTS_MULTI_GIB = 10;
     /** Targets on screen at once (so a grenade gibs at most this many) */
     public const MAX_ALIVE = 4;
     /** More targets than the spawn schedule can make in a round */
     public const MAX_TARGETS = 70;
-    /** Reaction time of one hit (ms): faster than a human / slower than a target lives */
+    /** Reaction time of one hit (ms): faster than a human / slower than a target lives.
+     *  A few lucky ones under MIN_REACTION happen (firing where a target pops up):
+     *  up to LUCKY_HITS + 10 % of the hits */
     public const MIN_REACTION = 100;
+    public const LUCKY_HITS = 3;
     public const MAX_REACTION = 2500;
     /** Average reaction faster than this is not a human */
     public const MIN_AVG_REACTION = 180;
@@ -129,7 +132,8 @@ class AimTrainer
         $reactions = array_values(array_map('intval', $reactions));
         if ($r['grenades'] > self::GRENADES || $r['hits'] + $r['gibs'] + $r['escaped'] > self::MAX_TARGETS
             || count($reactions) !== $r['hits']
-            || ($reactions && (min($reactions) < self::MIN_REACTION || max($reactions) > self::MAX_REACTION
+            || ($reactions && (count(array_filter($reactions, fn($ms) => $ms < self::MIN_REACTION)) > self::LUCKY_HITS + 0.1 * count($reactions)
+                || min($reactions) < 0 || max($reactions) > self::MAX_REACTION
                 || array_sum($reactions) / count($reactions) < self::MIN_AVG_REACTION))) {
             return ['error' => 'This round is not humanly possible.'];
         }

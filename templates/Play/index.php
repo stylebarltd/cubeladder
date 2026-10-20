@@ -40,6 +40,8 @@ $this->assign('title', 'Aim trainer');
 .at-score { font-size: 3.4rem; font-weight: 800; color: #facc15; line-height: 1; font-variant-numeric: tabular-nums; }
 .at-note { font-size: .8rem; color: rgb(161 161 170); }
 .at-note b { color: #fff; }
+.at-sound { margin-top: .5rem; font-size: .75rem; color: rgb(161 161 170); background: none; border: 0; cursor: pointer; padding: .2rem 0; }
+.at-sound:hover { color: #fff; }
 .at-card { border-radius: .75rem; border: 1px solid rgb(255 255 255 / .15); background: rgb(0 0 0 / .6); backdrop-filter: blur(2px); padding: 1rem 1.1rem; }
 .at-card h3 { font-weight: 800; color: #fff; display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .5rem; }
 .at-card h3 small { font-weight: 400; font-size: .7rem; color: rgb(161 161 170); }
@@ -101,6 +103,7 @@ $this->assign('title', 'Aim trainer');
                 <button type="button" class="at-nade" id="at-nade" aria-label="Grenade"><img src="/img/weapons/grenade.svg" alt=""><span id="at-nade-n"></span></button>
                 <div class="at-overlay" id="at-end" hidden></div>
             </div>
+            <button type="button" class="at-sound" id="at-sound"></button>
         </div>
 
         <div class="space-y-6">
@@ -180,6 +183,60 @@ $this->assign('title', 'Aim trainer');
     }
     nextMap();
 
+    // --- sound: no audio files - the browser says "Headshot!", the boom is made here
+    let soundOn = true;
+    try { soundOn = localStorage.getItem('aimSound') !== 'off'; } catch (e) {}
+    const soundBtn = document.getElementById('at-sound');
+    const showSound = () => { soundBtn.textContent = soundOn ? '🔊 Sound on' : '🔇 Sound off'; };
+    soundBtn.addEventListener('click', () => {
+        soundOn = !soundOn;
+        try { localStorage.setItem('aimSound', soundOn ? 'on' : 'off'); } catch (e) {}
+        if (!soundOn && window.speechSynthesis) speechSynthesis.cancel();
+        showSound();
+    });
+    showSound();
+
+    let voice = null;
+    function pickVoice() {
+        const all = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+        const en = all.filter(v => /^en/i.test(v.lang));
+        voice = en.find(v => /male|daniel|david|george|guy/i.test(v.name) && !/female/i.test(v.name)) || en[0] || null;
+    }
+    if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }
+    function sayHeadshot() {
+        if (!soundOn || !window.speechSynthesis) return;
+        speechSynthesis.cancel(); // two headshots fast: only the newest speaks
+        const u = new SpeechSynthesisUtterance('Headshot!');
+        if (voice) u.voice = voice;
+        u.rate = 1.15; u.pitch = 0.55; u.volume = 1;
+        speechSynthesis.speak(u);
+    }
+
+    let audio = null;
+    function boom() {
+        if (!soundOn) return;
+        try {
+            audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+            const now = audio.currentTime;
+            // noise burst through a falling low-pass: the bang
+            const len = Math.floor(audio.sampleRate * 0.9);
+            const buf = audio.createBuffer(1, len, audio.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+            const noise = audio.createBufferSource(); noise.buffer = buf;
+            const lp = audio.createBiquadFilter(); lp.type = 'lowpass';
+            lp.frequency.setValueAtTime(2400, now); lp.frequency.exponentialRampToValueAtTime(120, now + 0.8);
+            const ng = audio.createGain(); ng.gain.setValueAtTime(0.9, now); ng.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+            noise.connect(lp).connect(ng).connect(audio.destination);
+            // low thump
+            const osc = audio.createOscillator(); osc.type = 'sine';
+            osc.frequency.setValueAtTime(110, now); osc.frequency.exponentialRampToValueAtTime(35, now + 0.5);
+            const og = audio.createGain(); og.gain.setValueAtTime(0.8, now); og.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+            osc.connect(og).connect(audio.destination);
+            noise.start(now); osc.start(now); noise.stop(now + 0.9); osc.stop(now + 0.6);
+        } catch (e) { /* no Web Audio: silent */ }
+    }
+
     // same random numbers as every other browser with this seed
     function mulberry32(a) {
         return function () {
@@ -253,6 +310,7 @@ $this->assign('title', 'Aim trainer');
         gibs += gibbed.length;
         score += pts;
         shake = 10;
+        boom();
         const label = gibbed.length >= 3 ? 'MULTI GIB' : (gibbed.length === 2 ? 'DOUBLE GIB' : (gibbed.length ? 'GIBBED' : ''));
         effects.push({x: n.x, y: n.y, t: now, boom: true, r: R});
         if (pts) effects.push({x: n.x, y: n.y - R * 0.3, t: now, text: '+' + pts + ' ' + label, gib: true});
@@ -284,7 +342,7 @@ $this->assign('title', 'Aim trainer');
             streak++;
             if (streak % RULES.streak === 0) pts += RULES.streakBonus;
             score += pts;
-            if (dh) shake = 6;
+            if (dh) { shake = 6; sayHeadshot(); }
             effects.push({x: px, y: py, t: now, text: '+' + pts + (dh ? ' HEADSHOT' : ''), hs: dh});
             feed.unshift({t: now, hs: dh, team: tg.team, streak});
             feed.length = Math.min(feed.length, 5);
@@ -475,6 +533,7 @@ $this->assign('title', 'Aim trainer');
 
     async function begin(btn) {
         btn.disabled = true;
+        if (soundOn) { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) {} }
         try {
             const res = await post('/play/start');
             if (!res.ok) throw new Error('HTTP ' + res.status);
