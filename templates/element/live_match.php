@@ -80,7 +80,7 @@
             </div>
             <div class="js-game text-zinc-300 text-sm"></div>
             <div class="text-xs text-zinc-400">
-                <span class="js-watching" title="People on this page right now, you included"></span><span class="js-gamelink"></span>
+                <span class="js-watching" title="People following this game on cubeladder.ovh right now, you included (not the spectators in the game)"></span><span class="js-gamelink"></span>
             </div>
 
             <div class="lg-team lg-chat nice-scroll js-chatbox" hidden>
@@ -239,7 +239,7 @@ window.initLiveMatch = function (root, key) {
         const s = data.server;
         $('.js-updated').textContent = new Date(data.fetched_at).toLocaleTimeString();
         $('.js-title').textContent = s.name || key;
-        $('.js-watching').textContent = data.viewers ? '👁 ' + data.viewers + ' watching' : '';
+        $('.js-watching').textContent = data.viewers ? '🌐 ' + data.viewers + ' watching on cubeladder.ovh' : '';
         const st = $('.js-status');
         st.classList.remove('lg-pulse');
 

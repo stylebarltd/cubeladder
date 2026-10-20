@@ -10,7 +10,7 @@ return [
             'title' => 'See who\'s watching',
             'link' => '/live',
             'items' => [
-                'Live match pages now show how many people are watching the game right now, you included.',
+                'Live match pages now show how many people are following the game on cubeladder.ovh right now, you included. Spectators in the game are listed separately, as before.',
             ],
         ],
         [
