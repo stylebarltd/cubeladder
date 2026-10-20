@@ -183,7 +183,8 @@ $this->assign('title', 'Aim trainer');
     }
     nextMap();
 
-    // --- sound: no audio files - the browser says "Headshot!", the boom is made here
+    // --- sound: "Headshot!" is AssaultCube's own (webroot/sounds, not in git - AC
+    // licence); without the file the browser says it. The boom is made here.
     let soundOn = true;
     try { soundOn = localStorage.getItem('aimSound') !== 'off'; } catch (e) {}
     const soundBtn = document.getElementById('at-sound');
@@ -203,8 +204,24 @@ $this->assign('title', 'Aim trainer');
         voice = en.find(v => /male|daniel|david|george|guy/i.test(v.name) && !/female/i.test(v.name)) || en[0] || null;
     }
     if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', pickVoice); }
+    let headshotBuf = null;
+    async function loadSounds() {
+        if (headshotBuf || !audio) return;
+        try {
+            const res = await fetch('/sounds/headshot.mp3');
+            if (res.ok) headshotBuf = await audio.decodeAudioData(await res.arrayBuffer());
+        } catch (e) { /* no file: the browser's voice */ }
+    }
     function sayHeadshot() {
-        if (!soundOn || !window.speechSynthesis) return;
+        if (!soundOn) return;
+        if (headshotBuf && audio) {
+            const src = audio.createBufferSource();
+            src.buffer = headshotBuf;
+            src.connect(audio.destination);
+            src.start();
+            return;
+        }
+        if (!window.speechSynthesis) return;
         speechSynthesis.cancel(); // two headshots fast: only the newest speaks
         const u = new SpeechSynthesisUtterance('Headshot!');
         if (voice) u.voice = voice;
@@ -212,28 +229,83 @@ $this->assign('title', 'Aim trainer');
         speechSynthesis.speak(u);
     }
 
-    let audio = null;
+    let audio = null, echo = null;
+    // noise buffers: white (crack) and brown (blast, rumble - deep, no pitch)
+    function noise(seconds, brown) {
+        const len = Math.floor(audio.sampleRate * seconds);
+        const buf = audio.createBuffer(1, len, audio.sampleRate);
+        const d = buf.getChannelData(0);
+        let last = 0;
+        for (let i = 0; i < len; i++) {
+            const w = Math.random() * 2 - 1;
+            d[i] = brown ? (last = (last + 0.02 * w) / 1.02) * 3.5 : w;
+        }
+        const src = audio.createBufferSource();
+        src.buffer = buf;
+        return src;
+    }
+    // a short outdoor echo: decaying noise as impulse response
+    function echoNode() {
+        const len = Math.floor(audio.sampleRate * 2.2);
+        const ir = audio.createBuffer(2, len, audio.sampleRate);
+        for (let c = 0; c < 2; c++) {
+            const d = ir.getChannelData(c);
+            for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+        }
+        const conv = audio.createConvolver();
+        conv.buffer = ir;
+        const wet = audio.createGain();
+        wet.gain.value = 0.35;
+        conv.connect(wet).connect(audio.destination);
+        return conv;
+    }
+    // soft clipping: makes the blast dirty instead of clean
+    function distortion(amount) {
+        const curve = new Float32Array(1024);
+        for (let i = 0; i < 1024; i++) {
+            const x = i / 512 - 1;
+            curve[i] = (1 + amount) * x / (1 + amount * Math.abs(x));
+        }
+        const ws = audio.createWaveShaper();
+        ws.curve = curve;
+        return ws;
+    }
     function boom() {
         if (!soundOn) return;
         try {
             audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+            echo = echo || echoNode();
             const now = audio.currentTime;
-            // noise burst through a falling low-pass: the bang
-            const len = Math.floor(audio.sampleRate * 0.9);
-            const buf = audio.createBuffer(1, len, audio.sampleRate);
-            const d = buf.getChannelData(0);
-            for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
-            const noise = audio.createBufferSource(); noise.buffer = buf;
-            const lp = audio.createBiquadFilter(); lp.type = 'lowpass';
-            lp.frequency.setValueAtTime(2400, now); lp.frequency.exponentialRampToValueAtTime(120, now + 0.8);
-            const ng = audio.createGain(); ng.gain.setValueAtTime(0.9, now); ng.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
-            noise.connect(lp).connect(ng).connect(audio.destination);
-            // low thump
-            const osc = audio.createOscillator(); osc.type = 'sine';
-            osc.frequency.setValueAtTime(110, now); osc.frequency.exponentialRampToValueAtTime(35, now + 0.5);
-            const og = audio.createGain(); og.gain.setValueAtTime(0.8, now); og.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
-            osc.connect(og).connect(audio.destination);
-            noise.start(now); osc.start(now); noise.stop(now + 0.9); osc.stop(now + 0.6);
+            const out = audio.createDynamicsCompressor();
+            out.connect(audio.destination);
+            out.connect(echo);
+            const env = (node, peak, attack, decay) => {
+                const g = audio.createGain();
+                g.gain.setValueAtTime(0.0001, now);
+                g.gain.exponentialRampToValueAtTime(peak, now + attack);
+                g.gain.exponentialRampToValueAtTime(0.0001, now + attack + decay);
+                node.connect(g);
+                return g;
+            };
+            // 1. crack: very short and bright
+            const crack = noise(0.12, false);
+            const hp = audio.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+            crack.connect(hp);
+            env(hp, 0.9, 0.002, 0.09).connect(out);
+            // 2. blast: brown noise, the low-pass closes as it rings out, driven into distortion
+            const blast = noise(1.8, true);
+            const lp = audio.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.7;
+            lp.frequency.setValueAtTime(5000, now);
+            lp.frequency.exponentialRampToValueAtTime(180, now + 1.4);
+            const drive = distortion(8);
+            blast.connect(lp).connect(drive);
+            env(drive, 1.0, 0.008, 1.5).connect(out);
+            // 3. rumble: the deep tail you feel more than hear
+            const rumble = noise(2.4, true);
+            const lp2 = audio.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = 110;
+            rumble.connect(lp2);
+            env(lp2, 1.4, 0.03, 2.2).connect(out);
+            crack.start(now); blast.start(now); rumble.start(now);
         } catch (e) { /* no Web Audio: silent */ }
     }
 
@@ -533,7 +605,7 @@ $this->assign('title', 'Aim trainer');
 
     async function begin(btn) {
         btn.disabled = true;
-        if (soundOn) { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) {} }
+        try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); loadSounds(); } catch (e) {}
         try {
             const res = await post('/play/start');
             if (!res.ok) throw new Error('HTTP ' + res.status);
