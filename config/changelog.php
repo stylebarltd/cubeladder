@@ -21,6 +21,7 @@ return [
             'items' => [
                 'The live kill feed shows the weapon of every kill, and its own icon for headshots, knife kills, gibs, teamkills and flags. Players are in their team\'s colour: CLA red, RVSF blue.',
                 'Hall of Fame news in Discord now comes with a picture: the new top 10 with every value, the players the news is about highlighted. Flag Helper also shows how many steals and returns made the score.',
+                'Every Hall of Fame category has its own link now (e.g. /players/hall_of_fame/flag-helper) and a Share button: the link shows the category\'s top 10 as a picture in Discord, WhatsApp & co.',
             ],
         ],
         [

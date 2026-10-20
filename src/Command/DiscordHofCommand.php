@@ -19,9 +19,10 @@ use Throwable;
  * import, process_logs.sh): compares the top 10 of every category with the
  * last run (tmp/discord_hof.json) and posts one embed per changed category
  * - new entries, players who beat their own record, who moved and who
- * dropped out, each with their value - with a picture of the new top 10 on
- * a random player photo (HallOfFameImage). The first run only saves the
- * current lists.
+ * dropped out, each with their value - with the category's card
+ * (HallOfFameService::card, the same as its link preview) on the photo of
+ * the player the news is about, them highlighted, linking to the category
+ * (/players/hall_of_fame/<slug>). The first run only saves the current lists.
  *
  *   bin/cake discord_hof              post what changed
  *   bin/cake discord_hof --dry-run    print it and write tmp/discord_hof_<category>.jpg,
@@ -29,17 +30,6 @@ use Throwable;
  */
 class DiscordHofCommand extends Command
 {
-    /** Category key (HallOfFameService::freshTopLists) => emoji, title, unit, picture icon */
-    private const CATEGORIES = [
-        'kills' => ['💀', 'Most Kills', 'kills', 'skull'],
-        'headshot' => ['🎯', 'Most Headshots', 'headshots', 'crosshairs'],
-        'flags' => ['🚩', 'Most Flags scored', 'flags', 'flag'],
-        'streak' => ['🔥', 'Longest Streak', 'kills in a row', 'fire'],
-        'slashed' => ['🔪', 'Most Slashes', 'slashes', 'png:knife'],
-        'gibbed' => ['💣', 'Most Gibbed', 'gibs', 'png:grenade'],
-        'helper' => ['🤝', 'Flag Helper', 'steals + returns', 'handshake'],
-    ];
-
     public static function defaultName(): string
     {
         return 'discord_hof';
@@ -69,6 +59,7 @@ class DiscordHofCommand extends Command
                     'pos' => $i + 1,
                     'steals' => (int)$row->steals,
                     'returns' => (int)$row->returns,
+                    'picture' => (string)$row->picture,
                 ];
             }
         }
@@ -84,24 +75,22 @@ class DiscordHofCommand extends Command
 
         $site = rtrim((string)(Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh'), '/');
         $posts = [];
-        foreach (self::CATEGORIES as $key => [$emoji, $title, $unit, $icon]) {
+        foreach (HallOfFameService::CATEGORIES as $key => $cat) {
+            $unit = $cat['unit'];
             $change = $this->changes($before[$key] ?? [], $now[$key] ?? [], $key, $unit, $site);
             if (!$change) {
                 continue;
             }
+            // the photo of the player the news is about, else a random one
+            $photo = $change['player'] !== null && $change['player']['picture'] !== ''
+                ? WWW_ROOT . 'img/players/' . basename($change['player']['picture']) : null;
             $filename = 'hall_of_fame_' . $key . '.jpg';
-            $jpeg = (new HallOfFameImage())->render([
-                'title' => $title,
-                'subtitle' => 'Best single game since ' . date('F Y', strtotime(\App\Controller\PlayersController::HOF_SINCE)) . ' · ' . $unit,
-                'icon' => $icon,
-                'headline' => $change['headline'],
-                'background' => HallOfFameImage::randomBackground(),
-                'rows' => array_map(fn($e) => [$e['pos'], $e['name'], number_format($e['value']), $change['marks'][$e['player_id']] ?? ''], $now[$key]),
-            ]);
+            $jpeg = (new HallOfFameImage())->render(HallOfFameService::card($key, $now[$key], $change['headline'], $change['marks'],
+                $photo && is_file($photo) ? $photo : HallOfFameImage::randomBackground()));
             $posts[] = [
                 'embed' => [
-                    'title' => $emoji . ' Hall of Fame · ' . $title,
-                    'url' => $site . '/players/hall_of_fame',
+                    'title' => $cat['emoji'] . ' Hall of Fame · ' . $cat['title'],
+                    'url' => $site . '/players/hall_of_fame/' . $cat['slug'],
                     'description' => implode("\n", $change['lines']),
                     'color' => 0xEAB308,
                     'image' => ['url' => 'attachment://' . $filename],
@@ -141,7 +130,7 @@ class DiscordHofCommand extends Command
         $oldBy = array_column($old, null, 'player_id');
         $newBy = array_column($new, null, 'player_id');
         $news = $moves = $marks = [];
-        $headline = null;
+        $headline = $player = null;
 
         foreach ($new as $e) {
             $was = $oldBy[$e['player_id']] ?? null;
@@ -150,12 +139,14 @@ class DiscordHofCommand extends Command
             if ($was === null) {
                 $news[] = sprintf('🆕 %s entered the Hall of Fame at **#%d** with %s on %s', $this->link($e, $site), $e['pos'], $value, $game);
                 $marks[$e['player_id']] = 'NEW';
+                $player ??= $e;
                 $headline ??= sprintf('%s enters at #%d · %s %s on %s', $e['name'], $e['pos'], number_format($e['value']), $unit, $e['map']);
             } elseif ($e['value'] > $was['value']) {
                 $news[] = sprintf('📈 %s beat their own record: %s (was %s) on %s - now **#%d**%s',
                     $this->link($e, $site), $value, number_format($was['value']), $game,
                     $e['pos'], $e['pos'] !== $was['pos'] ? ' (was #' . $was['pos'] . ')' : '');
                 $marks[$e['player_id']] = 'RECORD';
+                $player ??= $e;
                 $headline ??= sprintf('%s beats their own record · %s %s on %s · now #%d', $e['name'], number_format($e['value']), $unit, $e['map'], $e['pos']);
             } elseif ($e['pos'] !== $was['pos']) {
                 $moves[] = sprintf('%s %s #%d → **#%d** · %s %s', $e['pos'] < $was['pos'] ? '⬆️' : '⬇️', $this->link($e, $site),
@@ -170,7 +161,8 @@ class DiscordHofCommand extends Command
         }
 
         // a list that only shifted (e.g. a game marked inaccurate) is no news
-        return $news ? ['lines' => array_merge($news, $moves), 'marks' => $marks, 'headline' => $headline] : null;
+        return $news ? ['lines' => array_merge($news, $moves), 'marks' => $marks, 'headline' => $headline,
+            'player' => $player + ['picture' => $player['picture'] ?? '']] : null;
     }
 
     /** "**21** steals + returns (12 steals, 9 returns)" - the parts only for Flag Helper */

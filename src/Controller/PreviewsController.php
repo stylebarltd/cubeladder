@@ -3,14 +3,18 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Service\HallOfFameImage;
+use App\Service\HallOfFameService;
 use App\Service\SiteCardImage;
 use Cake\Cache\Cache;
+use Cake\Http\Exception\NotFoundException;
 use Cake\Http\Response;
 
 /**
  * Link preview pictures (og:image) of the pages without their own:
  *   /previews/site     the site card - front page, Live, About, ... (layout default)
  *   /previews/ranking  the All Time Ranking's top 10
+ *   /previews/hall_of_fame/<slug>  a Hall of Fame category's top 10 (HallOfFameImage)
  * Cached on disk until something on them (or the drawing code) changes.
  */
 class PreviewsController extends AppController
@@ -82,13 +86,36 @@ class PreviewsController extends AppController
     }
 
     /**
+     * A Hall of Fame category's card: its top 10 on the photo of its #1
+     * (else a photo picked by the category), the same card the Discord news
+     * posts with the player it is about.
+     */
+    public function hallOfFame(string $slug): Response
+    {
+        $key = HallOfFameService::keyOf($slug);
+        if ($key === null) {
+            throw new NotFoundException();
+        }
+        $list = HallOfFameService::rows((new HallOfFameService())->topLists()[$key] ?? []);
+        $photo = !empty($list[0]['picture']) ? WWW_ROOT . 'img/players/' . basename($list[0]['picture']) : null;
+        if (!$photo || !is_file($photo)) {
+            $all = glob(WWW_ROOT . 'img/players/*.jpg') ?: [];
+            sort($all);
+            $photo = $all ? $all[crc32($slug) % count($all)] : null;
+        }
+        $card = HallOfFameService::card($key, $list, null, [], $photo);
+
+        return $this->picture('hof-' . $slug, $card, fn() => (new HallOfFameImage())->render($card), 'HallOfFameImage');
+    }
+
+    /**
      * Serve a cached picture, drawing it when its content or the drawing
      * code changed.
      */
-    private function picture(string $name, array $card, callable $draw): Response
+    private function picture(string $name, array $card, callable $draw, string $drawer = 'SiteCardImage'): Response
     {
         $dir = CACHE . 'cards' . DS;
-        $file = $dir . $name . '-' . md5((string)json_encode($card) . filemtime(ROOT . '/src/Service/SiteCardImage.php')) . '.jpg';
+        $file = $dir . $name . '-' . md5((string)json_encode($card) . filemtime(ROOT . '/src/Service/' . $drawer . '.php')) . '.jpg';
         if (!is_file($file)) {
             if (!is_dir($dir)) {
                 mkdir($dir, 0775, true);

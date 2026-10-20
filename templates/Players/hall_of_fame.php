@@ -1,3 +1,33 @@
+<?php
+use App\Service\HallOfFameService;
+
+/**
+ * @var string|null $category the category opened by /players/hall_of_fame/<slug>
+ */
+// Link preview: the category's card (PreviewsController::hallOfFame), the
+// first category on the plain address; a new picture URL when its list changes
+$ogSite = rtrim((string)\Cake\Core\Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh', '/');
+$ogKey = $category ?? 'kills';
+$ogCat = HallOfFameService::CATEGORIES[$ogKey];
+$ogList = HallOfFameService::rows((new HallOfFameService())->topLists()[$ogKey] ?? []);
+$ogTitle = $category ? 'Hall of Fame · ' . $ogCat['title'] . ' · cubeLadder' : 'Hall of Fame · cubeLadder';
+$ogText = $ogList
+    ? sprintf('#1 %s with %s %s in one game. The best single games on the AssaultCube servers - straight from the logs.',
+        $ogList[0]['name'], number_format($ogList[0]['value']), $ogCat['unit'])
+    : 'The best single games on the AssaultCube servers - straight from the logs.';
+$this->assign('title', $ogTitle);
+$this->start('meta'); ?>
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="cubeLadder">
+    <meta property="og:title" content="<?= h($ogTitle) ?>">
+    <meta property="og:description" content="<?= h($ogText) ?>">
+    <meta property="og:url" content="<?= h($ogSite . '/players/hall_of_fame' . ($category ? '/' . $ogCat['slug'] : '')) ?>">
+    <meta property="og:image" content="<?= h($ogSite . '/previews/hall_of_fame/' . $ogCat['slug'] . '?v=' . substr(md5((string)json_encode($ogList)), 0, 8)) ?>">
+    <meta property="og:image:width" content="<?= \App\Service\HallOfFameImage::WIDTH ?>">
+    <meta property="og:image:height" content="<?= \App\Service\HallOfFameImage::HEIGHT ?>">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="description" content="<?= h($ogText) ?>">
+<?php $this->end(); ?>
 <div class="w-full">
 
 <h1 class="sr-only">Hall of Fame</h1>
@@ -5,36 +35,43 @@
 <?php
 $genres = [
     [
+        'key'   => 'kills',
         'title' => 'Most Kills',
         'color' => 'text-green-400',
         'data'  => $topKills,
     ],
     [
+        'key'   => 'headshot',
         'title' => 'Most Headshots',
         'color' => 'text-red-400',
         'data'  => $topHeadshots,
     ],
     [
+        'key'   => 'flags',
         'title' => 'Most Flags scored',
         'color' => 'text-red-400',
         'data'  => $topFlags,
     ],
     [
+        'key'   => 'streak',
         'title' => 'Longest Streak',
         'color' => 'text-orange-400',
         'data'  => $topStreaks,
     ],
     [
+        'key'   => 'slashed',
         'title' => 'Most Slashes',
         'color' => 'text-purple-400',
         'data'  => $topSlashes,
     ],
     [
+        'key'   => 'gibbed',
         'title' => 'Most Gibbed',
         'color' => 'text-yellow-400',
         'data'  => $topGibbed,
     ],
     [
+        'key'   => 'helper',
         'title' => 'Flag Helpers',
         'color' => 'text-blue-400',
         'data'  => $bestFlagHelpers,
@@ -83,6 +120,8 @@ shuffle($playerImages);
             ?>
             <!-- Slide: full screen, player photo as background -->
             <div class="hof-slide relative w-full flex-shrink-0 bg-cover bg-center"
+                 data-slug="<?= h(HallOfFameService::CATEGORIES[$genre['key']]['slug']) ?>" data-key="<?= h($genre['key']) ?>"
+                 data-title="<?= h(HallOfFameService::CATEGORIES[$genre['key']]['title']) ?>"
                  style="background-image: linear-gradient(to right, rgba(0,0,0,.9), rgba(0,0,0,.7) 55%, rgba(0,0,0,.8)), url('<?= h($bgImg) ?>');">
                 <div class="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-16 md:py-10 lg:flex-row lg:items-center lg:justify-between">
 
@@ -95,6 +134,9 @@ shuffle($playerImages);
                             <?= $genre['title'] ?>
                         </h2>
                         <div class="mt-3 text-sm text-zinc-300">Best single game since <?= date('M Y', strtotime(\App\Controller\PlayersController::HOF_SINCE)) ?></div>
+                        <button type="button" class="js-hof-share mt-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-4 py-2 text-sm text-white transition hover:bg-black/70">
+                            <i class="fa-solid fa-share-nodes"></i> <span>Share</span>
+                        </button>
                     </div>
 
                     <!-- Players -->
@@ -227,11 +269,36 @@ shuffle($playerImages);
     const track   = document.getElementById('hof-track');
     const slides   = Array.from(track.children);
     const count   = slides.length;
-    let index = 0;
+    // the category of the address (/players/hall_of_fame/<slug>, also #slug or #key)
+    const want = <?= json_encode($category ? HallOfFameService::CATEGORIES[$category]['slug'] : null) ?> || decodeURIComponent(location.hash.slice(1));
+    let index = Math.max(0, slides.findIndex(s => s.dataset.slug === want || s.dataset.key === want));
+    const urlOf = (s) => location.origin + '/players/hall_of_fame/' + s.dataset.slug;
 
     function render() {
         track.style.transform = 'translateX(' + (-index * 100) + '%)';
+        // the address and the title follow the slide, so a copied link opens it
+        const s = slides[index];
+        if (location.pathname + location.hash !== '/players/hall_of_fame/' + s.dataset.slug) {
+            history.replaceState(null, '', urlOf(s));
+        }
+        document.title = 'Hall of Fame · ' + s.dataset.title + ' · cubeLadder';
     }
+
+    // share: the phone's share sheet, else copy the link
+    root.querySelectorAll('.js-hof-share').forEach(btn => btn.addEventListener('click', async () => {
+        const s = btn.closest('.hof-slide');
+        const url = urlOf(s), title = 'Hall of Fame · ' + s.dataset.title;
+        const label = btn.querySelector('span');
+        try {
+            if (navigator.share) { await navigator.share({title, url}); return; }
+            await navigator.clipboard.writeText(url);
+            label.textContent = 'Link copied';
+        } catch (e) {
+            if (e && e.name === 'AbortError') return;
+            label.textContent = url;
+        }
+        setTimeout(() => { label.textContent = 'Share'; }, 2500);
+    }));
 
     function go(i) {
         index = (i + count) % count; // wrap around

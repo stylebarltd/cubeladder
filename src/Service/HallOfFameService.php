@@ -19,6 +19,71 @@ class HallOfFameService
     public const TOP = 10;
 
     /**
+     * The categories, as on the page: key (topLists) => slug (the address
+     * /players/hall_of_fame/<slug>), title, unit, emoji (Discord), icon
+     * (HallOfFameImage: Font Awesome name or png:<weapon>)
+     */
+    public const CATEGORIES = [
+        'kills' => ['slug' => 'kills', 'title' => 'Most Kills', 'unit' => 'kills', 'emoji' => '💀', 'icon' => 'skull'],
+        'headshot' => ['slug' => 'headshots', 'title' => 'Most Headshots', 'unit' => 'headshots', 'emoji' => '🎯', 'icon' => 'crosshairs'],
+        'flags' => ['slug' => 'flags', 'title' => 'Most Flags scored', 'unit' => 'flags', 'emoji' => '🚩', 'icon' => 'flag'],
+        'streak' => ['slug' => 'streak', 'title' => 'Longest Streak', 'unit' => 'kills in a row', 'emoji' => '🔥', 'icon' => 'fire'],
+        'slashed' => ['slug' => 'slashes', 'title' => 'Most Slashes', 'unit' => 'slashes', 'emoji' => '🔪', 'icon' => 'png:knife'],
+        'gibbed' => ['slug' => 'gibs', 'title' => 'Most Gibbed', 'unit' => 'gibs', 'emoji' => '💣', 'icon' => 'png:grenade'],
+        'helper' => ['slug' => 'flag-helper', 'title' => 'Flag Helper', 'unit' => 'steals + returns', 'emoji' => '🤝', 'icon' => 'handshake'],
+    ];
+
+    /** Category key of an address slug, or null */
+    public static function keyOf(string $slug): ?string
+    {
+        foreach (self::CATEGORIES as $key => $c) {
+            if ($c['slug'] === $slug) {
+                return $key;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * What HallOfFameImage draws for one category: its top 10, a headline
+     * (default: the #1 and their record) and the players to highlight.
+     *
+     * @param list<array{pos:int, name:string, value:int, map?:string}> $list
+     * @param array<string, string> $marks player_id => NEW / RECORD / ▲2 / ...
+     */
+    public static function card(string $key, array $list, ?string $headline = null, array $marks = [], ?string $background = null): array
+    {
+        $c = self::CATEGORIES[$key];
+        $first = $list[0] ?? null;
+
+        return [
+            'title' => $c['title'],
+            'subtitle' => 'Best single game since ' . date('F Y', strtotime(PlayersController::HOF_SINCE)) . ' · ' . $c['unit'],
+            'icon' => $c['icon'],
+            'headline' => $headline ?? ($first
+                ? sprintf('#1 %s · %s %s%s', $first['name'], number_format($first['value']), $c['unit'], !empty($first['map']) ? ' on ' . $first['map'] : '')
+                : ''),
+            'background' => $background,
+            'footer' => 'cubeladder.ovh/players/hall_of_fame/' . $c['slug'],
+            'rows' => array_map(fn($e) => [$e['pos'], $e['name'], number_format($e['value']), $marks[$e['player_id'] ?? ''] ?? ''], $list),
+        ];
+    }
+
+    /** One topLists() list as plain rows for card() */
+    public static function rows(array $list): array
+    {
+        return array_map(fn($row, $i) => [
+            'pos' => $i + 1,
+            'player_id' => (string)$row->player_id,
+            'name' => (string)$row->name,
+            'value' => (int)$row->value,
+            'map' => (string)$row->map_name,
+            'picture' => (string)$row->picture,
+        ], array_values($list), array_keys(array_values($list)));
+    }
+
+    /**
      * Top 10 per Hall of Fame list (best single game per player), keyed
      * headshot / slashed / gibbed / kills / flags / streak / helper. Cached
      * with the rankings, which ProcessLogsCommand clears after every import.

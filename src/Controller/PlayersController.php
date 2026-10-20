@@ -41,8 +41,17 @@ class PlayersController extends AppController
 
         return $rankMap;
     }
-    public function hallOfFame()
+    /**
+     * The Hall of Fame; /players/hall_of_fame/<slug> opens that category
+     * (HallOfFameService::CATEGORIES) and shares its card as link preview.
+     */
+    public function hallOfFame(?string $slug = null)
     {
+        $category = $slug !== null ? \App\Service\HallOfFameService::keyOf($slug) : null;
+        if ($slug !== null && $category === null) {
+            throw new \Cake\Http\Exception\NotFoundException();
+        }
+        $this->set('category', $category);
         $top = (new \App\Service\HallOfFameService())->topLists();
         $topHeadshots = $top['headshot'];
         $topSlashes   = $top['slashed'];

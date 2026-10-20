@@ -115,7 +115,7 @@ class HallOfFameImage
             }
         }
 
-        $foot = 'cubeladder.ovh/players/hall_of_fame';
+        $foot = (string)($card['footer'] ?? 'cubeladder.ovh/players/hall_of_fame');
         $this->text($foot, $w - $pad - $this->width($foot, 15, $this->regular), $h - 14, 15, $this->regular, self::MUTED);
 
         ob_start();
