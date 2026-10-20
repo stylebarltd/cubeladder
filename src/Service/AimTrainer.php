@@ -6,7 +6,7 @@ namespace App\Service;
 use Cake\Datasource\ConnectionManager;
 
 /**
- * Aim trainer (/play): 30-second rounds of targets on a map screenshot,
+ * Aim trainer (/play): 40-second rounds of targets on a map screenshot,
  * with 5 grenades.
  *
  * A round starts with a one-time token and a seed (the targets come from
@@ -14,7 +14,7 @@ use Cake\Datasource\ConnectionManager;
  * round as events - h hit, s headshot, m missed shot, e target escaped,
  * n grenade exploded followed by a g per target it gibbed - plus the
  * reaction time of every shot that hit. Rounds of an earlier length (the
- * first were 60 s) are kept but not compared: the boards count rounds of
+ * first were 60 s, then 30 s) are kept but not compared: the boards count rounds of
  * ROUND_SECONDS only. The score is computed here from the
  * events (the page's own number is never trusted) and the round is checked
  * for what a human can't do. It stays a game in the browser: the board is
@@ -23,7 +23,7 @@ use Cake\Datasource\ConnectionManager;
  */
 class AimTrainer
 {
-    public const ROUND_SECONDS = 30;
+    public const ROUND_SECONDS = 40;
     /** Points: body hit, headshot, bonus for every 5 hits in a row */
     public const POINTS_HIT = 10;
     public const POINTS_HEADSHOT = 20;
@@ -36,7 +36,7 @@ class AimTrainer
     /** Targets on screen at once (so a grenade gibs at most this many) */
     public const MAX_ALIVE = 4;
     /** More targets than the spawn schedule can make in a round */
-    public const MAX_TARGETS = 70;
+    public const MAX_TARGETS = 90;
     /** Reaction time of one hit (ms): faster than a human / slower than a target lives.
      *  A few lucky ones under MIN_REACTION happen (firing where a target pops up):
      *  up to LUCKY_HITS + 10 % of the hits */
