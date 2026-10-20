@@ -1,0 +1,167 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Service;
+
+use Cake\Datasource\ConnectionManager;
+
+/**
+ * Aim trainer (/play): 60-second rounds of targets on a map screenshot.
+ *
+ * A round starts with a one-time token and a seed (the targets come from
+ * the seed, the same in every browser); at the end the page sends the
+ * round as events - h hit, s headshot, m missed shot, e target escaped -
+ * plus the reaction time of every hit. The score is computed here from the
+ * events (the page's own number is never trusted) and the round is checked
+ * for what a human can't do. It stays a game in the browser: the board is
+ * "just for fun", apart from the ladder's numbers, and only recognised
+ * players (identity) are on it.
+ */
+class AimTrainer
+{
+    public const ROUND_SECONDS = 60;
+    /** Points: body hit, headshot, bonus for every 5 hits in a row */
+    public const POINTS_HIT = 10;
+    public const POINTS_HEADSHOT = 20;
+    public const POINTS_STREAK = 10;
+    public const STREAK = 5;
+    /** More targets than the spawn schedule can make in a round */
+    public const MAX_TARGETS = 100;
+    /** Reaction time of one hit (ms): faster than a human / slower than a target lives */
+    public const MIN_REACTION = 100;
+    public const MAX_REACTION = 2500;
+    /** Average reaction faster than this is not a human */
+    public const MIN_AVG_REACTION = 180;
+    /** A started round can be finished this long */
+    private const TOKEN_TTL = 900;
+
+    /** New round: token + seed */
+    public function start(?string $playerId): array
+    {
+        $token = bin2hex(random_bytes(16));
+        $seed = random_int(1, 0x7fffffff);
+        $conn = ConnectionManager::get('default');
+        $conn->execute('INSERT INTO aim_rounds (token, seed, player_id, started_at) VALUES (?, ?, ?, ?)',
+            [$token, $seed, $playerId, gmdate('Y-m-d H:i:s')]);
+        // rounds never finished are of no use after a day
+        $conn->execute('DELETE FROM aim_rounds WHERE finished_at IS NULL AND started_at < ?', [gmdate('Y-m-d H:i:s', time() - 86400)]);
+
+        return ['token' => $token, 'seed' => $seed, 'seconds' => self::ROUND_SECONDS];
+    }
+
+    /**
+     * Score of a round from its events (the same rules as the page).
+     *
+     * @return array{score:int, shots:int, hits:int, headshots:int, escaped:int}
+     */
+    public static function score(string $events): array
+    {
+        $score = $streak = $hits = $headshots = $shots = $escaped = 0;
+        foreach (str_split($events) as $e) {
+            if ($e === 'h' || $e === 's') {
+                $shots++;
+                $hits++;
+                $headshots += $e === 's' ? 1 : 0;
+                $score += $e === 's' ? self::POINTS_HEADSHOT : self::POINTS_HIT;
+                if (++$streak % self::STREAK === 0) {
+                    $score += self::POINTS_STREAK;
+                }
+            } elseif ($e === 'm') {
+                $shots++;
+                $streak = 0;
+            } elseif ($e === 'e') {
+                $escaped++;
+                $streak = 0;
+            }
+        }
+
+        return compact('score', 'shots', 'hits', 'headshots', 'escaped');
+    }
+
+    /**
+     * Finishes a round. Returns the result, or an error text when the round
+     * is unknown, already finished, too short or not humanly possible.
+     *
+     * @param list<int> $reactions ms per hit, in order
+     * @return array{error?: string, score?: int, ...}
+     */
+    public function finish(string $token, string $events, array $reactions): array
+    {
+        $conn = ConnectionManager::get('default');
+        $round = $conn->execute('SELECT id, player_id, started_at, finished_at FROM aim_rounds WHERE token = ?', [$token])->fetch('assoc');
+        if (!$round || $round['finished_at'] !== null) {
+            return ['error' => 'This round is unknown or already over.'];
+        }
+        $elapsed = time() - strtotime($round['started_at'] . ' UTC');
+        if ($elapsed < self::ROUND_SECONDS - 2 || $elapsed > self::TOKEN_TTL) {
+            return ['error' => 'This round took too short or too long.'];
+        }
+        if (!preg_match('/^[hsme]{0,1000}$/', $events)) {
+            return ['error' => 'This round makes no sense.'];
+        }
+        $r = self::score($events);
+        $reactions = array_values(array_map('intval', $reactions));
+        if ($r['hits'] + $r['escaped'] > self::MAX_TARGETS || count($reactions) !== $r['hits']
+            || ($reactions && (min($reactions) < self::MIN_REACTION || max($reactions) > self::MAX_REACTION
+                || array_sum($reactions) / count($reactions) < self::MIN_AVG_REACTION))) {
+            return ['error' => 'This round is not humanly possible.'];
+        }
+        $avg = $reactions ? (int)round(array_sum($reactions) / count($reactions)) : null;
+        $conn->execute(
+            'UPDATE aim_rounds SET finished_at = ?, score = ?, shots = ?, hits = ?, headshots = ?, escapes = ?, avg_reaction_ms = ?
+             WHERE id = ? AND finished_at IS NULL',
+            [gmdate('Y-m-d H:i:s'), $r['score'], $r['shots'], $r['hits'], $r['headshots'], $r['escaped'], $avg, $round['id']]);
+
+        $out = $r + ['avg_reaction_ms' => $avg, 'player' => $round['player_id'] !== null];
+        if ($round['player_id'] !== null) {
+            $out['rank'] = $this->rank($round['player_id'], self::weekStart());
+            $out['best'] = (int)$conn->execute(
+                'SELECT MAX(score) FROM aim_rounds WHERE player_id = ? AND finished_at IS NOT NULL', [$round['player_id']])->fetchColumn(0);
+        }
+
+        return $out;
+    }
+
+    /** Monday 00:00 UTC of this week */
+    public static function weekStart(): string
+    {
+        return gmdate('Y-m-d 00:00:00', strtotime('monday this week 00:00 UTC'));
+    }
+
+    /**
+     * Top players since a date: each player's best round with its accuracy.
+     *
+     * @return list<array{player_id:string, name:string, country:?string, score:int, accuracy:int, headshots:int, avg_reaction_ms:?int}>
+     */
+    public function board(?string $since, int $limit = 10): array
+    {
+        $rows = ConnectionManager::get('default')->execute("
+            SELECT player_id, name, country, score, shots, hits, headshots, avg_reaction_ms FROM (
+                SELECT r.player_id, p.name, p.country, r.score, r.shots, r.hits, r.headshots, r.avg_reaction_ms,
+                       ROW_NUMBER() OVER (PARTITION BY r.player_id ORDER BY r.score DESC, r.finished_at ASC) AS rn,
+                       r.finished_at
+                FROM aim_rounds r INNER JOIN players p ON p.id = r.player_id
+                WHERE r.finished_at IS NOT NULL AND r.finished_at >= ? AND p.track = 1 AND p.cheater = 0
+            ) best WHERE rn = 1
+            ORDER BY score DESC, finished_at ASC LIMIT " . (int)$limit, [$since ?? '1970-01-01'])->fetchAll('assoc');
+
+        return array_map(fn($r) => [
+            'player_id' => $r['player_id'], 'name' => $r['name'], 'country' => $r['country'],
+            'score' => (int)$r['score'], 'headshots' => (int)$r['headshots'],
+            'accuracy' => (int)$r['shots'] ? (int)round(100 * $r['hits'] / $r['shots']) : 0,
+            'avg_reaction_ms' => $r['avg_reaction_ms'] !== null ? (int)$r['avg_reaction_ms'] : null,
+        ], $rows);
+    }
+
+    /** A player's place by best score since a date (1 = best) */
+    private function rank(string $playerId, string $since): int
+    {
+        $conn = ConnectionManager::get('default');
+        $mine = (int)$conn->execute('SELECT MAX(score) FROM aim_rounds WHERE player_id = ? AND finished_at >= ?', [$playerId, $since])->fetchColumn(0);
+
+        return 1 + (int)$conn->execute(
+            'SELECT COUNT(*) FROM (SELECT r.player_id FROM aim_rounds r INNER JOIN players p ON p.id = r.player_id
+              WHERE r.finished_at >= ? AND p.track = 1 AND p.cheater = 0 AND r.player_id <> ?
+              GROUP BY r.player_id HAVING MAX(r.score) > ?) better', [$since, $playerId, $mine])->fetchColumn(0);
+    }
+}

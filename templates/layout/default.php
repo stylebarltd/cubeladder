@@ -88,6 +88,11 @@
                         <i class="fa-solid fa-tower-broadcast"></i>
                     </a>
 
+                    <!-- Aim trainer (desktop; in the menu on phones) -->
+                    <a href="/play" class="hidden md:inline-block p-2 hover:text-zinc-500 transition" title="Aim trainer" aria-label="Aim trainer">
+                        <i class="fa-solid fa-crosshairs"></i>
+                    </a>
+
                     <!-- Search -->
                     <button class="p-2 hover:text-zinc-500 transition" id="search-btn" aria-label="Search players">
                         <i class="fas fa-search"></i>
@@ -189,6 +194,7 @@
                     </span>
                 </a>
                 <a href="/maps" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Maps</a>
+                <a href="/play" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-crosshairs"></i> Aim trainer</a>
                 <a href="/stats" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-users"></i> Community stats</a>
                 <a href="/about" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-circle-question"></i> About, rules &amp; what's new</a>
                 <?php if (!empty($authPlayer)): ?>

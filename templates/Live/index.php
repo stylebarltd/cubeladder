@@ -24,6 +24,7 @@
         <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide">Live</h1>
         <p class="mt-2 text-sm text-zinc-300">Who is playing right now &middot; <span id="live-updated">loading&hellip;</span></p>
         <p id="live-elsewhere-sub" class="mt-1 text-xs text-zinc-400"></p>
+        <p id="live-play" class="mt-1 text-xs hidden"><a href="/play" class="text-blue-400 hover:underline">Nobody playing? Warm up your aim &rarr;</a></p>
     </div>
 
     <div class="relative w-full sm:w-96" id="srv-picker">
@@ -196,6 +197,7 @@
                 otherPlayers ? plural(otherPlayers) + ' on other public servers' : '',
                 compPlayers ? plural(compPlayers) + ' on competitive servers' : '',
             ].filter(Boolean).join(' · ');
+            document.getElementById('live-play').classList.toggle('hidden', ownPlayers + otherPlayers + compPlayers > 0);
             renderButton();
             renderList();
             return data;

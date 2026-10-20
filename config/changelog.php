@@ -7,6 +7,14 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-21',
+            'title' => 'Aim trainer',
+            'link' => '/play',
+            'items' => [
+                'Waiting for a server to fill up? 60 seconds of targets on our maps: head 20, body 10, every 5 hits in a row +10. The best round of the week and of all time go on a board - just for fun, not part of the ladder.',
+            ],
+        ],
+        [
+            'date' => '2026-10-21',
             'title' => 'Weapon icons and Hall of Fame pictures',
             'items' => [
                 'The live kill feed shows the weapon of every kill, and its own icon for headshots, knife kills, gibs, teamkills and flags. Players are in their team\'s colour: CLA red, RVSF blue.',

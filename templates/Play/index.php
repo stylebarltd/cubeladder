@@ -1,0 +1,432 @@
+<?php
+/**
+ * Aim trainer: 60-second rounds on a map screenshot, the weekly and the
+ * all-time board. Rules and checks: App\Service\AimTrainer (the page only
+ * reports the round as events; the server scores it).
+ *
+ * @var \App\View\AppView $this
+ * @var array $week
+ * @var array $allTime
+ * @var array $maps [{name, url}]
+ * @var \App\Model\Entity\Player|null $authPlayer
+ */
+use App\Service\AimTrainer;
+
+$this->assign('title', 'Aim trainer');
+?>
+<style>
+.at-wrap { position: relative; border-radius: .75rem; overflow: hidden; border: 1px solid rgb(255 255 255 / .15); background: #0b0b0d; }
+.at-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 9; touch-action: none; cursor: none; }
+.at-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem;
+  text-align: center; padding: 1.5rem; background: rgb(0 0 0 / .62); backdrop-filter: blur(2px); }
+.at-overlay[hidden] { display: none; }
+.at-overlay h2 { font-size: 2rem; font-weight: 800; color: #fff; letter-spacing: .03em; }
+.at-overlay p { color: rgb(212 212 216); font-size: .9rem; max-width: 34rem; }
+.at-btn { margin-top: .4rem; padding: .7rem 1.6rem; border-radius: .5rem; font-weight: 800; font-size: 1rem; letter-spacing: .05em;
+  background: linear-gradient(90deg, #b91c1c, #1d4ed8); color: #fff; border: 1px solid rgb(255 255 255 / .25); cursor: pointer; }
+.at-btn:hover { filter: brightness(1.15); }
+.at-btn:disabled { opacity: .6; cursor: wait; }
+.at-result { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; margin: .4rem 0; }
+.at-result div { background: rgb(255 255 255 / .07); border-radius: .5rem; padding: .45rem .8rem; }
+.at-result b { display: block; font-size: 1.35rem; color: #fff; font-variant-numeric: tabular-nums; }
+.at-result span { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: rgb(161 161 170); }
+.at-score { font-size: 3.4rem; font-weight: 800; color: #facc15; line-height: 1; font-variant-numeric: tabular-nums; }
+.at-note { font-size: .8rem; color: rgb(161 161 170); }
+.at-note b { color: #fff; }
+.at-card { border-radius: .75rem; border: 1px solid rgb(255 255 255 / .15); background: rgb(0 0 0 / .6); backdrop-filter: blur(2px); padding: 1rem 1.1rem; }
+.at-card h3 { font-weight: 800; color: #fff; display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .5rem; }
+.at-card h3 small { font-weight: 400; font-size: .7rem; color: rgb(161 161 170); }
+.at-board { width: 100%; font-size: .85rem; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.at-board td { padding: .32rem .25rem; border-top: 1px solid rgb(63 63 70 / .5); color: rgb(212 212 216); white-space: nowrap; }
+.at-board td.n { color: rgb(113 113 122); width: 1.8rem; }
+.at-board td.p { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.at-board td.s { text-align: right; font-weight: 800; color: #facc15; }
+.at-board td.a { text-align: right; color: rgb(161 161 170); font-size: .75rem; }
+.at-board tr.me td { background: rgb(250 204 21 / .1); }
+.at-board a:hover { color: #60a5fa; }
+.at-empty { font-size: .8rem; color: rgb(113 113 122); font-style: italic; }
+@media (max-width: 640px) {
+  .at-overlay h2 { font-size: 1.4rem; }
+  .at-score { font-size: 2.4rem; }
+  .at-result { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .at-overlay p { font-size: .8rem; }
+}
+</style>
+
+<div class="relative min-h-[calc(100svh-4rem)] bg-zinc-900 bg-cover bg-center bg-fixed text-white"
+     style="background-image: linear-gradient(to bottom, rgba(0,0,0,.6), rgba(0,0,0,.4) 40%, rgba(0,0,0,.8)), url('/img/bullet.jpg');">
+<div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-16 md:py-8">
+
+    <div class="mb-6 drop-shadow-lg">
+        <h1 class="text-3xl md:text-5xl font-extrabold tracking-wide">Aim trainer</h1>
+        <p class="mt-2 text-sm text-zinc-300">
+            <?= AimTrainer::ROUND_SECONDS ?> seconds, as many targets as you can.
+            Head <?= AimTrainer::POINTS_HEADSHOT ?>, body <?= AimTrainer::POINTS_HIT ?>, every <?= AimTrainer::STREAK ?> hits in a row +<?= AimTrainer::POINTS_STREAK ?>.
+            Just for fun &ndash; not part of the ladder.
+        </p>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-3">
+        <div class="lg:col-span-2">
+            <div class="at-wrap" id="at">
+                <canvas id="at-canvas" width="1280" height="720" aria-label="Aim trainer"></canvas>
+                <div class="at-overlay" id="at-start">
+                    <h2>READY?</h2>
+                    <p>Targets pop up on the map and run away fast. Click or tap them &ndash; a headshot counts double.
+                        Every shot that hits nothing ends your streak.</p>
+                    <p class="at-note"><?= $authPlayer
+                        ? 'Playing as <b>' . h($authPlayer->name) . '</b> &ndash; your best round goes on the board.'
+                        : 'You are playing as a guest: your score counts only for you. The board knows you once you have played on a cubeLadder server from this connection.' ?></p>
+                    <button type="button" class="at-btn" id="at-go">START</button>
+                </div>
+                <div class="at-overlay" id="at-end" hidden></div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="at-card">
+                <h3>This week <small>resets Monday 00:00 UTC</small></h3>
+                <div id="at-week"></div>
+            </div>
+            <div class="at-card">
+                <h3>All time</h3>
+                <div id="at-all"></div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<?php $this->start('scriptBottom'); ?>
+<script>
+(function () {
+    const RULES = <?= json_encode([
+        'seconds' => AimTrainer::ROUND_SECONDS, 'hit' => AimTrainer::POINTS_HIT, 'headshot' => AimTrainer::POINTS_HEADSHOT,
+        'streakBonus' => AimTrainer::POINTS_STREAK, 'streak' => AimTrainer::STREAK,
+    ]) ?>;
+    const MAPS = <?= json_encode($maps) ?>;
+    const ME = <?= json_encode($authPlayer?->id) ?>;
+    const CSRF = document.querySelector('meta[name="csrfToken"]')?.content || '';
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const flag = (iso) => {
+        if (!iso || iso.length !== 2) return '';
+        const A = 0x1F1E6 - 65;
+        return String.fromCodePoint(iso.toUpperCase().charCodeAt(0) + A, iso.toUpperCase().charCodeAt(1) + A);
+    };
+
+    // --- boards --------------------------------------------------------
+    function board(el, rows) {
+        el.innerHTML = rows.length ? '<table class="at-board"><tbody>' + rows.map((r, i) =>
+            '<tr class="' + (r.player_id === ME ? 'me' : '') + '">' +
+                '<td class="n">' + (i + 1) + '</td>' +
+                '<td class="p"><a href="/players/view/' + esc(r.player_id) + '">' + esc(r.name) + '</a> ' + flag(r.country) + '</td>' +
+                '<td class="a" title="accuracy · headshots">' + r.accuracy + '% · ' + r.headshots + ' hs</td>' +
+                '<td class="s">' + r.score + '</td>' +
+            '</tr>').join('') + '</tbody></table>'
+            : '<p class="at-empty">Nobody yet &ndash; be the first.</p>';
+    }
+    board(document.getElementById('at-week'), <?= json_encode($week) ?>);
+    board(document.getElementById('at-all'), <?= json_encode($allTime) ?>);
+
+    // --- canvas ----------------------------------------------------------
+    const canvas = document.getElementById('at-canvas');
+    const ctx = canvas.getContext('2d');
+    let W = 1280, H = 720, dpr = 1;
+    function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const r = canvas.getBoundingClientRect();
+        W = r.width; H = r.width * 9 / 16;
+        canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const img = (src) => { const i = new Image(); i.src = src; return i; };
+    const ICONS = {hs: img('/img/achievements/headshot.svg'), gun: img('/img/weapons/sniper.svg')};
+    let bg = null, bgName = '';
+    let mapIndex = Math.floor(Math.random() * Math.max(1, MAPS.length));
+    function nextMap() {
+        if (!MAPS.length) return;
+        const m = MAPS[mapIndex++ % MAPS.length];
+        bg = img(m.url); bgName = m.name;
+    }
+    nextMap();
+
+    // same random numbers as every other browser with this seed
+    function mulberry32(a) {
+        return function () {
+            a |= 0; a = a + 0x6D2B79F5 | 0;
+            let t = Math.imul(a ^ a >>> 15, 1 | a);
+            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+    }
+
+    // --- round state -------------------------------------------------------
+    let state = 'idle', token = null, rnd = Math.random, t0 = 0, nextSpawn = 0;
+    let targets = [], effects = [], feed = [];
+    let events = '', reactions = [], score = 0, streak = 0, hits = 0, shots = 0, heads = 0;
+    let mouse = null, shake = 0;
+    const MAX_ALIVE = 4;
+    const ms = () => performance.now() - t0;
+    const progress = () => Math.min(1, ms() / (RULES.seconds * 1000));
+
+    function spawn(now) {
+        const p = progress();
+        const h = H * (0.24 - 0.09 * p);            // targets shrink over the round
+        const x = W * 0.07 + rnd() * W * 0.86;
+        const y = H * 0.42 + rnd() * (H * 0.56 - h); // feet on the lower part of the map
+        targets.push({x, y, h, team: rnd() < 0.5 ? 'CLA' : 'RVSF', born: now, life: 1700 - 700 * p, dir: rnd() < 0.5 ? -1 : 1});
+    }
+
+    // body and head of a target at time t
+    function shape(tg, t) {
+        const age = t - tg.born;
+        const pop = Math.min(1, age / 120);
+        const h = tg.h * (0.6 + 0.4 * pop);
+        const sway = Math.sin(age / 180) * tg.h * 0.08 * tg.dir;
+        const cx = tg.x + sway, top = tg.y + tg.h - h;
+        const r = h * 0.15;
+        return {cx, head: {x: cx, y: top + r, r}, body: {x: cx - h * 0.21, y: top + 2 * r + h * 0.02, w: h * 0.42, h: h - 2 * r - h * 0.02}};
+    }
+
+    function shoot(px, py) {
+        if (state !== 'play') return;
+        const now = ms();
+        shots++;
+        // the newest target on top is hit first
+        for (let i = targets.length - 1; i >= 0; i--) {
+            const s = shape(targets[i], now);
+            const dh = Math.hypot(px - s.head.x, py - s.head.y) <= s.head.r * 1.1;
+            const db = px >= s.body.x && px <= s.body.x + s.body.w && py >= s.body.y && py <= s.body.y + s.body.h;
+            if (!dh && !db) continue;
+            const tg = targets.splice(i, 1)[0];
+            hits++;
+            if (dh) heads++;
+            events += dh ? 's' : 'h';
+            reactions.push(Math.round(now - tg.born));
+            let pts = dh ? RULES.headshot : RULES.hit;
+            streak++;
+            if (streak % RULES.streak === 0) pts += RULES.streakBonus;
+            score += pts;
+            if (dh) shake = 6;
+            effects.push({x: px, y: py, t: now, text: '+' + pts + (dh ? ' HEADSHOT' : ''), hs: dh});
+            feed.unshift({t: now, hs: dh, team: tg.team, streak});
+            feed.length = Math.min(feed.length, 5);
+            return;
+        }
+        events += 'm';
+        streak = 0;
+        effects.push({x: px, y: py, t: now, miss: true});
+    }
+
+    const pos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height];
+    };
+    canvas.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') mouse = pos(e); });
+    canvas.addEventListener('pointerleave', () => { mouse = null; });
+    canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); shoot(...pos(e)); });
+
+    // --- drawing -----------------------------------------------------------
+    function drawBg() {
+        if (bg && bg.complete && bg.naturalWidth) {
+            const s = Math.max(W / bg.naturalWidth, H / bg.naturalHeight);
+            const w = bg.naturalWidth * s, h = bg.naturalHeight * s;
+            ctx.drawImage(bg, (W - w) / 2, (H - h) / 2, w, h);
+        } else {
+            ctx.fillStyle = '#18181b'; ctx.fillRect(0, 0, W, H);
+        }
+        ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0, 0, W, H);
+    }
+
+    function drawTarget(tg, t) {
+        const s = shape(tg, t);
+        const left = 1 - (t - tg.born) / tg.life;
+        const main = tg.team === 'CLA' ? '#dc2626' : '#2563eb', dark = tg.team === 'CLA' ? '#7f1d1d' : '#172554';
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 8;
+        ctx.fillStyle = main; ctx.strokeStyle = dark; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(s.body.x, s.body.y, s.body.w, s.body.h, s.body.w * 0.25); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(s.head.x, s.head.y, s.head.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+        // eyes slit, so the head reads as a head
+        ctx.fillStyle = 'rgba(0,0,0,.55)';
+        ctx.fillRect(s.head.x - s.head.r * 0.6, s.head.y - s.head.r * 0.15, s.head.r * 1.2, s.head.r * 0.25);
+        // time left
+        ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(s.body.x, s.body.y + s.body.h + 4, s.body.w, 4);
+        ctx.fillStyle = left > 0.35 ? '#fde047' : '#f87171'; ctx.fillRect(s.body.x, s.body.y + s.body.h + 4, s.body.w * Math.max(0, left), 4);
+    }
+
+    function drawHud(t) {
+        const left = Math.max(0, RULES.seconds - t / 1000);
+        ctx.font = '800 ' + Math.round(H * 0.07) + 'px ui-monospace, monospace';
+        ctx.fillStyle = left <= 10 ? '#f87171' : '#fff';
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillText(left.toFixed(1), W * 0.025, H * 0.03);
+        ctx.font = '700 ' + Math.round(H * 0.035) + 'px ui-monospace, monospace';
+        ctx.fillStyle = '#facc15';
+        ctx.fillText(score + ' pts', W * 0.025, H * 0.115);
+        ctx.fillStyle = '#d4d4d8';
+        const acc = shots ? Math.round(100 * hits / shots) : 100;
+        ctx.fillText(acc + '% · ' + heads + ' hs' + (streak >= RULES.streak ? '  🔥' + streak : ''), W * 0.025, H * 0.165);
+        // kill feed, top right
+        ctx.textAlign = 'right';
+        ctx.font = '600 ' + Math.round(H * 0.03) + 'px ui-monospace, monospace';
+        feed.forEach((f, i) => {
+            const a = Math.max(0, 1 - (t - f.t) / 4000);
+            if (!a) return;
+            ctx.globalAlpha = a;
+            const y = H * 0.04 + i * H * 0.05, size = H * 0.035;
+            ctx.fillStyle = f.team === 'CLA' ? '#f87171' : '#60a5fa';
+            const victim = f.team + ' bot';
+            ctx.fillText(victim, W * 0.975, y);
+            const vw = ctx.measureText(victim).width;
+            const icon = f.hs ? ICONS.hs : ICONS.gun;
+            if (icon.complete) ctx.drawImage(icon, W * 0.975 - vw - size * 1.25, y - size * 0.05, size, size);
+            ctx.fillStyle = '#fff';
+            ctx.fillText('you', W * 0.975 - vw - size * 1.5, y);
+            ctx.globalAlpha = 1;
+        });
+        ctx.textAlign = 'left';
+        ctx.font = '600 ' + Math.round(H * 0.025) + 'px ui-monospace, monospace';
+        ctx.fillStyle = 'rgba(255,255,255,.55)';
+        ctx.fillText(bgName, W * 0.025, H * 0.94);
+    }
+
+    function drawEffects(t) {
+        effects = effects.filter(e => t - e.t < 700);
+        effects.forEach(e => {
+            const a = 1 - (t - e.t) / 700;
+            ctx.globalAlpha = a;
+            if (e.miss) {
+                ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(e.x, e.y, 4 + (1 - a) * 6, 0, Math.PI * 2); ctx.stroke();
+            } else {
+                // hit marker and the points
+                ctx.strokeStyle = e.hs ? '#facc15' : '#fff'; ctx.lineWidth = 2.5;
+                const s = 7 + (1 - a) * 5, g = 4;
+                [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([dx, dy]) => {
+                    ctx.beginPath(); ctx.moveTo(e.x + dx * g, e.y + dy * g); ctx.lineTo(e.x + dx * (g + s), e.y + dy * (g + s)); ctx.stroke();
+                });
+                ctx.font = '800 ' + Math.round(H * (e.hs ? 0.04 : 0.032)) + 'px ui-monospace, monospace';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = e.hs ? '#facc15' : '#fff';
+                ctx.fillText(e.text, e.x, e.y - 18 - (1 - a) * 30);
+                ctx.textAlign = 'left';
+            }
+            ctx.globalAlpha = 1;
+        });
+    }
+
+    function drawCrosshair() {
+        if (!mouse) return;
+        const [x, y] = mouse;
+        ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 2;
+        [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(([dx, dy]) => {
+            ctx.beginPath(); ctx.moveTo(x + dx * 5, y + dy * 5); ctx.lineTo(x + dx * 14, y + dy * 14); ctx.stroke();
+        });
+    }
+
+    function frame() {
+        const t = ms();
+        ctx.save();
+        if (shake > 0) { ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake); shake *= 0.85; if (shake < .5) shake = 0; }
+        drawBg();
+        if (state === 'play') {
+            // spawn on the seed's schedule: faster towards the end
+            while (t >= nextSpawn && t < RULES.seconds * 1000) {
+                if (targets.length < MAX_ALIVE) spawn(nextSpawn);
+                nextSpawn += 900 - 450 * Math.min(1, nextSpawn / (RULES.seconds * 1000));
+            }
+            targets = targets.filter(tg => {
+                if (t - tg.born < tg.life) return true;
+                events += 'e';
+                streak = 0;
+                return false;
+            });
+            targets.forEach(tg => drawTarget(tg, t));
+            drawEffects(t);
+            drawHud(t);
+            if (t >= RULES.seconds * 1000) end();
+        }
+        ctx.restore();
+        if (state === 'play' || state === 'idle') drawCrosshair();
+        requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    // --- start / end ---------------------------------------------------------
+    const startBox = document.getElementById('at-start');
+    const endBox = document.getElementById('at-end');
+    const post = (url, body) => fetch(url, {
+        method: 'POST', headers: {'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': CSRF},
+        body: JSON.stringify(body || {}),
+    });
+
+    async function begin(btn) {
+        btn.disabled = true;
+        try {
+            const res = await post('/play/start');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            token = data.token;
+            rnd = mulberry32(data.seed);
+        } catch (e) {
+            btn.disabled = false;
+            btn.textContent = 'TRY AGAIN';
+            return;
+        }
+        nextMap();
+        targets = []; effects = []; feed = [];
+        events = ''; reactions = []; score = streak = hits = shots = heads = 0;
+        startBox.hidden = true; endBox.hidden = true;
+        t0 = performance.now(); nextSpawn = 400;
+        state = 'play';
+    }
+
+    async function end() {
+        state = 'over';
+        targets = [];
+        const acc = shots ? Math.round(100 * hits / shots) : 0;
+        const avg = reactions.length ? Math.round(reactions.reduce((a, b) => a + b, 0) / reactions.length) : null;
+        endBox.innerHTML = '<h2>TIME!</h2><div class="at-score">' + score + '</div>' +
+            '<div class="at-result">' +
+                '<div><b>' + hits + '</b><span>hits</span></div>' +
+                '<div><b>' + heads + '</b><span>headshots</span></div>' +
+                '<div><b>' + acc + '%</b><span>accuracy</span></div>' +
+                '<div><b>' + (avg ?? '–') + (avg ? ' ms' : '') + '</b><span>reaction</span></div>' +
+            '</div><p class="at-note js-at-rank">saving&hellip;</p>' +
+            '<button type="button" class="at-btn" id="at-again">PLAY AGAIN</button>';
+        endBox.hidden = false;
+        const again = document.getElementById('at-again');
+        again.addEventListener('click', () => begin(again));
+        const note = endBox.querySelector('.js-at-rank');
+        try {
+            const res = await post('/play/finish', {token, events, reactions});
+            const data = await res.json();
+            if (!res.ok) { note.textContent = data.error || 'Not saved.'; return; }
+            if (data.player) {
+                note.innerHTML = 'This week you are <b>#' + data.rank + '</b> · your best ever: <b>' + data.best + '</b>';
+            } else {
+                note.textContent = 'Guest round: not on the board. Play on a cubeLadder server once to get on it.';
+            }
+            board(document.getElementById('at-week'), data.week || []);
+        } catch (e) {
+            note.textContent = 'Could not save this round.';
+        }
+    }
+
+    const go = document.getElementById('at-go');
+    go.addEventListener('click', () => begin(go));
+    document.addEventListener('keydown', (e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && state !== 'play' && document.activeElement?.tagName !== 'INPUT') {
+            e.preventDefault();
+            const btn = state === 'idle' ? go : document.getElementById('at-again');
+            if (btn && !btn.disabled) begin(btn);
+        }
+    });
+})();
+</script>
+<?php $this->end(); ?>
