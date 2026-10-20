@@ -109,7 +109,16 @@ class LiveController extends AppController
         }, 'live');
         // per request, not cached: everybody on this match page right now
         $viewer = $this->request->getQuery('v');
-        $data['viewers'] = (new \App\Service\LiveViewers())->seen($key, is_string($viewer) ? $viewer : null);
+        $watching = (new \App\Service\LiveViewers())->seen(
+            $key, is_string($viewer) ? $viewer : null, $this->request->getAttribute('identity')?->id);
+        $data['viewers'] = $watching['count'];
+        // logged-in players by name; the rest are counted as guests
+        $data['watching'] = $watching['players'] ? $this->fetchTable('Players')->find()
+            ->select(['id', 'name'])
+            ->where(['id IN' => $watching['players']])
+            ->orderBy(['name' => 'ASC'])
+            ->enableHydration(false)
+            ->all()->toList() : [];
 
         $this->viewBuilder()->setClassName('Json');
         $this->set('data', $data);
@@ -118,7 +127,7 @@ class LiveController extends AppController
 
     /**
      * Id of this game on the ladder, when the log parser already created it
-     * (latest game of the server, same map + mode).
+     * (latest game of the server, same map + mode, still running).
      */
     private function currentGameId(array $info): ?string
     {
@@ -127,13 +136,19 @@ class LiveController extends AppController
             return null;
         }
         $game = $this->fetchTable('Games')->find()
-            ->select(['Games.id', 'Games.mode', 'Maps.name'])
+            ->select(['Games.id', 'Games.mode', 'Games.ended_at', 'Maps.name'])
             ->contain(['Maps'])
             ->where(['Games.server_name' => $info['key']])
             ->orderBy(['Games.started_at' => 'DESC'])
             ->enableHydration(false)
             ->first();
         if (!$game || $game['mode'] !== $mode || ($game['map']['name'] ?? null) !== $info['map']) {
+            return null;
+        }
+        // A running game is imported without an end; a finished one is the
+        // previous round on the same map - unless the server is showing the
+        // end-of-game scoreboard (0 minutes left), which is that game.
+        if ($game['ended_at'] !== null && (int)($info['minremain'] ?? 1) > 0) {
             return null;
         }
 

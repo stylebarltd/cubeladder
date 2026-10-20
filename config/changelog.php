@@ -10,7 +10,8 @@ return [
             'title' => 'See who\'s watching, and other AC servers',
             'link' => '/live',
             'items' => [
-                'Live match pages now show how many people are following the game on cubeladder.ovh right now, you included. Spectators in the game are listed separately, as before.',
+                'Live match pages now show how many people are following the game on cubeladder.ovh right now, you included - players who are logged in by name, everybody else as guests. Spectators in the game are listed separately, as before.',
+                'The "this game on the ladder" link on a live match no longer points to the previous round when the same map is played again.',
                 'Other AC servers: the Live page now lists the other public AssaultCube servers too, busiest first - also the empty ones, like the server browser in the game.',
             ],
         ],

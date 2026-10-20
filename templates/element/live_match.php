@@ -239,7 +239,14 @@ window.initLiveMatch = function (root, key) {
         const s = data.server;
         $('.js-updated').textContent = new Date(data.fetched_at).toLocaleTimeString();
         $('.js-title').textContent = s.name || key;
-        $('.js-watching').textContent = data.viewers ? '🌐 ' + data.viewers + ' watching on cubeladder.ovh' : '';
+        // "🌐 4 watching on cubeladder.ovh: Pola, Georgia + 2 guests" (logged-in players by name)
+        const named = (data.watching || []).map(p => '<a href="/players/view/' + esc(p.id) + '" class="text-zinc-300 hover:text-blue-400">' + esc(p.name) + '</a>');
+        const guests = (data.viewers || 0) - named.length;
+        $('.js-watching').innerHTML = data.viewers
+            ? '🌐 ' + data.viewers + ' watching on cubeladder.ovh' + (named.length
+                ? ': ' + named.join(', ') + (guests > 0 ? ' + ' + guests + ' guest' + (guests === 1 ? '' : 's') : '')
+                : '')
+            : '';
         const st = $('.js-status');
         st.classList.remove('lg-pulse');
 
