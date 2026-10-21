@@ -25,6 +25,7 @@ use Cake\Http\Client\FormData;
  *   bin/cake discord_update --force    post again although it was posted
  *   bin/cake discord_update --card random   with a random rated player's card
  *   bin/cake discord_update --card <player id>
+ *   bin/cake discord_update --picture /previews/play   with one of the site's preview pictures
  */
 class DiscordUpdateCommand extends Command
 {
@@ -41,7 +42,8 @@ class DiscordUpdateCommand extends Command
             ->addOption('print', ['help' => 'Print the payload only', 'boolean' => true])
             ->addOption('force', ['help' => 'Post even when this entry was posted before', 'boolean' => true])
             ->addOption('loud', ['help' => 'A normal message that notifies (big news), with the title as text', 'boolean' => true])
-            ->addOption('card', ['help' => 'Show a player card under it: a player id, or "random" (a rated player)']);
+            ->addOption('card', ['help' => 'Show a player card under it: a player id, or "random" (a rated player)'])
+            ->addOption('picture', ['help' => 'Show a picture of the site under it, e.g. /previews/play']);
     }
 
     public function execute(Arguments $args, ConsoleIo $io): ?int
@@ -99,10 +101,15 @@ class DiscordUpdateCommand extends Command
 
         $http = new Client(['timeout' => 20]);
         $card = $args->getOption('card') ? $this->playerCard((string)$args->getOption('card'), $site, $http) : null;
+        $jpeg = $args->getOption('picture') ? $this->picture($site . '/' . ltrim((string)$args->getOption('picture'), '/'), $http) : null;
         if ($card) {
-            // the card as an attachment (Discord shows linked webhook pictures unreliably)
             [$name, $jpeg, $playerId] = $card;
             $payload['embeds'][] = ['title' => $name, 'url' => $site . '/players/view/' . $playerId, 'color' => 0x3B82F6, 'image' => ['url' => 'attachment://card.jpg']];
+        } elseif ($jpeg) {
+            $payload['embeds'][0]['image'] = ['url' => 'attachment://card.jpg'];
+        }
+        if ($jpeg) {
+            // the picture as an attachment (Discord shows linked webhook pictures unreliably)
             $form = new FormData();
             $json = $form->newPart('payload_json', (string)json_encode($payload));
             $json->type('application/json');
@@ -125,6 +132,14 @@ class DiscordUpdateCommand extends Command
         $io->out('Posted "' . $entry['title'] . '"');
 
         return self::CODE_SUCCESS;
+    }
+
+    /** A picture of the site (JPEG/PNG bytes), or null */
+    private function picture(string $url, Client $http): ?string
+    {
+        $res = $http->get($url);
+
+        return $res->isOk() && str_starts_with($res->getHeaderLine('Content-Type'), 'image/') ? $res->getStringBody() : null;
     }
 
     /**
