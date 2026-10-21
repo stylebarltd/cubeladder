@@ -1,6 +1,6 @@
 <?php
 /**
- * Aim trainer: 60-second rounds on a map screenshot, the weekly and the
+ * Aim trainer: 40-second rounds on a map screenshot, the weekly and the
  * all-time board. Rules and checks: App\Service\AimTrainer (the page only
  * reports the round as events; the server scores it).
  *
@@ -13,7 +13,23 @@
 use App\Service\AimTrainer;
 
 $this->assign('title', 'Aim trainer');
-?>
+// Link preview: the aim trainer's card (PreviewsController::play), a new
+// picture URL when the board or the week's map changes
+$ogSite = rtrim((string)\Cake\Core\Configure::read('Ladder.discord.site') ?: 'https://cubeladder.ovh', '/');
+$ogText = sprintf('%d seconds of targets on AssaultCube maps, %d grenades, a weekly and an all-time board. Waiting for a server to fill up? Warm up your aim.',
+    AimTrainer::ROUND_SECONDS, AimTrainer::GRENADES);
+$this->start('meta'); ?>
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="cubeLadder">
+    <meta property="og:title" content="Aim trainer · cubeLadder">
+    <meta property="og:description" content="<?= h($ogText) ?>">
+    <meta property="og:url" content="<?= h($ogSite . '/play') ?>">
+    <meta property="og:image" content="<?= h($ogSite . '/previews/play?v=' . substr(md5((string)json_encode((new AimTrainer())->card())), 0, 8)) ?>">
+    <meta property="og:image:width" content="<?= \App\Service\HallOfFameImage::WIDTH ?>">
+    <meta property="og:image:height" content="<?= \App\Service\HallOfFameImage::HEIGHT ?>">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="description" content="<?= h($ogText) ?>">
+<?php $this->end(); ?>
 <style>
 .at-wrap { position: relative; border-radius: .75rem; overflow: hidden; border: 1px solid rgb(255 255 255 / .15); background: #0b0b0d; }
 .at-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 9; touch-action: none; cursor: none; }

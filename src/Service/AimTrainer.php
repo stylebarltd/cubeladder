@@ -185,6 +185,40 @@ class AimTrainer
         ], $rows);
     }
 
+    /**
+     * The link preview of /play (PreviewsController::play, drawn by
+     * HallOfFameImage): the all-time top 10 on a map screenshot that changes
+     * every week, this week's leader as the challenge;
+     * a short board shows open places up to five.
+     */
+    public function card(): array
+    {
+        $week = $this->board(self::weekStart(), 1);
+        $allTime = $this->board(null);
+        $maps = glob(WWW_ROOT . 'img/maps/*.jpg') ?: [];
+        sort($maps);
+        $rows = array_map(fn($r, $i) => [$i + 1, $r['name'], number_format($r['score']), ''], $allTime, array_keys($allTime));
+        // a short board shows open places, up to five
+        for ($i = count($rows); $i < 5; $i++) {
+            $rows[] = [$i + 1, 'your name here?', '-', ''];
+        }
+
+        return [
+            'tag' => 'PLAY IN YOUR BROWSER',
+            'tagIcon' => 'play',
+            'icon' => 'crosshairs',
+            'title' => 'Aim trainer',
+            'subtitle' => sprintf('%d seconds on AssaultCube maps  ·  head %d  ·  body %d  ·  %d grenades',
+                self::ROUND_SECONDS, self::POINTS_HEADSHOT, self::POINTS_HIT, self::GRENADES),
+            'headline' => $week
+                ? sprintf('This week: %s leads with %s points  ·  can you beat it?', $week[0]['name'], number_format($week[0]['score']))
+                : 'Nobody on this week\'s board yet  ·  your round could top it',
+            'rows' => $rows,
+            'background' => $maps ? $maps[crc32(self::weekStart()) % count($maps)] : null,
+            'footer' => 'cubeladder.ovh/play',
+        ];
+    }
+
     /** A player's place by best score since a date (1 = best) */
     private function rank(string $playerId, string $since): int
     {

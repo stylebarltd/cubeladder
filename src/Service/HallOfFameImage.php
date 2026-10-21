@@ -26,7 +26,7 @@ class HallOfFameImage
     /** Font Awesome code points (fa-solid-900.ttf) */
     public const ICONS = [
         'skull' => 0xf54c, 'crosshairs' => 0xf05b, 'flag' => 0xf024, 'fire' => 0xf06d,
-        'handshake' => 0xf2b5, 'trophy' => 0xf091,
+        'handshake' => 0xf2b5, 'trophy' => 0xf091, 'play' => 0xf04b,
     ];
 
     private const GOLD = [250, 204, 21];
@@ -47,7 +47,8 @@ class HallOfFameImage
 
     /**
      * @param array $card title, subtitle, icon (ICONS key or resources/weapons/<name>.png
-     *   as "png:<name>"), headline, background (file|null),
+     *   as "png:<name>"), headline, background (file|null), tag + tagIcon (top right,
+     *   default HALL OF FAME with the trophy; the aim trainer's card uses its own),
      *   rows: list of [pos, name, value (text), mark (''|NEW|▲2|▼1|RECORD)]
      * @return string JPEG bytes
      */
@@ -63,8 +64,8 @@ class HallOfFameImage
         // brand + tag
         $this->text('cube', $pad, 66, 26, $this->bold, [59, 130, 246]);
         $this->text('Ladder', $pad + $this->width('cube', 26, $this->bold), 66, 26, $this->bold, self::WHITE);
-        $tag = 'HALL OF FAME';
-        $this->icon('trophy', $w - $pad - $this->width($tag, 20, $this->bold) - 34, 64, 20, self::GOLD);
+        $tag = (string)($card['tag'] ?? 'HALL OF FAME');
+        $this->icon((string)($card['tagIcon'] ?? 'trophy'), $w - $pad - $this->width($tag, 20, $this->bold) - 34, 64, 20, self::GOLD);
         $this->text($tag, $w - $pad - $this->width($tag, 20, $this->bold), 64, 20, $this->bold, self::GOLD);
 
         // category: icon, title, subtitle

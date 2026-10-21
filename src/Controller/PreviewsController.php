@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Service\AimTrainer;
 use App\Service\HallOfFameImage;
 use App\Service\HallOfFameService;
 use App\Service\SiteCardImage;
@@ -15,6 +16,7 @@ use Cake\Http\Response;
  *   /previews/site     the site card - front page, Live, About, ... (layout default)
  *   /previews/ranking  the All Time Ranking's top 10
  *   /previews/hall_of_fame/<slug>  a Hall of Fame category's top 10 (HallOfFameImage)
+ *   /previews/play     the aim trainer's all-time top 10 and this week's leader
  * Cached on disk until something on them (or the drawing code) changes.
  */
 class PreviewsController extends AppController
@@ -106,6 +108,14 @@ class PreviewsController extends AppController
         $card = HallOfFameService::card($key, $list, null, [], $photo);
 
         return $this->picture('hof-' . $slug, $card, fn() => (new HallOfFameImage())->render($card), 'HallOfFameImage');
+    }
+
+    /** The aim trainer's card (AimTrainer::card), drawn like the Hall of Fame's */
+    public function play(): Response
+    {
+        $card = (new AimTrainer())->card();
+
+        return $this->picture('play', $card, fn() => (new HallOfFameImage())->render($card), 'HallOfFameImage');
     }
 
     /**

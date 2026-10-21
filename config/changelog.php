@@ -13,6 +13,7 @@ return [
                 'Waiting for a server to fill up? 40 seconds of targets on our maps: head 20, body 10, every 5 hits in a row +10. The best round of the week and of all time go on a board - just for fun, not part of the ladder.',
                 '5 grenades per round (right-click or G, on a phone tap the grenade): 15 per gib, +10 for every further gib of the same grenade - wait until they stand close together.',
                 'With sound: a pistol shot for every hit, "Headshot!" for every headshot and an explosion for every grenade - the button under the game turns it off.',
+                'Share /play in Discord or WhatsApp and the link shows the all-time top 10 and this week\'s leader to beat.',
             ],
         ],
         [
