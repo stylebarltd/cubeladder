@@ -21,7 +21,10 @@ class HallOfFameService
     /**
      * The categories, as on the page: key (topLists) => slug (the address
      * /players/hall_of_fame/<slug>), title, unit, emoji (Discord), icon
-     * (HallOfFameImage: Font Awesome name or png:<weapon>)
+     * (HallOfFameImage: Font Awesome name or png:<weapon>). The game
+     * categories are the best single game since PlayersController::HOF_SINCE;
+     * 'aim' is the best round in the browser aim trainer (AimTrainer, /play),
+     * its rows have no game and no map ('scope' says what counts instead).
      */
     public const CATEGORIES = [
         'kills' => ['slug' => 'kills', 'title' => 'Most Kills', 'unit' => 'kills', 'emoji' => '💀', 'icon' => 'skull'],
@@ -31,7 +34,15 @@ class HallOfFameService
         'slashed' => ['slug' => 'slashes', 'title' => 'Most Slashes', 'unit' => 'slashes', 'emoji' => '🔪', 'icon' => 'png:knife'],
         'gibbed' => ['slug' => 'gibs', 'title' => 'Most Gibbed', 'unit' => 'gibs', 'emoji' => '💣', 'icon' => 'png:grenade'],
         'helper' => ['slug' => 'flag-helper', 'title' => 'Flag Helper', 'unit' => 'steals + returns', 'emoji' => '🤝', 'icon' => 'handshake'],
+        'aim' => ['slug' => 'aim-trainer', 'title' => 'Aim Trainer', 'unit' => 'points', 'emoji' => '🕹️', 'icon' => 'bullseye',
+            'scope' => 'Best ' . AimTrainer::ROUND_SECONDS . '-second round in the aim trainer', 'link' => '/play'],
     ];
+
+    /** The page of a category's records: the game, or the aim trainer */
+    public static function where(string $key): string
+    {
+        return self::CATEGORIES[$key]['link'] ?? '';
+    }
 
     /** Category key of an address slug, or null */
     public static function keyOf(string $slug): ?string
@@ -59,10 +70,11 @@ class HallOfFameService
 
         return [
             'title' => $c['title'],
-            'subtitle' => 'Best single game since ' . date('F Y', strtotime(PlayersController::HOF_SINCE)) . ' · ' . $c['unit'],
+            'subtitle' => ($c['scope'] ?? 'Best single game since ' . date('F Y', strtotime(PlayersController::HOF_SINCE))) . ' · ' . $c['unit'],
             'icon' => $c['icon'],
             'headline' => $headline ?? ($first
-                ? sprintf('#1 %s · %s %s%s', $first['name'], number_format($first['value']), $c['unit'], !empty($first['map']) ? ' on ' . $first['map'] : '')
+                ? sprintf('#1 %s · %s %s%s', $first['name'], number_format($first['value']), $c['unit'],
+                    !empty($first['map']) ? ' on ' . $first['map'] : (isset($c['link']) ? ' · cubeladder.ovh' . $c['link'] : ''))
                 : ''),
             'background' => $background,
             'footer' => 'cubeladder.ovh/players/hall_of_fame/' . $c['slug'],
@@ -85,8 +97,10 @@ class HallOfFameService
 
     /**
      * Top 10 per Hall of Fame list (best single game per player), keyed
-     * headshot / slashed / gibbed / kills / flags / streak / helper. Cached
-     * with the rankings, which ProcessLogsCommand clears after every import.
+     * headshot / slashed / gibbed / kills / flags / streak / helper, and
+     * 'aim' (best aim trainer round per player). Cached with the rankings,
+     * which ProcessLogsCommand clears after every import and AimTrainer
+     * after a new personal best.
      */
     public function topLists(): array
     {
@@ -107,6 +121,7 @@ class HallOfFameService
             'slashed' => $this->topPlayers('slashed'),
             'gibbed' => $this->topPlayers('gibbed'),
             'helper' => $this->topPlayers(['stole_the_flag', 'returned_the_flag']),
+            'aim' => (new AimTrainer())->hallOfFame(self::TOP),
         ];
     }
 

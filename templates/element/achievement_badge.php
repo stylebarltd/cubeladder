@@ -12,7 +12,7 @@
 $short = [
     'total_score' => 'Top scorer', 'games' => 'Most games', 'teamkills' => 'Most teamkills',
     'kd_ratio' => 'Best K/D', 'gibbed' => 'Most gibs', 'slashed' => 'Most slashes',
-    'scored_with_the_flag' => 'Most flags', 'headshot' => 'Most headshots',
+    'scored_with_the_flag' => 'Most flags', 'headshot' => 'Most headshots', 'aim_trainer' => 'Sharpshooter',
 ][$event] ?? $event;
 ?>
 <?php if (!empty($large)): ?>

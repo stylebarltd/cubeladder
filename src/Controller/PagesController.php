@@ -78,7 +78,7 @@ class PagesController extends AppController
             $hofTitles = [
                 'kills' => 'Most Kills', 'headshot' => 'Most Headshots', 'flags' => 'Most Flags scored',
                 'streak' => 'Longest Streak', 'slashed' => 'Most Slashes', 'gibbed' => 'Most Gibbed',
-                'helper' => 'Flag Helper',
+                'helper' => 'Flag Helper', 'aim' => 'Aim Trainer',
             ];
             $hofRecords = [];
             foreach ((new \App\Service\HallOfFameService())->topLists() as $key => $list) {

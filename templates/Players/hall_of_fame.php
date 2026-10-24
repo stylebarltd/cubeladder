@@ -76,6 +76,13 @@ $genres = [
         'color' => 'text-blue-400',
         'data'  => $bestFlagHelpers,
     ],
+    [
+        // the browser aim trainer (/play): best round per player, no game and no map
+        'key'   => 'aim',
+        'title' => 'Aim Trainer',
+        'color' => 'text-cyan-400',
+        'data'  => $topAim,
+    ],
 ];
 
 $achievementLabels = [
@@ -87,6 +94,7 @@ $achievementLabels = [
     'slashed' => 'Most Slashes last week',
     'scored_with_the_flag' => 'Most Flags scored last week',
     'headshot' => 'Most Headshots last week',
+    'aim_trainer' => 'Best aim trainer round last week',
 ];
 
 // Only categories that actually have players.
@@ -133,7 +141,10 @@ shuffle($playerImages);
                         <h2 class="mt-2 text-5xl md:text-7xl font-extrabold leading-tight <?= $genre['color'] ?>">
                             <?= $genre['title'] ?>
                         </h2>
-                        <div class="mt-3 text-sm text-zinc-300">Best single game since <?= date('M Y', strtotime(\App\Controller\PlayersController::HOF_SINCE)) ?></div>
+                        <div class="mt-3 text-sm text-zinc-300"><?= h(HallOfFameService::CATEGORIES[$genre['key']]['scope'] ?? 'Best single game since ' . date('M Y', strtotime(\App\Controller\PlayersController::HOF_SINCE))) ?></div>
+                        <?php if ($genre['key'] === 'aim'): ?>
+                            <a href="/play" class="mt-2 inline-flex items-center gap-2 text-sm text-cyan-300 hover:text-cyan-200"><i class="fa-solid fa-play"></i> Play a round</a>
+                        <?php endif; ?>
                         <button type="button" class="js-hof-share mt-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-4 py-2 text-sm text-white transition hover:bg-black/70">
                             <i class="fa-solid fa-share-nodes"></i> <span>Share</span>
                         </button>
@@ -158,7 +169,8 @@ shuffle($playerImages);
                                     'picked_off' => (int)($player->picked_off ?? 0),
                                     'busted'     => (int)($player->busted ?? 0),
                                 ];
-                                $weapons = $this->Layout->weapon($recordStats);
+                                // an aim trainer round has no game: no weapons, the round's accuracy instead
+                                $weapons = $genre['key'] === 'aim' ? ['weapons' => []] : $this->Layout->weapon($recordStats);
                                 $medals = $achievementPlayers[$player->player_id] ?? [];
                                 ?>
                                 <div class="flex items-start gap-3 py-2">
@@ -227,11 +239,19 @@ shuffle($playerImages);
                                         <div class="text-[10px] text-zinc-500 whitespace-nowrap mt-1">
                                             <?= $player->played_at->format('d M Y') ?>
                                         </div>
+                                        <?php if ($genre['key'] === 'aim'): ?>
+                                            <!-- the round's accuracy, headshots and gibs; the link opens the trainer -->
+                                            <a href="/play" class="mt-0.5 ml-auto block whitespace-nowrap text-[10px] text-blue-500 hover:underline"
+                                               title="<?= (int)$player->accuracy ?>% accuracy · <?= (int)$player->headshots ?> headshots · <?= (int)$player->gibs ?> gibs<?= $player->avg_reaction_ms !== null ? ' · ' . (int)$player->avg_reaction_ms . ' ms reaction' : '' ?>">
+                                                <?= (int)$player->accuracy ?>% · <?= (int)$player->headshots ?> HS · <?= (int)$player->gibs ?> gibs
+                                            </a>
+                                        <?php else: ?>
                                         <!-- the record game's map, under its date -->
                                         <a href="<?= $this->Url->build(['controller' => 'Games', 'action' => 'view', $player->game_id]) ?>"
                                            class="mt-0.5 ml-auto block max-w-[5.5rem] truncate text-[10px] text-blue-500 hover:underline sm:max-w-[7rem]" title="<?= h($player->map_name) ?>">
                                             <?= h($player->map_name) ?>
                                         </a>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             <?php endforeach; ?>

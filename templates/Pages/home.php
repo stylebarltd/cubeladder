@@ -36,7 +36,7 @@ $onAir = !empty($liveNow['live']);
 $features = [
     ['/players?continent=europe', 'fa-earth-americas', 'text-lime-300', 'Best by country', 'rankings per continent &amp; country &ndash; who rules Brazil?'],
     ['/live', 'fa-tower-broadcast', 'text-green-400', 'Live scoreboards', 'every server, map in the background, 5 s updates'],
-    ['/players/hall_of_fame', 'fa-crown', 'text-yellow-300', 'Hall of Fame', 'best single game in 7 categories'],
+    ['/players/hall_of_fame', 'fa-crown', 'text-yellow-300', 'Hall of Fame', 'best single game in 7 categories, and the aim trainer'],
     ['/maps', 'fa-map', 'text-sky-300', 'Maps', 'records, top players &amp; weekly winners per map'],
     ['/players', 'fa-user-astronaut', 'text-blue-300', 'Player pages', 'nemesis, prey, records, time played'],
     ['/players/map', 'fa-earth-europe', 'text-emerald-300', 'Player map', 'where the ladder plays from'],
@@ -232,7 +232,7 @@ $features = [
                             </div>
                             <div class="text-right">
                                 <div class="font-mono text-lg font-bold leading-none text-yellow-300"><?= number_format((int)$p->value) ?></div>
-                                <div class="mt-0.5 text-[10px] text-zinc-500"><?= h($p->map_name) ?></div>
+                                <div class="mt-0.5 text-[10px] text-zinc-500"><?= h($p->map_name !== '' ? $p->map_name : 'aim trainer round') ?></div>
                             </div>
                         </div>
                     <?php endforeach; ?>

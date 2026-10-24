@@ -8,14 +8,16 @@ use Cake\Console\ConsoleOptionParser;
 use Cake\Core\Configure;
 use Cake\Http\Client;
 use DateTimeImmutable;
+use App\Service\AimTrainer;
 use App\Service\LastGamesTrait;
 use Throwable;
 
 /**
  * Weekly achievements (cron, Monday 00:01, for the week that just ended):
- * the #1 of each category over the last 100 games and the best player on
- * every map, stored in achievements, sent to the winners' inbox and posted
- * to the Discord achievements channel (Ladder.discord.achievements.webhook).
+ * the #1 of each category over the last 100 games, the best player on
+ * every map and the best aim trainer round of the week (AimTrainer, event
+ * type aim_trainer), stored in achievements, sent to the winners' inbox and
+ * posted to the Discord achievements channel (Ladder.discord.achievements.webhook).
  *
  *   bin/cake CalculateAchievements              calculate, store, post
  *   bin/cake CalculateAchievements --post-only  post the stored week again
@@ -35,6 +37,7 @@ class CalculateAchievementsCommand extends Command
         'gibbed' => ['💣', 'Most gibs'],
         'teamkills' => ['🤦', 'Most teamkills'],
         'suicided' => ['☠️', 'Most suicides'],
+        'aim_trainer' => ['🕹️', 'Aim trainer'],
     ];
 
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
@@ -182,6 +185,30 @@ class CalculateAchievementsCommand extends Command
 
 
 
+
+        /**
+         * Best aim trainer round of the week (rounds finished Monday - Sunday, UTC)
+         */
+        $aim = (new AimTrainer())->bestBetween($weekStart->format('Y-m-d'), $weekEnd->format('Y-m-d'));
+        if ($aim && !$Achievements->exists(['week_start' => $weekStart->format('Y-m-d'), 'event_type' => 'aim_trainer'])) {
+            $Achievements->saveOrFail($Achievements->newEntity([
+                'week_start' => $weekStart->format('Y-m-d'),
+                'week_end'   => $weekEnd->format('Y-m-d'),
+                'player_id'  => $aim['player_id'],
+                'event_type' => 'aim_trainer',
+                'count'      => $aim['score'],
+                'created'    => (new DateTimeImmutable())->format('Y-m-d H:i:s'),
+            ]));
+            $saved++;
+            // the same wording as the categories above: the inbox reads the type and the value from it
+            $this->sendAchievementMessage(
+                $Messages,
+                $aim['player_id'],
+                'Weekly Achievement Unlocked!',
+                sprintf("You ranked #1 for **aim trainer** this week with a value of **%s**.\n\nSharpest aim of the week! 🎯", $aim['score'])
+            );
+            $io->out(sprintf('✔ aim_trainer → player %s (%s)', $aim['player_id'], $aim['score']));
+        }
 
         /**
          * Best player per map (last 100 games)
@@ -358,7 +385,7 @@ class CalculateAchievementsCommand extends Command
         $embeds = [[
             'title' => '🥇 Weekly achievements · ' . $period,
             'url' => $site . '/players',
-            'description' => 'The best of the week over the last 100 games.',
+            'description' => 'The best of the week over the last 100 games, and the week\'s best aim trainer round.',
             'color' => 0xEAB308,
             'fields' => $fields,
         ]];

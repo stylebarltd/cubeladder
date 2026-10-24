@@ -10,7 +10,7 @@
 $units = [
     'best_on_map' => 'points', 'total_score' => 'points', 'kd_ratio' => 'K/D',
     'headshot' => 'headshots', 'scored_with_the_flag' => 'flags', 'slashed' => 'knife kills',
-    'gibbed' => 'gibs', 'suicided' => 'suicides', 'teamkills' => 'teamkills',
+    'gibbed' => 'gibs', 'suicided' => 'suicides', 'teamkills' => 'teamkills', 'aim_trainer' => 'points',
 ];
 // the week an achievement was for: the last completed Monday - Sunday before it was sent
 $weekOf = function ($created): string {

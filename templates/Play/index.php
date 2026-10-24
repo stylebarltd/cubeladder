@@ -720,7 +720,8 @@ $this->start('meta'); ?>
             const data = await res.json();
             if (!res.ok) { note.textContent = data.error || 'Not saved.'; return; }
             if (data.player) {
-                note.innerHTML = 'This week you are <b>#' + data.rank + '</b> · your best ever: <b>' + data.best + '</b>';
+                note.innerHTML = 'This week you are <b>#' + data.rank + '</b> · all time <b>#' + data.allTimeRank + '</b> · your best ever: <b>' + data.best + '</b>'
+                    + (data.allTimeRank <= 10 ? ' · <a href="/players/hall_of_fame/aim-trainer">Hall of Fame</a>' : '');
             } else {
                 note.textContent = 'Guest round: not on the board. Play on a cubeLadder server once to get on it.';
             }

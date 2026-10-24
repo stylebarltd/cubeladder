@@ -73,6 +73,7 @@ $achievementLabels = [
     'slashed' => 'Most Slashes last week',
     'scored_with_the_flag' => 'Most Flags scored last week',
     'headshot' => 'Most Headshots last week',
+    'aim_trainer' => 'Best aim trainer round last week',
 ];
 ?>
 

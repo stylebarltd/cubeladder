@@ -60,6 +60,13 @@ class AchievementsHelper extends Helper
             'icon'   => 'total_score.svg',
             'format' => 'int',
         ],
+
+        // the week's best round in the browser aim trainer (/play)
+        'aim_trainer' => [
+            'label'  => 'Sharpshooter',
+            'icon'   => 'aim_trainer.svg',
+            'format' => 'int',
+        ],
     ];
 
 //    public function label(string $eventType): string

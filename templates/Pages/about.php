@@ -14,8 +14,8 @@ $rules = [
     '<b>All Time Ranking</b>: points of this year, from <b>5,000 points</b> on (<b>1,000</b> when filtered by continent or country).',
     '<b>Inactive players</b>: no game in the last <b>' . \App\Utility\Activity::ACTIVE_DAYS . ' days</b> &ndash; out of the rankings and the CTF rating until the next game. Hall of Fame records stay, marked inactive.',
     '<b>the last 100</b>: ranking over the last 100 games played on our servers.',
-    '<b>Hall of Fame</b>: best single game per category since <b>' . date('M Y', strtotime(\App\Controller\PlayersController::HOF_SINCE)) . '</b>.',
-    '<b>Weekly achievements</b> are awarded every <b>Sunday</b>.',
+    '<b>Hall of Fame</b>: best single game per category since <b>' . date('M Y', strtotime(\App\Controller\PlayersController::HOF_SINCE)) . '</b>, plus the best round in the <a href="/play" class="text-blue-300 hover:underline">aim trainer</a>.',
+    '<b>Weekly achievements</b> are awarded every <b>Sunday</b> &ndash; the week\'s best aim trainer round is one of them.',
     'Teams, minutes played and final scores come from the server logs, the live view straight from the game servers (every 5 seconds).',
 ];
 ?>

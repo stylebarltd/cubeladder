@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use Cake\Cache\Cache;
 use Cake\Datasource\ConnectionManager;
+use DateTimeImmutable;
 
 /**
  * Aim trainer (/play): 40-second rounds of targets on a map screenshot,
@@ -19,7 +21,9 @@ use Cake\Datasource\ConnectionManager;
  * events (the page's own number is never trusted) and the round is checked
  * for what a human can't do. It stays a game in the browser: the board is
  * "just for fun", apart from the ladder's numbers, and only recognised
- * players (identity) are on it.
+ * players (identity) are on it. The week's best round is a weekly
+ * achievement (CalculateAchievementsCommand, event_type aim_trainer) and
+ * the all-time top 10 is a Hall of Fame category (HallOfFameService 'aim').
  */
 class AimTrainer
 {
@@ -146,12 +150,47 @@ class AimTrainer
         $out = $r + ['avg_reaction_ms' => $avg, 'player' => $round['player_id'] !== null];
         if ($round['player_id'] !== null) {
             $out['rank'] = $this->rank($round['player_id'], self::weekStart());
+            $out['allTimeRank'] = $this->rank($round['player_id'], '1970-01-01');
             $out['best'] = (int)$conn->execute(
                 'SELECT MAX(score) FROM aim_rounds WHERE player_id = ? AND seconds = ? AND finished_at IS NOT NULL',
                 [$round['player_id'], self::ROUND_SECONDS])->fetchColumn(0);
+            // a new personal best may change the Hall of Fame list (cached with the rankings)
+            if ($out['best'] === $r['score']) {
+                Cache::delete('hall_of_fame', 'rankings');
+            }
         }
 
         return $out;
+    }
+
+    /**
+     * The best round finished between two days (inclusive, UTC) - the weekly
+     * achievement -, or null when nobody played: player_id, name, score.
+     */
+    public function bestBetween(string $firstDay, string $lastDay): ?array
+    {
+        $row = $this->board($firstDay . ' 00:00:00', 1, $lastDay . ' 23:59:59')[0] ?? null;
+
+        return $row ? ['player_id' => $row['player_id'], 'name' => $row['name'], 'score' => $row['score']] : null;
+    }
+
+    /**
+     * The all-time top 10 as a Hall of Fame list (HallOfFameService
+     * topLists 'aim'): the same shape as the game categories' rows - a game
+     * record has game_id and map_name, a round has neither (empty) - plus
+     * accuracy, headshots, gibs and avg_reaction_ms of the record round.
+     *
+     * @return list<object>
+     */
+    public function hallOfFame(int $limit = 10): array
+    {
+        return array_map(fn($r) => (object)[
+            'player_id' => $r['player_id'], 'name' => $r['name'], 'country' => $r['country'], 'picture' => $r['picture'],
+            'value' => $r['score'], 'game_id' => '', 'map_name' => '',
+            'played_at' => new DateTimeImmutable($r['finished_at'] . ' UTC'),
+            'accuracy' => $r['accuracy'], 'headshots' => $r['headshots'], 'gibs' => $r['gibs'], 'avg_reaction_ms' => $r['avg_reaction_ms'],
+            'steals' => 0, 'returns' => 0,
+        ], $this->board(null, $limit));
     }
 
     /** Monday 00:00 UTC of this week */
@@ -161,27 +200,30 @@ class AimTrainer
     }
 
     /**
-     * Top players since a date: each player's best round with its accuracy.
+     * Top players since a date (until a date): each player's best round with
+     * its accuracy. The earlier of two equal scores ranks first.
      *
-     * @return list<array{player_id:string, name:string, country:?string, score:int, accuracy:int, headshots:int, gibs:int, avg_reaction_ms:?int}>
+     * @return list<array{player_id:string, name:string, country:?string, picture:?string, score:int, accuracy:int, headshots:int, gibs:int, avg_reaction_ms:?int, finished_at:string}>
      */
-    public function board(?string $since, int $limit = 10): array
+    public function board(?string $since, int $limit = 10, ?string $until = null): array
     {
         $rows = ConnectionManager::get('default')->execute("
-            SELECT player_id, name, country, score, shots, hits, headshots, gibs, avg_reaction_ms FROM (
-                SELECT r.player_id, p.name, p.country, r.score, r.shots, r.hits, r.headshots, r.gibs, r.avg_reaction_ms,
+            SELECT player_id, name, country, picture, score, shots, hits, headshots, gibs, avg_reaction_ms, finished_at FROM (
+                SELECT r.player_id, p.name, p.country, p.picture, r.score, r.shots, r.hits, r.headshots, r.gibs, r.avg_reaction_ms,
                        ROW_NUMBER() OVER (PARTITION BY r.player_id ORDER BY r.score DESC, r.finished_at ASC) AS rn,
                        r.finished_at
                 FROM aim_rounds r INNER JOIN players p ON p.id = r.player_id
-                WHERE r.finished_at IS NOT NULL AND r.finished_at >= ? AND r.seconds = ? AND p.track = 1 AND p.cheater = 0
+                WHERE r.finished_at IS NOT NULL AND r.finished_at >= ? AND r.finished_at <= ? AND r.seconds = ? AND p.track = 1 AND p.cheater = 0
             ) best WHERE rn = 1
-            ORDER BY score DESC, finished_at ASC LIMIT " . (int)$limit, [$since ?? '1970-01-01', self::ROUND_SECONDS])->fetchAll('assoc');
+            ORDER BY score DESC, finished_at ASC LIMIT " . (int)$limit,
+            [$since ?? '1970-01-01', $until ?? '9999-12-31', self::ROUND_SECONDS])->fetchAll('assoc');
 
         return array_map(fn($r) => [
-            'player_id' => $r['player_id'], 'name' => $r['name'], 'country' => $r['country'],
+            'player_id' => $r['player_id'], 'name' => $r['name'], 'country' => $r['country'], 'picture' => $r['picture'],
             'score' => (int)$r['score'], 'headshots' => (int)$r['headshots'], 'gibs' => (int)$r['gibs'],
             'accuracy' => (int)$r['shots'] ? (int)round(100 * $r['hits'] / $r['shots']) : 0,
             'avg_reaction_ms' => $r['avg_reaction_ms'] !== null ? (int)$r['avg_reaction_ms'] : null,
+            'finished_at' => (string)$r['finished_at'],
         ], $rows);
     }
 
@@ -216,6 +258,34 @@ class AimTrainer
             'rows' => $rows,
             'background' => $maps ? $maps[crc32(self::weekStart()) % count($maps)] : null,
             'footer' => 'cubeladder.ovh/play',
+        ];
+    }
+
+    /**
+     * A player's all-time best round for the personal records on their page
+     * (next to the Hall of Fame game records): value, rank, players (on the
+     * board), played_at, url; null without a finished round.
+     */
+    public function personalRecord(string $playerId): ?array
+    {
+        $conn = ConnectionManager::get('default');
+        $best = $conn->execute('SELECT score, finished_at FROM aim_rounds WHERE player_id = ? AND seconds = ? AND finished_at IS NOT NULL
+            ORDER BY score DESC, finished_at ASC LIMIT 1', [$playerId, self::ROUND_SECONDS])->fetch('assoc');
+        if (!$best) {
+            return null;
+        }
+        $players = (int)$conn->execute('SELECT COUNT(DISTINCT r.player_id) FROM aim_rounds r INNER JOIN players p ON p.id = r.player_id
+            WHERE r.finished_at IS NOT NULL AND r.seconds = ? AND p.track = 1 AND p.cheater = 0', [self::ROUND_SECONDS])->fetchColumn(0);
+
+        return [
+            'title' => 'Aim Trainer',
+            'value' => (int)$best['score'],
+            'rank' => $this->rank($playerId, '1970-01-01'),
+            'players' => $players,
+            'game_id' => null,
+            'map_name' => 'aim trainer',
+            'played_at' => new DateTimeImmutable($best['finished_at'] . ' UTC'),
+            'url' => '/play',
         ];
     }
 

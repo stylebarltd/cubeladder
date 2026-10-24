@@ -6,6 +6,16 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-10-24',
+            'title' => 'Aim trainer: weekly achievement and Hall of Fame',
+            'link' => '/players/hall_of_fame/aim-trainer',
+            'items' => [
+                'The best aim trainer round of the week is a weekly achievement now, like Most points or Best K/D: a Sharpshooter badge next to your name for a week, a message in your inbox and a line in the Discord achievements post.',
+                'The all-time top 10 is a Hall of Fame category (/players/hall_of_fame/aim-trainer) with its own share card, and your best round sits with your personal records on your player page. Entering the top 10 or beating your own record makes the Hall of Fame news in Discord.',
+                'After a round the result tells you where you stand all time, not only this week.',
+            ],
+        ],
+        [
             'date' => '2026-10-21',
             'title' => 'Share the aim trainer',
             'link' => '/play',

@@ -32,6 +32,7 @@ $body = $body ?? null;
 $labels = [
     'total_score' => 'Most Points', 'games' => 'Most Games Played', 'teamkills' => 'Most Teamkills', 'kd_ratio' => 'Best KD Ratio',
     'gibbed' => 'Most Gibs', 'slashed' => 'Most Slashes', 'scored_with_the_flag' => 'Most Flags scored', 'headshot' => 'Most Headshots',
+    'aim_trainer' => 'Best aim trainer round',
 ];
 $seenLabel = null;
 if ($lastSeen) {

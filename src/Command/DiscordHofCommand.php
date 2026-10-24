@@ -16,8 +16,8 @@ use Throwable;
 
 /**
  * Hall of Fame news in the Discord achievements channel (after every
- * import, process_logs.sh): compares the top 10 of every category with the
- * last run (tmp/discord_hof.json) and posts one embed per changed category
+ * import, process_logs.sh): compares the top 10 of every category (the aim
+ * trainer's included) with the last run (tmp/discord_hof.json) and posts one embed per changed category
  * - new entries, players who beat their own record, who moved and who
  * dropped out, each with their value - with the category's card
  * (HallOfFameService::card, the same as its link preview) on the photo of
@@ -132,22 +132,25 @@ class DiscordHofCommand extends Command
         $news = $moves = $marks = [];
         $headline = $player = null;
 
+        // where it happened: "on <map>" linking to the game, or "in the aim trainer" linking to /play
+        $where = fn(array $e, bool $markdown) => $e['game_id'] !== ''
+            ? ($markdown ? sprintf('on [%s](%s/games/view/%s)', $e['map'], $site, $e['game_id']) : 'on ' . $e['map'])
+            : ($markdown ? sprintf('in the [aim trainer](%s%s)', $site, HallOfFameService::where($key)) : 'in the aim trainer');
         foreach ($new as $e) {
             $was = $oldBy[$e['player_id']] ?? null;
-            $game = sprintf('[%s](%s/games/view/%s)', $e['map'], $site, $e['game_id']);
             $value = $this->value($e, $key, $unit);
             if ($was === null) {
-                $news[] = sprintf('🆕 %s entered the Hall of Fame at **#%d** with %s on %s', $this->link($e, $site), $e['pos'], $value, $game);
+                $news[] = sprintf('🆕 %s entered the Hall of Fame at **#%d** with %s %s', $this->link($e, $site), $e['pos'], $value, $where($e, true));
                 $marks[$e['player_id']] = 'NEW';
                 $player ??= $e;
-                $headline ??= sprintf('%s enters at #%d · %s %s on %s', $e['name'], $e['pos'], number_format($e['value']), $unit, $e['map']);
+                $headline ??= sprintf('%s enters at #%d · %s %s %s', $e['name'], $e['pos'], number_format($e['value']), $unit, $where($e, false));
             } elseif ($e['value'] > $was['value']) {
-                $news[] = sprintf('📈 %s beat their own record: %s (was %s) on %s - now **#%d**%s',
-                    $this->link($e, $site), $value, number_format($was['value']), $game,
+                $news[] = sprintf('📈 %s beat their own record: %s (was %s) %s - now **#%d**%s',
+                    $this->link($e, $site), $value, number_format($was['value']), $where($e, true),
                     $e['pos'], $e['pos'] !== $was['pos'] ? ' (was #' . $was['pos'] . ')' : '');
                 $marks[$e['player_id']] = 'RECORD';
                 $player ??= $e;
-                $headline ??= sprintf('%s beats their own record · %s %s on %s · now #%d', $e['name'], number_format($e['value']), $unit, $e['map'], $e['pos']);
+                $headline ??= sprintf('%s beats their own record · %s %s %s · now #%d', $e['name'], number_format($e['value']), $unit, $where($e, false), $e['pos']);
             } elseif ($e['pos'] !== $was['pos']) {
                 $moves[] = sprintf('%s %s #%d → **#%d** · %s %s', $e['pos'] < $was['pos'] ? '⬆️' : '⬇️', $this->link($e, $site),
                     $was['pos'], $e['pos'], number_format($e['value']), $unit);

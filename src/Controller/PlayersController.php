@@ -64,6 +64,7 @@ class PlayersController extends AppController
 //        $topReturned    = $this->getTopPlayers('returned_the_flag');
 
         $bestFlagHelpers = $top['helper'];
+        $topAim       = $top['aim'] ?? [];   // the aim trainer's best rounds (no game, no map)
 
         // Weekly achievement medals, keyed by player (same source as Players::index)
         $achievePlayers = $this->Players->Achievements->find()
@@ -112,6 +113,7 @@ class PlayersController extends AppController
             'topFlags',
             'topStreaks',
             'bestFlagHelpers',
+            'topAim',
             'achievementPlayers',
             'playerRatings',
             'inactivePlayers'
@@ -1029,6 +1031,10 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         );
 
         $records = $this->getPlayerRecords((string)$player->id);
+        // the aim trainer's best round next to the game records (Hall of Fame category 'aim')
+        if ($aimRecord = (new \App\Service\AimTrainer())->personalRecord((string)$player->id)) {
+            $records['aim'] = $aimRecord;
+        }
 
         // Most played map (counted games) - the page background
         $favoriteMap = $this->Players->PlayerStatsPerGame->find()

@@ -26,7 +26,7 @@ class HallOfFameImage
     /** Font Awesome code points (fa-solid-900.ttf) */
     public const ICONS = [
         'skull' => 0xf54c, 'crosshairs' => 0xf05b, 'flag' => 0xf024, 'fire' => 0xf06d,
-        'handshake' => 0xf2b5, 'trophy' => 0xf091, 'play' => 0xf04b,
+        'handshake' => 0xf2b5, 'trophy' => 0xf091, 'play' => 0xf04b, 'bullseye' => 0xf140,
     ];
 
     private const GOLD = [250, 204, 21];

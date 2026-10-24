@@ -13,6 +13,7 @@ $achievementLabels = [
     'kd_ratio' => 'Best KD Ratio', 'gibbed' => 'Most Gibs', 'suicided' => 'Most Suicided',
     'slashed' => 'Most Slashes', 'scored_with_the_flag' => 'Most Flags scored',
     'headshot' => 'Most Headshots', 'best_on_map' => 'Best on Map', 'games' => 'Most Games Played',
+    'aim_trainer' => 'Best aim trainer round',
 ];
 ?>
 <?php
@@ -332,6 +333,7 @@ endif;
             'slashed' => ['img' => '/img/achievements/slashed.svg', 'color' => 'text-purple-400'],
             'gibbed' => ['icon' => 'fa-bomb', 'color' => 'text-yellow-400'],
             'flag_helper' => ['icon' => 'fa-flag', 'color' => 'text-blue-400'],
+            'aim' => ['icon' => 'fa-bullseye', 'color' => 'text-cyan-400'],   // the aim trainer (/play), not a game
         ];
         $rankBadge = fn(int $rank) => match (true) {
             $rank === 1 => 'bg-yellow-400 text-black',
@@ -349,7 +351,7 @@ endif;
             <?php if (!empty($records)): ?>
                 <div class="space-y-1.5">
                     <?php foreach ($records as $key => $rec): $st = $recordStyle[$key] ?? ['icon' => 'fa-circle-dot', 'color' => 'text-white']; ?>
-                        <a href="<?= $rec['game_id'] ? '/games/view/' . h($rec['game_id']) : '#' ?>"
+                        <a href="<?= h($rec['url'] ?? ($rec['game_id'] ? '/games/view/' . $rec['game_id'] : '#')) ?>"
                            class="flex items-center gap-3 rounded-lg bg-white/5 px-2 py-1.5 hover:bg-white/10 transition">
                             <?php if (!empty($st['img'])): ?>
                                 <span class="inline-block h-4 w-5 shrink-0 bg-current <?= $st['color'] ?>"
