@@ -104,14 +104,19 @@ $this->start('meta'); ?>
     </div>
 
     <div class="grid gap-6 lg:grid-cols-3">
-        <div class="lg:col-span-2">
+        <!-- the game needs a mouse: on phones only this note, the boards and the points -->
+        <div class="at-card md:hidden">
+            <h3>On a bigger screen</h3>
+            <p class="at-note">The aim trainer is played with a mouse &ndash; open <b>cubeladder.ovh/play</b> on a desktop or laptop. The boards and the points are below.</p>
+        </div>
+        <div class="hidden md:block lg:col-span-2">
             <div class="at-wrap" id="at">
                 <canvas id="at-canvas" width="1280" height="720" aria-label="Aim trainer"></canvas>
                 <div class="at-overlay" id="at-start">
                     <h2>READY?</h2>
                     <p>Targets pop up on the map and run away fast. Click or tap them &ndash; a headshot counts double.
                         Every shot that hits nothing ends your streak.</p>
-                    <p><b>Grenades (<?= AimTrainer::GRENADES ?>):</b> right-click or press <b>G</b> &ndash; on a phone tap the grenade, then where it should land.
+                    <p><b>Grenades (<?= AimTrainer::GRENADES ?>):</b> right-click or press <b>G</b> &ndash; on a touch screen tap the grenade, then where it should land.
                         It explodes after half a second: wait until targets stand close together.</p>
                     <p class="at-note"><?= $authPlayer
                         ? 'Playing as <b>' . h($authPlayer->name) . '</b> &ndash; your best round goes on the board.'

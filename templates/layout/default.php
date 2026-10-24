@@ -194,7 +194,8 @@
                     </span>
                 </a>
                 <a href="/maps" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Maps</a>
-                <a href="/play" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-crosshairs"></i> Aim trainer</a>
+                <a href="/play" class="hidden md:flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-crosshairs"></i> Aim trainer</a><!-- the game is not played on phones -->
+
                 <a href="/stats" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-users"></i> Community stats</a>
                 <a href="/about" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-circle-question"></i> About, rules &amp; what's new</a>
                 <?php if (!empty($authPlayer)): ?>
