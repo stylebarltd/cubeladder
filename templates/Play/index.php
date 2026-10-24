@@ -54,6 +54,8 @@ $this->start('meta'); ?>
 .at-result b { display: block; font-size: 1.35rem; color: #fff; font-variant-numeric: tabular-nums; }
 .at-result span { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: rgb(161 161 170); }
 .at-score { font-size: 3.4rem; font-weight: 800; color: #facc15; line-height: 1; font-variant-numeric: tabular-nums; }
+.at-points td.p { white-space: normal; max-width: none; }
+.at-points td.p small { color: rgb(113 113 122); margin-left: .25rem; }
 .at-note { font-size: .8rem; color: rgb(161 161 170); }
 .at-note b { color: #fff; }
 .at-sound { margin-top: .5rem; font-size: .75rem; color: rgb(161 161 170); background: none; border: 0; cursor: pointer; padding: .2rem 0; }
@@ -130,6 +132,19 @@ $this->start('meta'); ?>
             <div class="at-card">
                 <h3>All time</h3>
                 <div id="at-all"></div>
+            </div>
+            <!-- the points, as the game counts them (AimTrainer::score) -->
+            <div class="at-card">
+                <h3>Points <small>per hit</small></h3>
+                <table class="at-board at-points">
+                    <tr><td class="p">Body hit</td><td class="s"><?= AimTrainer::POINTS_HIT ?></td></tr>
+                    <tr><td class="p">Headshot</td><td class="s"><?= AimTrainer::POINTS_HEADSHOT ?></td></tr>
+                    <tr><td class="p">Every <?= AimTrainer::STREAK ?>th hit in a row <small>streak</small></td><td class="s">+<?= AimTrainer::POINTS_STREAK ?></td></tr>
+                    <tr><td class="p">Gib by grenade</td><td class="s"><?= AimTrainer::POINTS_GIB ?></td></tr>
+                    <tr><td class="p">Each further gib of the same grenade</td><td class="s">+<?= AimTrainer::POINTS_MULTI_GIB ?></td></tr>
+                </table>
+                <p class="at-note" style="margin-top:.5rem">A headshot as your <?= AimTrainer::STREAK ?>th hit in a row shows +<?= AimTrainer::POINTS_HEADSHOT + AimTrainer::POINTS_STREAK ?>.
+                    A miss, an escaped target or a grenade that gibs nobody ends the streak.</p>
             </div>
         </div>
     </div>
@@ -425,12 +440,12 @@ $this->start('meta'); ?>
             return true;
         });
         events += 'n' + 'g'.repeat(gibbed.length);
-        let pts = 0;
+        let pts = 0, streakBonus = false;
         gibbed.forEach((tg, i) => {
             let p = RULES.gib + (i > 0 ? RULES.multiGib : 0);
             gibPoints += p;
             streak++;
-            if (streak % RULES.streak === 0) p += RULES.streakBonus;
+            if (streak % RULES.streak === 0) { p += RULES.streakBonus; streakBonus = true; }
             pts += p;
             feed.unshift({t: now, gib: true, team: tg.team});
         });
@@ -441,7 +456,7 @@ $this->start('meta'); ?>
         boom();
         const label = gibbed.length >= 3 ? 'MULTI GIB' : (gibbed.length === 2 ? 'DOUBLE GIB' : (gibbed.length ? 'GIBBED' : ''));
         effects.push({x: n.x, y: n.y, t: now, boom: true, r: R});
-        if (pts) effects.push({x: n.x, y: n.y - R * 0.3, t: now, text: '+' + pts + ' ' + label, gib: true});
+        if (pts) effects.push({x: n.x, y: n.y - R * 0.3, t: now, text: '+' + pts + ' ' + label + (streakBonus ? ' + STREAK' : ''), gib: true});
     }
 
     const nadeBtn = document.getElementById('at-nade');
@@ -471,7 +486,8 @@ $this->start('meta'); ?>
             if (streak % RULES.streak === 0) pts += RULES.streakBonus;
             score += pts;
             if (dh) { shake = 6; sayHeadshot(); } else pistol();
-            effects.push({x: px, y: py, t: now, text: '+' + pts + (dh ? ' HEADSHOT' : ''), hs: dh});
+            // "+30 HEADSHOT + STREAK": the bonus is named, so a 30 is not taken for a special headshot
+            effects.push({x: px, y: py, t: now, text: '+' + pts + (dh ? ' HEADSHOT' : '') + (streak % RULES.streak === 0 ? (dh ? ' + STREAK' : ' STREAK') : ''), hs: dh});
             feed.unshift({t: now, hs: dh, team: tg.team, streak});
             feed.length = Math.min(feed.length, 5);
             return;

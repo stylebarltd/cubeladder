@@ -13,6 +13,7 @@ return [
                 'The best aim trainer round of the week is a weekly achievement now, like Most points or Best K/D: a Sharpshooter badge next to your name for a week, a message in your inbox and a line in the Discord achievements post.',
                 'The all-time top 10 is a Hall of Fame category (/players/hall_of_fame/aim-trainer) with its own share card, and your best round sits with your personal records on your player page. Entering the top 10 or beating your own record makes the Hall of Fame news in Discord.',
                 'After a round the result tells you where you stand all time, not only this week.',
+                'The pop-up names the streak bonus ("+30 HEADSHOT + STREAK"), and the points per hit are in a table next to the boards.',
             ],
         ],
         [
