@@ -1,0 +1,11 @@
+# Static prototype: serve index.html here instead of routing /map3d/ through CakePHP.
+RewriteEngine On
+DirectoryIndex index.html
+
+# The ES modules import each other without version strings, so make browsers
+# revalidate them on every load (they are small; maps, textures and models may cache).
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|html|json)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cubeLadder · 3D map prototype</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #12151c; color: #e6e9ef; font: 14px/1.4 system-ui, sans-serif; }
+  canvas#view { display: block; width: 100vw; height: 100vh; }
+  #panel { position: fixed; top: 12px; left: 12px; background: rgba(18,21,28,.86); border: 1px solid #2a3040; border-radius: 8px; padding: 12px 14px; min-width: 240px; backdrop-filter: blur(4px); }
+  #panel h1 { font-size: 15px; margin: 0 0 8px; }
+  #panel select, #panel label { display: block; margin: 6px 0; }
+  #panel select { width: 100%; background: #1c2130; color: inherit; border: 1px solid #2a3040; border-radius: 4px; padding: 4px; }
+  .legend div { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+  .sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+  .muted { color: #8a93a6; font-size: 12px; }
+  #status { margin-top: 8px; font-size: 12px; color: #8a93a6; white-space: pre-line; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="panel">
+  <h1>AssaultCube map · 3D prototype</h1>
+  <select id="map">
+    <option value="ac_shine">ac_shine</option>
+    <option value="ac_desert">ac_desert</option>
+    <option value="ac_desert3">ac_desert3</option>
+    <option value="ac_gothic">ac_gothic</option>
+    <option value="ac_ingress">ac_ingress</option>
+    <option value="ac_mines">ac_mines</option>
+    <option value="ac_werk">ac_werk</option>
+    <option value="rapier">rapier</option>
+  </select>
+  <label><input type="checkbox" id="textures" checked> Map textures</label>
+  <label><input type="checkbox" id="models" checked> Objects (mapmodels: crates, barrels, fences, platforms…)</label>
+  <label><input type="checkbox" id="paths" checked> Shortest walkable route between the flags</label>
+  <label><input type="checkbox" id="field"> Distance to flag (heatmap)</label>
+  <label class="muted">Target flag (heatmap and click): <select id="fieldTeam" style="display:inline;width:auto"><option value="0">CLA flag</option><option value="1">RVSF flag</option></select></label>
+  <div class="legend">
+    <div><span class="sw" style="background:#e0443a"></span> CLA spawns and flag</div>
+    <div><span class="sw" style="background:#3a7be0"></span> RVSF spawns and flag</div>
+    <div><span class="sw" style="background:#f5c242"></span> Shortest walkable route, flag to flag</div>
+    <div><span class="sw" style="background:#3ad9e0"></span> Click a floor: shortest walkable route from there to the target flag</div>
+  </div>
+  <div id="click" class="muted"></div>
+  <div id="status">loading…</div>
+  <div class="muted">Drag to orbit, wheel to zoom, right-drag to pan.<br>The route is the shortest walkable way on the cube grid, not the fastest strafe-jump line.</div>
+</div>
+<script type="module">
+  import { loadMap, summary, ENT, TEAM } from "./cgz.js";
+  import { Viewer } from "./viewer.js";
+  import { buildGrid, astar, snap, distanceField, cellOf, heightOf } from "./path.js";
+
+  const ROUTE_COLOR = 0xf5c242, CLICK_COLOR = 0x3ad9e0;
+  const viewer = new Viewer(document.getElementById("view"));
+  const status = document.getElementById("status");
+  const $ = (id) => document.getElementById(id);
+  let map, grid, pathLines = [];
+
+  async function load(name) {
+    status.textContent = `loading ${name}…`;
+    const t0 = performance.now();
+    try {
+      map = await loadMap(`maps/${name}.cgz`);
+    } catch (e) { status.textContent = `failed: ${e.message}`; console.error(e); return; }
+    const s = summary(map);
+    console.log("[cgz] header", { title: map.title, version: map.version, headersize: map.headersize, sfactor: map.sfactor, size: map.size, numents: map.numents, waterlevel: s.waterlevel });
+    console.log("[cgz] entities", s.entities);
+    console.log("[cgz] cubes", s.cubes);
+    console.log("[cgz] config", { textures: map.textures.length, sky: map.config.sky, extras: map.extras.map((r) => r.type) });
+    viewer.setTextured($("textures").checked);
+    viewer.setMap(map);
+    clickCell = -1; $("click").textContent = "";
+    grid = buildGrid(map);
+    const lines = computePaths();
+    const ms = (performance.now() - t0).toFixed(0);
+    const head = `${map.title}\n${map.size}×${map.size} cubes · format ${map.version} · ${map.numents} entities · ${ms} ms`;
+    status.textContent = `${head}\n${lines.join("\n")}\ntextures: loading…`;
+    applyField();
+    Promise.all([viewer.texturesReady, viewer.modelsReady]).then(([t, m]) => {
+      if (viewer.map !== map) return;
+      status.textContent = `${head}\n${lines.join("\n")}\ntextures: ${t.loaded}/${t.slots} slots loaded${t.missing ? `, ${t.missing} missing` : ""} (${map.textures.length} in map config)\nobjects: ${m.placed} placed${m.skipped ? `, ${m.skipped} skipped` : ""}`;
+    });
+  }
+
+  // One route: the shortest walkable way between the two flags. It is the same
+  // for both teams (grab the enemy flag, bring it home), so it is drawn once.
+  // The reverse direction is checked too, because drops are one-way in the
+  // walk model; if it differs, the status says so.
+  function computePaths() {
+    viewer.clearPaths();
+    const flags = {}, spawns = { 0: 0, 1: 0 };
+    for (const e of map.ents) {
+      if (e.type === ENT.CTF_FLAG && (e.team === 0 || e.team === 1)) flags[e.team] = e;
+      if (e.type === ENT.PLAYERSTART && (e.team === 0 || e.team === 1)) spawns[e.team]++;
+    }
+    const out = [`spawns: ${spawns[TEAM.CLA]} CLA, ${spawns[TEAM.RVSF]} RVSF`];
+    if (flags[0] === undefined || flags[1] === undefined) { out.push("no CTF flags on this map"); return out; }
+    const cla = snap(grid, flags[TEAM.CLA].x, flags[TEAM.CLA].y), rvsf = snap(grid, flags[TEAM.RVSF].x, flags[TEAM.RVSF].y);
+    const there = astar(grid, cla, rvsf), back = astar(grid, rvsf, cla);
+    if (!there && !back) { out.push("flags not connected by a walkable route"); return out; }
+    // Drops are one-way in the walk model, so the two directions can differ; show the shorter one.
+    const shorter = !back || (there && there.length <= back.length) ? there : back;
+    const other = shorter === there ? back : there;
+    if ($("paths").checked) viewer.addPath(shorter.cells, ROUTE_COLOR, undefined, false, shorter.heights);
+    out.push(`flag to flag: ${shorter.length.toFixed(0)} cubes`);
+    if (other && Math.abs(other.length - shorter.length) > 0.5) {
+      out.push(`(${shorter === there ? "RVSF → CLA" : "CLA → RVSF"} needs ${other.length.toFixed(0)} cubes: a drop on the short way cannot be climbed back)`);
+    }
+    return out;
+  }
+
+  function applyField() {
+    if (!map) return;
+    if (!$("field").checked) { viewer.colorFloor(null); return; }
+    const team = Number($("fieldTeam").value);
+    const flag = map.ents.find((e) => e.type === ENT.CTF_FLAG && e.team === team);
+    if (!flag) { viewer.colorFloor(null); return; }
+    viewer.colorFloor(distanceField(grid, snap(grid, flag.x, flag.y)));
+  }
+
+  // Click (not drag) on a floor cube: shortest walkable route from there to the target flag.
+  let clickCell = -1;
+  function flagCell(team) {
+    const f = map.ents.find((e) => e.type === ENT.CTF_FLAG && e.team === team);
+    return f ? snap(grid, f.x, f.y) : -1;
+  }
+  function routeFromClick() {
+    const out = $("click");
+    if (!map || clickCell < 0) { viewer.clearUserPath(); out.textContent = ""; return; }
+    const x = clickCell & (map.size - 1), y = clickCell >> map.sfactor;
+    // a click lands on the cube floor; the deck of a clipped platform counts too when the floor is blocked
+    const start = grid.walk[clickCell] ? clickCell : snap(grid, x, y);
+    if (start < 0) { viewer.setUserPath(clickCell, null, CLICK_COLOR); out.textContent = `(${x}, ${y}): not walkable`; return; }
+    const team = Number($("fieldTeam").value);
+    const paths = [0, 1].map((t) => astar(grid, start, flagCell(t)));
+    const p = paths[team];
+    viewer.setUserPath(cellOf(grid, start), p?.cells ?? null, CLICK_COLOR, p?.heights ?? null, heightOf(grid, start));
+    const len = (q) => (q ? `${q.length.toFixed(0)} cubes` : "unreachable");
+    out.textContent = `From (${x}, ${y}): ${len(paths[0])} to the CLA flag, ${len(paths[1])} to the RVSF flag. Route shown to the ${team === TEAM.CLA ? "CLA" : "RVSF"} flag.`;
+  }
+  {
+    const canvas = document.getElementById("view");
+    let down = null;
+    canvas.addEventListener("pointerdown", (e) => { if (e.button === 0) down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+    canvas.addEventListener("pointerup", (e) => {
+      if (!down || e.button !== 0) return;
+      const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5, slow = performance.now() - down.t > 400;
+      down = null;
+      if (moved || slow || !map) return;
+      clickCell = viewer.pickCell(e.clientX, e.clientY);
+      routeFromClick();
+    });
+  }
+
+  window.dbg = () => ({ map, grid, viewer, astar, distanceField, snap, cellOf, heightOf });
+  $("map").addEventListener("change", (e) => load(e.target.value));
+  $("textures").addEventListener("change", (e) => viewer.setTextured(e.target.checked));
+  $("models").addEventListener("change", (e) => viewer.setModelsVisible(e.target.checked));
+  $("paths").addEventListener("change", () => computePaths());
+  $("field").addEventListener("change", applyField);
+  $("fieldTeam").addEventListener("change", () => { applyField(); routeFromClick(); });
+  load($("map").value);
+</script>
+</body>
+</html>
