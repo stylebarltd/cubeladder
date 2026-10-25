@@ -556,7 +556,7 @@ endif;
 </div>
 
 <!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/vendor/chartjs-4.6.1/chart.umd.min.js"></script>
 <script>
 
     const gamesData = <?= json_encode($gamesData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;

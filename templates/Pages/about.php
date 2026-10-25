@@ -202,9 +202,16 @@ $rules = [
             <!-- Discord server widget: who is online, join button -->
             <section class="rounded-xl border border-[#5865F2]/60 bg-[#5865F2]/25 p-4 backdrop-blur-[2px]">
                 <h2 class="mb-3 px-2 text-lg font-bold"><i class="fa-brands fa-discord mr-2 text-indigo-300"></i>Community</h2>
-                <iframe src="https://discord.com/widget?id=<?= h(rawurlencode((string)$guild)) ?>&amp;theme=dark" title="cubeLadder on Discord"
-                        class="block h-[420px] w-full rounded-lg" loading="lazy" allowtransparency="true" frameborder="0"
-                        sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
+                <!-- loaded only after a click: the widget comes from discord.com, which then gets the visitor's IP (see /privacy) -->
+                <div class="js-external" data-service="discord" data-html="<?= h('<iframe src="https://discord.com/widget?id=' . rawurlencode((string)$guild) . '&amp;theme=dark" title="cubeLadder on Discord" class="block h-[420px] w-full rounded-lg" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>') ?>">
+                    <div class="flex h-[420px] flex-col items-center justify-center gap-3 rounded-lg bg-black/40 p-6 text-center text-sm text-zinc-300">
+                        <i class="fa-brands fa-discord text-4xl text-indigo-300"></i>
+                        <p>See who is online in our Discord. The widget is loaded from discord.com, which then receives your IP address. <a href="/privacy#discord" class="underline hover:text-white">Privacy</a></p>
+                        <button type="button" class="js-external-load rounded-lg bg-[#5865F2] px-4 py-2 font-semibold text-white hover:bg-[#4752c4]">Show the Discord widget</button>
+                        <label class="flex items-center gap-2 text-xs text-zinc-400"><input type="checkbox" class="js-external-remember accent-indigo-400"> Always load it on this device</label>
+                        <a href="https://discord.gg/tVX7FKCtK3" rel="noopener" class="text-xs underline hover:text-white">Or just join our Discord</a>
+                    </div>
+                </div>
             </section>
             <?php endif; ?>
 

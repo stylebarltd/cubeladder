@@ -35,6 +35,10 @@ class CleanUpCommand extends Command
     private const CARD_DAYS = 30;
     private const LOG_MAX_MB = 100;
     private const LOG_KEEP_MB = 20;
+    /** raw game server logs in tmp/ (they contain IPs): days after their last change */
+    private const RAW_LOG_DAYS = 30;
+    /** players.ip: days after the player's last game */
+    private const IP_KEEP_DAYS = 90;
 
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
@@ -74,6 +78,23 @@ class CleanUpCommand extends Command
         if (!$args->getOption('deep')) {
             return self::CODE_SUCCESS;
         }
+
+        // Privacy retention (see /privacy): raw game server logs (they hold every
+        // player's IP) go RAW_LOG_DAYS after their last change - the importer only
+        // ever reads the newest files; a profile's IP address is cleared
+        // IP_KEEP_DAYS after the player's last game (it is set again on the next login).
+        $rawLogs = array_filter(glob(TMP . 'serverlog_*.txt') ?: [], fn($f) => filemtime($f) < time() - self::RAW_LOG_DAYS * 86400);
+        if (!$dry) {
+            foreach ($rawLogs as $f) {
+                @unlink($f);
+            }
+        }
+        $io->out(sprintf('# CleanUp: %d raw server logs older than %d days%s', count($rawLogs), self::RAW_LOG_DAYS, $dry ? ' (dry run)' : ' deleted'));
+        $n = (int)$conn->execute('SELECT COUNT(*) FROM players WHERE ip IS NOT NULL AND last_seen < NOW() - INTERVAL ' . self::IP_KEEP_DAYS . ' DAY')->fetchColumn(0);
+        if ($n > 0 && !$dry) {
+            $conn->execute('UPDATE players SET ip = NULL WHERE ip IS NOT NULL AND last_seen < NOW() - INTERVAL ' . self::IP_KEEP_DAYS . ' DAY');
+        }
+        $io->out(sprintf('# CleanUp: %d player IP addresses older than %d days%s', $n, self::IP_KEEP_DAYS, $dry ? ' (dry run)' : ' cleared'));
 
         // players who never had a game, and nothing else of theirs to keep
         $this->purge($conn, $io, $dry, 'players without games', 'players p',

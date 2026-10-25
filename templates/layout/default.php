@@ -51,7 +51,7 @@
 
 
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/vendor/fontawesome-6.5.0/css/all.min.css">
 
 
 </head>
@@ -232,7 +232,13 @@
 <!-- Page content -->
 <?= $this->fetch('content') ?>
     <!-- Footer -->
-
+    <?php if ($this->request->getParam('action') !== 'map'): // the player map fills the screen ?>
+    <footer class="mx-auto w-full max-w-7xl px-4 py-6 text-center text-xs text-zinc-500 md:px-16">
+        <a href="/privacy" class="hover:text-zinc-300">Privacy</a>
+        <span class="mx-2">·</span>
+        <a href="/about" class="hover:text-zinc-300">About</a>
+    </footer>
+    <?php endif; ?>
 
 </div>
 
@@ -341,6 +347,48 @@
    // displayMenuItems();
 </script>
 
+
+<!-- Privacy notice: information only, no consent needed - the site sets only
+     strictly necessary cookies and loads outside content only on a click
+     (see /privacy). Closing it is remembered in localStorage. -->
+<div id="privacy-notice" class="fixed inset-x-0 bottom-0 z-[1000] hidden p-3 md:p-4" role="region" aria-label="Privacy notice">
+    <div class="mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border border-white/15 bg-zinc-900/95 p-4 text-sm text-zinc-200 shadow-2xl backdrop-blur md:flex-row md:items-center">
+        <p class="flex-1">
+            <i class="fa-solid fa-cookie-bite mr-1 text-amber-300"></i>
+            No tracking, no ads: cubeLadder only uses cookies the site needs to work. We recognise players by the connection they play from. Discord and map content load only when you click.
+            <a href="/privacy" class="underline hover:text-white">Privacy policy</a>
+        </p>
+        <button type="button" id="privacy-notice-ok" class="shrink-0 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">OK</button>
+    </div>
+</div>
+<script>
+(() => {
+    const store = {
+        get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+        set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} },
+    };
+    // the notice, until closed once
+    const box = document.getElementById('privacy-notice');
+    if (box && store.get('privacyNotice') !== 'seen' && location.pathname !== '/privacy') {
+        box.classList.remove('hidden');
+        document.getElementById('privacy-notice-ok').addEventListener('click', () => {
+            store.set('privacyNotice', 'seen');
+            box.remove();
+        });
+    }
+    // outside content (Discord widget, ...): <div class="js-external" data-service="x" data-html="...">
+    // shows a placeholder; the content loads on a click, or right away when the visitor chose "always"
+    document.querySelectorAll('.js-external').forEach((el) => {
+        const key = 'external.' + el.dataset.service;
+        const load = () => { el.innerHTML = el.dataset.html; };
+        if (store.get(key) === 'yes') { load(); return; }
+        el.querySelector('.js-external-load')?.addEventListener('click', () => {
+            if (el.querySelector('.js-external-remember')?.checked) store.set(key, 'yes');
+            load();
+        });
+    });
+})();
+</script>
 
 <!-- Optional scripts -->
 <?= $this->fetch('scriptBottom') ?>

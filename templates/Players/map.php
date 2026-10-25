@@ -6,8 +6,8 @@
  * @var \App\View\AppView $this
  */
 ?>
-<?= $this->Html->css('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css') ?>
-<?= $this->Html->script('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js') ?>
+<?= $this->Html->css('/vendor/leaflet-1.9.4/leaflet.css') ?>
+<?= $this->Html->script('/vendor/leaflet-1.9.4/leaflet.js') ?>
 <style>
 #player-map { background: #0b0b0e; }
 #player-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6); }
@@ -45,6 +45,13 @@
             <p class="mt-3 text-[11px] text-zinc-400">
                 <i class="fa-solid fa-shield-halved mr-1"></i>Positions are randomized within ~100&nbsp;km.
             </p>
+            <div id="map-tiles-box" class="mt-3 rounded-lg bg-white/5 p-3 text-xs text-zinc-300">
+                <p>The map background is loaded from openstreetmap.org, which then receives your IP address. <a href="/privacy#map" class="underline hover:text-white">Privacy</a></p>
+                <div class="mt-2 flex flex-wrap items-center gap-3">
+                    <button type="button" id="map-tiles-btn" class="rounded-md bg-blue-600 px-3 py-1.5 font-semibold text-white hover:bg-blue-700">Show the map background</button>
+                    <label class="flex items-center gap-1.5 text-zinc-400"><input type="checkbox" id="map-tiles-remember" class="accent-blue-500"> always on this device</label>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -54,11 +61,25 @@
         const map = L.map('player-map', { worldCopyJump: true, zoomControl: false }).setView([25, 10], 3);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // standard OSM tiles, darkened in CSS (.leaflet-tile-pane) to match the site
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
+        // standard OSM tiles, darkened in CSS (.leaflet-tile-pane) to match the site.
+        // Loaded only after a click (or when chosen before): the tiles come from
+        // openstreetmap.org, which then receives the visitor's IP (see /privacy).
+        const showTiles = () => {
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+            document.getElementById('map-tiles-box')?.remove();
+        };
+        let always = false;
+        try { always = localStorage.getItem('external.osm') === 'yes'; } catch (e) {}
+        if (always) showTiles();
+        document.getElementById('map-tiles-btn')?.addEventListener('click', () => {
+            if (document.getElementById('map-tiles-remember')?.checked) {
+                try { localStorage.setItem('external.osm', 'yes'); } catch (e) {}
+            }
+            showTiles();
+        });
 
         const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         const flag = (iso) => /^[A-Za-z]{2}$/.test(iso || '')

@@ -309,7 +309,7 @@ $features = [
                     <ul class="space-y-1 text-sm">
                         <?php foreach ($lastLogs as $lastLog): ?>
                             <li class="flex justify-between gap-3">
-                                <span class="font-semibold"><?= $this->Layout->serverName($lastLog->server_name) ?></span>
+                                <span class="font-semibold"><?= $this->Layout->serverIcon($lastLog->server_name) ?><?= $this->Layout->serverName($lastLog->server_name) ?></span>
                                 <span class="font-mono text-xs text-zinc-400"><?= $lastLog->modified->format('d M H:i') ?></span>
                             </li>
                         <?php endforeach ?>

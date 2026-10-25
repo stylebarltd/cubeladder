@@ -89,3 +89,12 @@ __pycache__/
 /.env.local
 # DDEV regenerates this seed for config/.env on every start
 /config/.env.ddev
+/webroot/img/discord/
+# AssaultCube maps, textures and models for the 3D viewer (map licences forbid
+# redistribution in part, size): server only, like webroot/img/maps/
+/webroot/map3d/maps/
+/webroot/map3d/textures/
+/webroot/map3d/models/
+# working material: map screenshots and player illustrations (licence / privacy, size)
+/webroot/img/_maps_from_screens/
+/webroot/img/illustrated_players/

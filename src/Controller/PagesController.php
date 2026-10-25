@@ -280,8 +280,52 @@ class PagesController extends AppController
 
             return [
                 'online' => (int)($json['presence_count'] ?? count($json['members'] ?? [])),
-                'avatars' => array_values(array_filter(array_column(array_slice($json['members'] ?? [], 0, 8), 'avatar_url'))),
+                'avatars' => $this->localAvatars(array_values(array_filter(array_column(array_slice($json['members'] ?? [], 0, 8), 'avatar_url')))),
             ];
         }, 'live_slow');
+    }
+
+    /**
+     * Copies the Discord widget avatars to webroot/img/discord/ and returns
+     * their local paths, so visitors' browsers never contact cdn.discordapp.com
+     * (privacy: no IP transfer to Discord). Files older than a day are removed.
+     *
+     * @param list<string> $urls
+     * @return list<string>
+     */
+    private function localAvatars(array $urls): array
+    {
+        $dir = WWW_ROOT . 'img' . DS . 'discord' . DS;
+        if (!is_dir($dir) && !@mkdir($dir, 0775, true)) {
+            return [];
+        }
+        foreach (glob($dir . '*.png') ?: [] as $old) {
+            if (filemtime($old) < time() - 86400) {
+                @unlink($old);
+            }
+        }
+        $http = new \Cake\Http\Client(['timeout' => 3]);
+        $out = [];
+        foreach ($urls as $url) {
+            if (!preg_match('#^https://cdn\.discordapp\.com/#', (string)$url)) {
+                continue;
+            }
+            $name = substr(hash('sha256', (string)$url), 0, 20) . '.png';
+            if (!is_file($dir . $name)) {
+                try {
+                    $res = $http->get((string)$url);
+                } catch (\Throwable $e) {
+                    continue;
+                }
+                $body = $res->isOk() ? $res->getStringBody() : '';
+                if ($body === '' || strlen($body) > 512 * 1024 || !str_starts_with($body, "\x89PNG")) {
+                    continue;
+                }
+                file_put_contents($dir . $name, $body);
+            }
+            $out[] = '/img/discord/' . $name;
+        }
+
+        return $out;
     }
 }
