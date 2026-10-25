@@ -57,6 +57,11 @@ $this->start('meta'); ?>
 .at-points td.p { white-space: normal; max-width: none; }
 .at-points td.p small { color: rgb(113 113 122); margin-left: .25rem; }
 .at-note { font-size: .8rem; color: rgb(161 161 170); }
+.at-link { border-color: rgb(250 204 21 / .5); }
+.at-code { font: 800 2rem/1.2 ui-monospace, monospace; letter-spacing: .08em; color: #facc15; text-align: center; padding: .35rem 0; user-select: all; }
+.at-link .at-note + .at-note { margin-top: .4rem; }
+.at-dots { display: inline-block; width: .5rem; height: .5rem; border-radius: 50%; background: #facc15; animation: at-pulse 1.6s ease-in-out infinite; vertical-align: middle; }
+@keyframes at-pulse { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
 .at-note b { color: #fff; }
 .at-sound { margin-top: .5rem; font-size: .75rem; color: rgb(161 161 170); background: none; border: 0; cursor: pointer; padding: .2rem 0; }
 .at-sound:hover { color: #fff; }
@@ -120,7 +125,7 @@ $this->start('meta'); ?>
                         It explodes after half a second: wait until targets stand close together.</p>
                     <p class="at-note"><?= $authPlayer
                         ? 'Playing as <b>' . h($authPlayer->name) . '</b> &ndash; your best round goes on the board.'
-                        : 'You are playing as a guest: your score counts only for you. The board knows you once you have played on a cubeLadder server from this connection.' ?></p>
+                        : 'You are playing as a guest: your score counts only for you. To get on the board, say <b>' . h($linkCode) . '</b> in a game on a cubeLadder server.' ?></p>
                     <button type="button" class="at-btn" id="at-go">START</button>
                 </div>
                 <button type="button" class="at-nade" id="at-nade" aria-label="Grenade"><img src="/img/weapons/grenade.svg" alt=""><span id="at-nade-n"></span></button>
@@ -130,6 +135,17 @@ $this->start('meta'); ?>
         </div>
 
         <div class="space-y-6">
+            <?php if (!$authPlayer && $linkCode): ?>
+            <!-- not recognised by IP: prove who you are with a code in the game chat (PlayerLink); the page waits for it -->
+            <div class="at-card at-link" id="at-link">
+                <h3>Get on the board <small>playing as guest</small></h3>
+                <p class="at-note">Say this in the chat of any game on a cubeLadder server:</p>
+                <div class="at-code"><?= h($linkCode) ?></div>
+                <p class="at-note">The servers' logs are read every 10 minutes. This page waits and recognises you by itself &ndash;
+                    on this browser for a year, also on a phone. The code is valid for <?= \App\Service\PlayerLink::VALID_HOURS ?> hours.</p>
+                <p class="at-note js-link-state"><span class="at-dots"></span> waiting for your code&hellip;</p>
+            </div>
+            <?php endif; ?>
             <div class="at-card">
                 <h3>This week <small>resets Monday 00:00 UTC</small></h3>
                 <div id="at-week"></div>
@@ -167,6 +183,30 @@ $this->start('meta'); ?>
     ]) ?>;
     const MAPS = <?= json_encode($maps) ?>;
     const ME = <?= json_encode($authPlayer?->id) ?>;
+
+    // guest with a link code: ask every 20 s whether it was said in a game (the import runs every 10 minutes);
+    // on a match the server sets the identity cookie and the page reloads as that player. Not during a round.
+    (function () {
+        const box = document.getElementById('at-link');
+        if (!box) return;
+        const state = box.querySelector('.js-link-state');
+        const started = Date.now();
+        const tick = async () => {
+            if (Date.now() - started > <?= \App\Service\PlayerLink::VALID_HOURS ?> * 3600e3) { state.textContent = 'Code expired - reload the page for a new one.'; return; }
+            try {
+                const r = await (await fetch('/play/link', {headers: {'Accept': 'application/json'}, cache: 'no-store'})).json();
+                if (r.linked) {
+                    state.innerHTML = 'Got it: you are <b></b>. Reloading&hellip;';
+                    state.querySelector('b').textContent = r.name;
+                    const reload = () => document.querySelector('.at-wrap.at-playing') ? setTimeout(reload, 2000) : location.reload();
+                    setTimeout(reload, 1500);
+                    return;
+                }
+            } catch (e) { /* offline for a moment: try again */ }
+            setTimeout(tick, 20000);
+        };
+        setTimeout(tick, 5000);
+    })();
     const CSRF = document.querySelector('meta[name="csrfToken"]')?.content || '';
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const flag = (iso) => {

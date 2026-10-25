@@ -198,10 +198,10 @@ class AppController extends Controller
             && $this->ownsPlayer($identity);
     }
 
-    public function writePlayerCookie(string $playerId): void
+    public function writePlayerCookie(string $playerId, string $expiry = '+30 days'): void
     {
         $cookie = (new Cookie('selected_player_id', $playerId))
-            ->withExpiry(new \DateTime('+30 days'))
+            ->withExpiry(new \DateTime($expiry))
             ->withPath('/')
             ->withSecure($this->request->is('https'))
             ->withHttpOnly(true)

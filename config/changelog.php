@@ -6,6 +6,14 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-10-26',
+            'title' => 'Aim trainer says "guest" although you play here?',
+            'link' => '/play',
+            'items' => [
+                'Some connections (VPNs, some internet providers, phones) reach the website from a different address than the game, so cubeLadder could not tell who you are. The aim trainer page now shows you a code like cl-48213: say it in the chat of any game on a cubeLadder server, and within about 10 minutes the page recognises you by itself - on that browser for a year, also on your phone.',
+            ],
+        ],
+        [
             'date' => '2026-10-24',
             'title' => 'Aim trainer: weekly achievement and Hall of Fame',
             'link' => '/players/hall_of_fame/aim-trainer',
