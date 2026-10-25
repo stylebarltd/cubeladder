@@ -367,7 +367,7 @@ window.initLiveMatch = function (root, key) {
     function render(data) {
         const s = data.server;
         $('.js-updated').textContent = new Date(data.fetched_at).toLocaleTimeString();
-        $('.js-title').textContent = s.name || key;
+        $('.js-title').innerHTML = (s.icon ? '<img src="' + esc(s.icon) + '" alt="" class="inline-block h-7 w-7 rounded-full align-[-5px] mr-2">' : '') + esc(s.name || key);
         // "🌐 4 watching on cubeladder.ovh: Pola, Georgia + 2 guests" (logged-in players by name)
         const named = (data.watching || []).map(p => '<a href="/players/view/' + esc(p.id) + '" class="text-zinc-300 hover:text-blue-400">' + esc(p.name) + '</a>');
         const guests = (data.viewers || 0) - named.length;

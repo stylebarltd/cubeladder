@@ -101,6 +101,7 @@ class LiveController extends AppController
             $info['map_image'] = $info['map'] && is_file(WWW_ROOT . 'img/maps/' . $info['map'] . '.jpg')
                 ? \App\View\Helper\LayoutHelper::mapUrl($info['map'] . '.jpg')
                 : null; // no screenshot: the page keeps the bullet background
+            $info['icon'] = \App\View\Helper\LayoutHelper::serverIconFor($key); // server logo for the title, when it has one
             $latest = $this->latestGame($info);
             $info['game_id'] = $this->currentGameId($info, $latest);
             $list = [$info];

@@ -76,7 +76,7 @@
     const competitive = new Set(<?= json_encode(array_values(\App\Service\CompetitiveTracker::servers())) ?>);
     const own = <?= json_encode(array_map(fn($k, $c) => [
         'key' => $k, 'name' => $c['name'] ?? $k, 'online' => null, 'numplayers' => 0,
-        'host' => $c['host'], 'port' => (int)$c['port'],
+        'host' => $c['host'], 'port' => (int)$c['port'], 'icon' => $this->Layout->serverIconPath($k),
     ], array_keys($servers), $servers)) ?>;
     let groups = [{title: 'Our servers', servers: own}];
     const byKey = () => new Map(groups.flatMap(g => g.servers).map(s => [s.key, s]));
@@ -94,6 +94,8 @@
     const subText = (s) => s.online === false ? 'offline'
         : (s.numplayers > 0 ? (s.map || '—') + ' · ' + (s.mode_name || '?') : (s.online ? 'empty' : s.host + ':' + s.port));
     const countText = (s) => s.online ? s.numplayers + '/' + (s.maxclients ?? '?') : '';
+    // server logo (webroot/img/servers/<key>.png) in front of the name, when the server has one
+    const logo = (s) => s.icon ? '<img src="' + esc(s.icon) + '" alt="" class="inline-block h-4 w-4 rounded-full align-[-3px] mr-1">' : '';
     const thumb = (s) => (s.numplayers > 0 && s.map_thumb) ? s.map_thumb : '/img/bullet-thumb.jpg';
 
     function renderButton() {
@@ -101,7 +103,7 @@
         if (!s) return;
         document.getElementById('srv-btn-thumb').src = thumb(s);
         document.getElementById('srv-btn-dot').className = 'absolute -right-1 -top-1 h-3 w-3 rounded-full ring-2 ring-black ' + dotClass(s);
-        document.getElementById('srv-btn-name').textContent = s.name;
+        document.getElementById('srv-btn-name').innerHTML = logo(s) + esc(s.name);
         document.getElementById('srv-btn-sub').textContent = subText(s);
         document.getElementById('srv-btn-count').textContent = countText(s);
     }
@@ -118,7 +120,7 @@
                         '<span class="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full ring-2 ring-zinc-900 ' + dotClass(s) + '"></span>' +
                     '</span>' +
                     '<span class="min-w-0 flex-1">' +
-                        '<span class="block truncate text-sm">' + esc(s.name) +
+                        '<span class="block truncate text-sm">' + logo(s) + esc(s.name) +
                             (competitive.has(s.key) ? ' <span class="ml-1 rounded bg-amber-500/20 px-1 py-px align-middle text-[9px] font-bold uppercase tracking-wide text-amber-300">competitive</span>' : '') +
                         '</span>' +
                         '<span class="block truncate text-[11px] text-zinc-500">' + esc(subText(s)) + '</span>' +

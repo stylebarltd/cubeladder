@@ -229,6 +229,41 @@ class LayoutHelper extends Helper
 
 
 
+    /**
+     * Web path of a server's logo, webroot/img/servers/<server key>.<png|jpg>
+     * (the same file the Discord posts use), or null when the server has none.
+     */
+    public function serverIconPath(?string $key): ?string
+    {
+        return self::serverIconFor($key);
+    }
+
+    /** Static form of serverIconPath() for controllers and services (like mapUrl()). */
+    public static function serverIconFor(?string $key): ?string
+    {
+        if (!$key || !preg_match('/^[\w.-]+$/', $key)) {
+            return null;
+        }
+        foreach (['png', 'jpg'] as $ext) {
+            if (is_file(WWW_ROOT . 'img/servers/' . $key . '.' . $ext)) {
+                return '/img/servers/' . rawurlencode($key) . '.' . $ext;
+            }
+        }
+
+        return null;
+    }
+
+    /** Small round server logo as an <img>, or '' when the server has none. */
+    public function serverIcon(?string $key, string $class = 'inline-block h-4 w-4 rounded-full align-[-3px] mr-1'): string
+    {
+        $path = $this->serverIconPath($key);
+        if (!$path) {
+            return '';
+        }
+
+        return '<img src="' . h($path) . '" alt="" class="' . h($class) . '" loading="lazy">';
+    }
+
     public function serverName($type): string
     {
         if(!$type){

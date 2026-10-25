@@ -10,6 +10,12 @@ TMP_DIR="$BASE_DIR/tmp"
 LOGFILE="$BASE_DIR/logs/logfile_server_processor.log"
 mkdir -p "$TMP_DIR" "$BASE_DIR/logs"
 
+# same lock as process_logs.sh, so a run by hand never overlaps the cron run
+if [[ -z "${PROCESS_LOGS_LOCKED:-}" ]]; then
+    export PROCESS_LOGS_LOCKED=1
+    exec flock -w 900 "$TMP_DIR/process_logs.lock" "$0" "$@"
+fi
+
 # B_FTP_HOST / B_FTP_PORT / B_FTP_USER / B_FTP_PASS in .env.local (skipped when unset).
 # The login goes to curl on stdin, so it never shows up in the process list.
 if [[ -n "${B_FTP_HOST:-}" ]]; then

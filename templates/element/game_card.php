@@ -125,7 +125,7 @@ $head = function () use ($flagMode, $rated, $withAcc) {
                     <i class="far fa-clock mr-1"></i><?= $game->started_at->format('H:i') ?>
                     <?php if ($game->ended_at): ?>&ndash; <?= $game->ended_at->format('H:i') ?><?php endif; ?>
                 </span>
-                <span><i class="fa-solid fa-server mr-1"></i><?= $this->Layout->serverName($game->server_name) ?></span>
+                <span><?= $this->Layout->serverIcon($game->server_name) ?: '<i class="fa-solid fa-server mr-1"></i>' ?><?= $this->Layout->serverName($game->server_name) ?></span>
                 <span><?= $this->Layout->gameModeIcon($game->mode) ?></span>
             </div>
             <?php if ($share):

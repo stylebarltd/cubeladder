@@ -12,6 +12,15 @@ LOGFILE="$PROCESSOR_LOG_DIR/logfile_server_processor.log"
 
 mkdir -p "$TMP_DIR"
 
+# One import at a time: a run started by hand must not overlap the cron run
+# (two parsers on the same log race on log_offsets and players). The fetch_*
+# scripts take the same lock when run on their own; PROCESS_LOGS_LOCKED tells
+# them it is held already.
+if [[ -z "${PROCESS_LOGS_LOCKED:-}" ]]; then
+    export PROCESS_LOGS_LOCKED=1
+    exec flock -w 900 "$TMP_DIR/process_logs.lock" "$0" "$@"
+fi
+
 declare -A SERVERS
 SERVERS["chobbz"]="${CHOBBZ_SSH}|${CHOBBZ_SSH_KEY}|/serverlogs"
 SERVERS["acka"]="${ACKA_SSH}|${ACKA_SSH_KEY}|/home/AssaultCube_v1.3/logs"
@@ -115,6 +124,9 @@ done
 
 # FTP servers (Barry's B server): fetch_ftp_logs.sh
 "$BASE_DIR/fetch_ftp_logs.sh" || echo "fetch_ftp_logs.sh failed!" >> "$LOGFILE"
+
+# Vortex servers (logs via their Cloudflare gateway): fetch_vortex_logs.sh
+"$BASE_DIR/fetch_vortex_logs.sh" || echo "fetch_vortex_logs.sh failed!" >> "$LOGFILE"
 
 echo "➡ CleanUp"
 if ! "$BASE_DIR/bin/cake" CleanUp >> "$LOGFILE" 2>&1; then

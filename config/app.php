@@ -524,6 +524,10 @@ return [
         // enabled locally via app_local.php).
         'streakBanner' => false,
 
+        // Competitive ladder (/competitive): open to everyone, but not linked
+        // anywhere on purpose (only the admin nav knows the page).
+        'competitive' => ['public' => true],
+
         'servers' => [
             // rule: aCKa servers first, then Banana and POTATO
             'acka-custom'    => ['name' => '[aCKa] Custom',      'host' => '54.36.188.74', 'port' => 9000],
@@ -535,6 +539,13 @@ return [
             // Barry's B server (logs over FTP, see process_logs.sh); its log is in
             // New York time, the parser stores it in Berlin time like the others
             'barry-b'        => ['name' => 'B[] New York', 'host' => '107.173.23.18', 'port' => 28763, 'logTz' => 'America/New_York'],
+            // Vortex servers (logs over their Cloudflare gateway, see fetch_vortex_logs.sh);
+            // the USA West log is in Pacific time, the others log in UTC
+            'vortex-usa-west'  => ['name' => 'Vortex CTF USA West',  'host' => '69.169.106.218', 'port' => 5625, 'logTz' => 'America/Los_Angeles'],
+            'vortex-usa-east'  => ['name' => 'Vortex CTF USA East',  'host' => '64.20.59.2',     'port' => 5680, 'logTz' => 'UTC'],
+            'vortex-brazil'    => ['name' => 'Vortex CTF Brazil',    'host' => '109.104.155.33', 'port' => 5533, 'logTz' => 'UTC'],
+            'vortex-germany'   => ['name' => 'Vortex CTF Germany',   'host' => '104.243.39.28',  'port' => 5578, 'logTz' => 'UTC'],
+            'vortex-singapore' => ['name' => 'Vortex CTF Singapore', 'host' => '51.79.163.179',  'port' => 5573, 'logTz' => 'UTC'],
             // clan match / inter servers: own sidebar box on /live ('live' => false)
             'mys-1111'  => ['name' => 'MyS 1111',  'host' => 'mysick.org',   'port' => 1111, 'live' => false],
             'mys-2222'  => ['name' => 'MyS 2222',  'host' => 'mysick.org',   'port' => 2222, 'live' => false],
@@ -588,7 +599,8 @@ return [
 
         'discord' => [
             'webhook' => env('DISCORD_LIVE_WEBHOOK'),
-            'servers' => ['acka-custom', 'acka-nostalgic', 'acka-assault', 'acka-europa', 'chobbz-banana', 'chobbz-potato', 'barry-b'],
+            'servers' => ['acka-custom', 'acka-nostalgic', 'acka-assault', 'acka-europa', 'chobbz-banana', 'chobbz-potato', 'barry-b',
+                'vortex-usa-west', 'vortex-usa-east', 'vortex-brazil', 'vortex-germany', 'vortex-singapore'],
             'site' => env('APP_FULL_BASE_URL', 'https://cubeladder.ovh'),
             'state' => TMP . 'discord_live.json',
             /*

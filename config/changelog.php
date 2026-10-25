@@ -14,6 +14,14 @@ return [
             ],
         ],
         [
+            'date' => '2026-10-25',
+            'title' => 'New servers on the ladder: the Vortex CTF servers',
+            'link' => '/live',
+            'items' => [
+                'Games on Vortex CTF USA West, USA East, Brazil, Germany and Singapore count for the ladder from today on. The servers are on the Live page too.',
+            ],
+        ],
+        [
             'date' => '2026-10-24',
             'title' => 'Aim trainer: weekly achievement and Hall of Fame',
             'link' => '/players/hall_of_fame/aim-trainer',

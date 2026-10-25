@@ -1566,6 +1566,28 @@ class AcLogParser
             throw $e;
         }
 
+        // save() can also just return false (a rule failed, e.g. a parallel
+        // import created the same player a moment ago): reuse that row rather
+        // than carrying on with an entity that has no id.
+        if ($player->id === null) {
+            $existing = null;
+            if ($pubkey) {
+                $existing = $this->Players->find()->where(['pubkey' => $pubkey])->first();
+            }
+            if (!$existing) {
+                $existing = $this->Players->find()->where(['name' => $name])->first();
+            }
+            if (!$existing) {
+                throw new \RuntimeException("Could not save player '$name': " . json_encode($player->getErrors()));
+            }
+            $this->playersCache[$name] = $existing->id;
+            if ($pubkey) {
+                $this->pubkeyCache[$pubkey] = $existing->id;
+            }
+
+            return $existing;
+        }
+
         // cache
         $this->playersCache[$name] = $player->id;
         if ($pubkey) {
