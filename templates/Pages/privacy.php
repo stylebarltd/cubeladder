@@ -36,12 +36,11 @@ $td = 'border-b border-white/10 py-2 pr-4 align-top';
         <p class="mt-6">cubeLadder (cubeladder.ovh) publishes rankings, statistics and live views of AssaultCube games played on the servers listed on the site. This page explains which personal data we process, why, and what you can do about it.</p>
 
         <h2 id="controller" class="<?= $h2 ?>">Who is responsible</h2>
-        <p>The data controller is <b>stylebar limited</b>, 49 Austin Road, Kowloon, Hong Kong. It runs cubeLadder as a non-commercial hobby project, managed by pola|ZZ from Thailand.</p>
+        <p>The data controller is <b>stylebar limited</b>, 49 Austin Road, Kowloon, Hong Kong. It runs cubeLadder as a non-commercial hobby project, managed by pola|ZZ, resident in Thailand.</p>
         <ul class="mt-3 list-disc pl-6 space-y-1">
             <li>Privacy contact: <?= $contact ?></li>
             <?php if ($euRep): ?><li>EU representative: <?= h($euRep) ?></li><?php endif; ?>
         </ul>
-        <p class="mt-3">The domain cubeladder.ovh is registered by ZZ|Ketar* as a sponsor. He does not run the site or decide how data is used. Please send privacy requests to the contact above.</p>
 
         <h2 id="sources" class="<?= $h2 ?>">Where the data comes from</h2>
         <p>Most data comes from the logs of the AssaultCube game servers on the ladder (<?= h(implode(', ', $servers)) ?>), which their operators share with cubeLadder, and from the live status of those servers. The rest comes from you when you use the website.</p>
