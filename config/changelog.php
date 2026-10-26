@@ -13,7 +13,7 @@ return [
                 'cubeLadder no longer keeps the game chat. Only a link code like cl-48213 is saved, and only for a day. Because of that, the "said gg" count is gone from player pages.',
                 'Old server logs are deleted after 30 days, your IP address 90 days after your last game, and inbox messages after 12 months.',
                 'The site no longer loads anything from other websites until you click: the Discord widget on the About page and the map background on the player map wait for your click.',
-                'Everything is explained on the new privacy page, linked at the bottom of every page.',
+                'Everything is explained on the new privacy page: the shield icon at the top of every page.',
             ],
         ],
         [

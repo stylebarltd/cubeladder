@@ -102,6 +102,9 @@
                     <a href="/about" class="hidden md:inline-block p-2 hover:text-zinc-500 transition" title="About, rules &amp; what's new" aria-label="About">
                         <i class="fa-solid fa-circle-question"></i>
                     </a>
+                    <a href="/privacy" class="hidden md:inline-block p-2 hover:text-zinc-500 transition" title="Privacy" aria-label="Privacy">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </a>
 
                     <!-- Admin area (logged in admins only), with open merge requests + unread messages -->
                     <?php if (!empty($isAdmin)): ?>
@@ -198,6 +201,7 @@
 
                 <a href="/stats" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-users"></i> Community stats</a>
                 <a href="/about" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-circle-question"></i> About, rules &amp; what's new</a>
+                <a href="/privacy" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-user-shield"></i> Privacy</a>
                 <?php if (!empty($authPlayer)): ?>
                     <a href="<?= $this->Url->build(['controller' => 'Messages', 'action' => 'inbox']) ?>" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md">
                         <i class="fa fa-inbox"></i> Inbox
@@ -231,14 +235,7 @@
 
 <!-- Page content -->
 <?= $this->fetch('content') ?>
-    <!-- Footer -->
-    <?php if ($this->request->getParam('action') !== 'map'): // the player map fills the screen ?>
-    <footer class="mx-auto w-full max-w-7xl px-4 py-6 text-center text-xs text-zinc-500 md:px-16">
-        <a href="/privacy" class="hover:text-zinc-300">Privacy</a>
-        <span class="mx-2">·</span>
-        <a href="/about" class="hover:text-zinc-300">About</a>
-    </footer>
-    <?php endif; ?>
+
 
 </div>
 
