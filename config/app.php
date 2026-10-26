@@ -528,6 +528,9 @@ return [
         // anywhere on purpose (only the admin nav knows the page).
         'competitive' => ['public' => true],
 
+        // /privacy: the privacy contact (an OVH mail redirect)
+        'privacy' => ['email' => 'privacy@cubeladder.ovh'],
+
         'servers' => [
             // rule: aCKa servers first, then Banana and POTATO
             'acka-custom'    => ['name' => '[aCKa] Custom',      'host' => '54.36.188.74', 'port' => 9000],

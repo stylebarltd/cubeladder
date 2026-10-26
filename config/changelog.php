@@ -7,6 +7,17 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-26',
+            'title' => 'Privacy: less data, and a privacy page',
+            'link' => '/privacy',
+            'items' => [
+                'cubeLadder no longer keeps the game chat. Only a link code like cl-48213 is saved, and only for a day. Because of that, the "said gg" count is gone from player pages.',
+                'Old server logs are deleted after 30 days, your IP address 90 days after your last game, and inbox messages after 12 months.',
+                'The site no longer loads anything from other websites until you click: the Discord widget on the About page and the map background on the player map wait for your click.',
+                'Everything is explained on the new privacy page, linked at the bottom of every page.',
+            ],
+        ],
+        [
+            'date' => '2026-10-26',
             'title' => 'Aim trainer says "guest" although you play here?',
             'link' => '/play',
             'items' => [

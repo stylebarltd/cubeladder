@@ -31,9 +31,6 @@ if (!empty($funFacts['server'])) {
 if (!empty($funFacts['weekday'])) {
     $facts[] = ['fa-calendar-week', 'Plays most on <b>' . h($funFacts['weekday']['day']) . 's</b>'];
 }
-if (!empty($funFacts['gg'])) {
-    $facts[] = ['fa-comment', 'Said <b>gg</b> ' . number_format($funFacts['gg']) . ' time' . ($funFacts['gg'] === 1 ? '' : 's') . ' in the chat'];
-}
 if (($funFacts['names'] ?? 0) > 1) {
     $facts[] = ['fa-masks-theater', 'Played under <b>' . (int)$funFacts['names'] . '</b> different names'];
 }

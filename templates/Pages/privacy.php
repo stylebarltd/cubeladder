@@ -31,12 +31,12 @@ $td = 'border-b border-white/10 py-2 pr-4 align-top';
 <div class="mx-auto w-full max-w-4xl px-4 py-10 md:px-8 text-zinc-200 leading-relaxed">
     <div class="rounded-xl border border-white/15 bg-black/70 p-6 md:p-10 backdrop-blur-[2px]">
         <h1 class="text-3xl md:text-4xl font-extrabold text-white"><i class="fa-solid fa-shield-halved mr-2 text-green-400"></i>Privacy policy</h1>
-        <p class="mt-2 text-sm text-zinc-400">Last updated: 25 October 2026</p>
+        <p class="mt-2 text-sm text-zinc-400">Last updated: 26 October 2026</p>
 
         <p class="mt-6">cubeLadder (cubeladder.ovh) publishes rankings, statistics and live views of AssaultCube games played on the servers listed on the site. This page explains which personal data we process, why, and what you can do about it.</p>
 
         <h2 id="controller" class="<?= $h2 ?>">Who is responsible</h2>
-        <p>The data controller is <b>pola|ZZ</b>, a private individual living in Thailand, who runs cubeLadder as a non-commercial hobby project.</p>
+        <p>The data controller is <b>stylebar limited</b>, 49 Austin Road, Kowloon, Hong Kong. It runs cubeLadder as a non-commercial hobby project, managed by pola|ZZ from Thailand.</p>
         <ul class="mt-3 list-disc pl-6 space-y-1">
             <li>Privacy contact: <?= $contact ?></li>
             <?php if ($euRep): ?><li>EU representative: <?= h($euRep) ?></li><?php endif; ?>
@@ -53,11 +53,12 @@ $td = 'border-b border-white/10 py-2 pr-4 align-top';
             <tbody>
             <tr><td class="<?= $td ?>">Nickname and AssaultCube public key</td><td class="<?= $td ?>">Recognise you across games and name changes</td><td class="<?= $td ?>">Legitimate interest</td><td class="<?= $td ?>">While the ladder runs</td></tr>
             <tr><td class="<?= $td ?>">Game events: kills, flags, scores, teams, minutes, accuracy, damage, ping, votes</td><td class="<?= $td ?>">Rankings, ratings, Hall of Fame, achievements, live view</td><td class="<?= $td ?>">Legitimate interest</td><td class="<?= $td ?>">While the ladder runs</td></tr>
-            <tr><td class="<?= $td ?>">In-game chat lines (full text)</td><td class="<?= $td ?>">Live view of a running game; counts such as "said gg 120 times" on player pages. The text itself is not shown on player pages.</td><td class="<?= $td ?>">Legitimate interest</td><td class="<?= $td ?>">While the ladder runs</td></tr>
+            <tr><td class="<?= $td ?>">A link code you say in the game chat (like cl-48213)</td><td class="<?= $td ?>">Recognise you on the website when your browser uses a different connection than the game. Nothing else from the chat is saved.</td><td class="<?= $td ?>">Providing the service you use</td><td class="<?= $td ?>">1 day</td></tr>
             <tr><td class="<?= $td ?>">Country and approximate location</td><td class="<?= $td ?>">Country flags, rankings by country, player map. Worked out from your IP address with a local GeoLite2 database (no outside service is asked); map positions are shifted at random by up to ~100 km.</td><td class="<?= $td ?>">Legitimate interest</td><td class="<?= $td ?>">While the ladder runs</td></tr>
             <tr><td class="<?= $td ?>">IP address</td><td class="<?= $td ?>">Recognise you on the website without an account (your name at the top right, "Edit profile", messages, "Don't track me"), and work out your country</td><td class="<?= $td ?>">Legitimate interest</td><td class="<?= $td ?>">Only the latest one per profile, cleared 90 days after your last game. Raw server logs, which contain IP addresses, are deleted 30 days after import.</td></tr>
+            <tr><td class="<?= $td ?>">Network part of your IP address (first three parts) with your name, in competitive games</td><td class="<?= $td ?>">Tell competitive players apart, who often change names and play without a login</td><td class="<?= $td ?>">Legitimate interest</td><td class="<?= $td ?>">While the competitive ladder runs</td></tr>
             <tr><td class="<?= $td ?>">Profile choices (picture, "Don't track me")</td><td class="<?= $td ?>">Your settings</td><td class="<?= $td ?>">Providing the service you use</td><td class="<?= $td ?>">While your profile exists</td></tr>
-            <tr><td class="<?= $td ?>">Messages (inbox, messages to the admin)</td><td class="<?= $td ?>">Answer you and send achievement notices</td><td class="<?= $td ?>">Providing the service you use</td><td class="<?= $td ?>">Until you delete them in your inbox</td></tr>
+            <tr><td class="<?= $td ?>">Messages (inbox, messages to the admin)</td><td class="<?= $td ?>">Answer you and send achievement notices</td><td class="<?= $td ?>">Providing the service you use</td><td class="<?= $td ?>">12 months, or until you delete them in your inbox</td></tr>
             <tr><td class="<?= $td ?>">Aim trainer rounds</td><td class="<?= $td ?>">Aim trainer boards and records</td><td class="<?= $td ?>">Providing the service you use</td><td class="<?= $td ?>">While the boards run</td></tr>
             <tr><td class="<?= $td ?>">Pages visited and referrer</td><td class="<?= $td ?>">Count visits</td><td class="<?= $td ?>">Legitimate interest</td><td class="<?= $td ?>">Counts per day only, kept about 13 months. Guests are counted by a hash of IP address and browser with a random key that is replaced every day, so no IP address is stored and a guest cannot be followed from one day to the next.</td></tr>
             </tbody>
@@ -67,7 +68,7 @@ $td = 'border-b border-white/10 py-2 pr-4 align-top';
         <p class="mt-3">We use your data to build ratings, player types and similar labels from your game statistics. These are for fun and community rankings only and have no legal or similar effect on you.</p>
 
         <h2 id="public" class="<?= $h2 ?>">What is public</h2>
-        <p>Your nickname, country flag, game statistics, ratings, records and achievements are shown publicly on the site and shared in our Discord server. Chat lines of a game that is running right now appear in its live view. Your IP address, your public key and your messages are never published.</p>
+        <p>Your nickname, country flag, game statistics, ratings, records and achievements are shown publicly on the site and shared in our Discord server. Your IP address, your public key and your messages are never published.</p>
 
         <h2 id="recipients" class="<?= $h2 ?>">Who else receives data</h2>
         <ul class="list-disc pl-6 space-y-2">
@@ -80,7 +81,7 @@ $td = 'border-b border-white/10 py-2 pr-4 align-top';
         <p class="mt-3">Everything else the pages need (fonts, icons, scripts) is served from cubeladder.ovh itself. We do not sell data and do not use it for advertising.</p>
 
         <h2 id="storage" class="<?= $h2 ?>">Where the data is stored</h2>
-        <p>The site's data is stored in Germany. The controller manages it from Thailand, and public results also appear on Discord, whose servers are in the USA.</p>
+        <p>The site's data is stored in Germany. It is managed from Thailand, and public results also appear on Discord, whose servers are in the USA.</p>
 
         <h2 id="cookies" class="<?= $h2 ?>">Cookies and storage in your browser</h2>
         <p>We use only cookies that the site needs to work. We use no analytics, advertising or tracking cookies, so we do not ask for consent.</p>

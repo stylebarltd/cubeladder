@@ -36,30 +36,17 @@ class AcLogParser
     /** killer|victim => ['kills' => n, 'teamkills' => n] for the current game (kill_pairs) */
     protected array $killBuffer = [];
 
-    /** buffered chat rows for the events table (type 'chat') */
+    /** buffered rows for the events table (link codes said in the chat, votes, anticheat) */
     protected array $chatBuffer = [];
 
     /**
-     * Canned in-game voice commands (bound to keys, not typed) that are
-     * not worth recording as chat. Compared case-insensitively.
+     * The link code in a chat line ("cl-48213", also "cl 48213" / "48213" as
+     * players type it), else null. Only these are saved (privacy: no chat
+     * text is kept, see /privacy); PlayerLink::check() looks for them.
      */
-    public const IGNORED_CHAT = [
-        'thanks', 'thanks!', 'thanks, man', 'nice shot', 'awesome', 'awesome!', 'gg',
-        'stay together!', "there's no way, sir!", 'spread out!', 'come on, move!',
-        'haha', 'recover the flag!', 'negative', 'affirmative', 'i made contact',
-        "i'm on your team, man!", 'we did it!', 'sorry', 'report in!',
-    ];
-
-    /** chat messages shorter than this (in characters) are not recorded */
-    public const MIN_CHAT_LENGTH = 4;
-
-    /** Whether a chat line is worth recording as an event. */
-    public static function isChatWorthRecording(string $msg): bool
+    public static function linkCodeIn(string $msg): ?string
     {
-        $msg = trim($msg);
-
-        return mb_strlen($msg) >= self::MIN_CHAT_LENGTH
-            && !in_array(mb_strtolower($msg), self::IGNORED_CHAT, true);
+        return preg_match('/(?<!\d)(\d{5})(?!\d)/', $msg, $m) ? 'cl-' . $m[1] : null;
     }
     protected $PlayerStatsPerGame;
     protected $Demos;
@@ -428,20 +415,22 @@ class AcLogParser
             return;
         }
 
-        // chat: [ip] name says: 'message' - saved to events (type "chat").
+        // chat: [ip] name says: 'message' - only a link code in it is saved to
+        // events (type "chat", PlayerLink), never the text.
         // Checked before the kill regex so a message quoting a kill verb
         // is not mistaken for a kill line.
         if (preg_match($this->chatRegex, $rest, $m)) {
             $name = trim($m[2]);
             $msg = trim($m[3]);
-            if (strtolower($name) !== 'unarmed' && self::isChatWorthRecording($msg)) {
+            $code = self::linkCodeIn($msg);
+            if (strtolower($name) !== 'unarmed' && $code !== null) {
                 $this->chatBuffer[] = [
                     'game_id' => $this->currentGame->id ?? null,
                     'event_time' => $ts ? $ts->format('Y-m-d H:i:s') : null,
                     'event_hash' => md5($this->getServerName() . '|' . ($ts ? $ts->format('c') : '') . '|' . $name . '|' . $msg),
                     'type' => 'chat',
                     'actor_id' => $this->getPlayerIdByNameCached($name),
-                    'details' => json_encode(['name' => $name, 'msg' => $msg], JSON_UNESCAPED_UNICODE),
+                    'details' => json_encode(['msg' => $code]),
                 ];
                 if (count($this->chatBuffer) >= 200) {
                     $this->flushChats();

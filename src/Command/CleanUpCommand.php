@@ -21,8 +21,10 @@ use Cake\Database\Connection;
  *    locked and not opted out (their "don't track me" is kept)
  *  - games without any player row (a day old) and their events / kill pairs
  *  - maps nobody played
- *  - rows of deleted players or games left in the other tables (not the
- *    chat: player pages quote it, it is the only copy)
+ *  - rows of deleted players or games left in the other tables
+ *  - privacy retention (/privacy): raw server logs after RAW_LOG_DAYS, profile
+ *    IPs after IP_KEEP_DAYS, link codes said in the chat after CHAT_KEEP_DAYS,
+ *    inbox messages after MESSAGE_KEEP_MONTHS
  *  - preview pictures (tmp/cache/cards) not used for CARD_DAYS
  *  - logs/logfile_server_processor.log: over LOG_MAX_MB, only its last LOG_KEEP_MB stay
  *
@@ -39,6 +41,10 @@ class CleanUpCommand extends Command
     private const RAW_LOG_DAYS = 30;
     /** players.ip: days after the player's last game */
     private const IP_KEEP_DAYS = 90;
+    /** events type 'chat' (only link codes, PlayerLink - a code is valid for 3 hours) */
+    private const CHAT_KEEP_DAYS = 1;
+    /** messages (inbox, messages to the admin) */
+    private const MESSAGE_KEEP_MONTHS = 12;
 
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
     {
@@ -95,6 +101,10 @@ class CleanUpCommand extends Command
             $conn->execute('UPDATE players SET ip = NULL WHERE ip IS NOT NULL AND last_seen < NOW() - INTERVAL ' . self::IP_KEEP_DAYS . ' DAY');
         }
         $io->out(sprintf('# CleanUp: %d player IP addresses older than %d days%s', $n, self::IP_KEEP_DAYS, $dry ? ' (dry run)' : ' cleared'));
+        $this->purge($conn, $io, $dry, 'old chat lines', 'events e',
+            "e.type = 'chat' AND e.event_time < NOW() - INTERVAL " . self::CHAT_KEEP_DAYS . ' DAY');
+        $this->purge($conn, $io, $dry, 'old messages', 'messages m',
+            'm.created < NOW() - INTERVAL ' . self::MESSAGE_KEEP_MONTHS . ' MONTH');
 
         // players who never had a game, and nothing else of theirs to keep
         $this->purge($conn, $io, $dry, 'players without games', 'players p',

@@ -1022,14 +1022,6 @@ $gamesDataGlobal = [];        // games inside lastGameIds
              GROUP BY p.id, p.name, p.country, p.picture HAVING n > 0 ORDER BY n DESC LIMIT 10',
             [$player->id]
         )->fetchAll('assoc');
-        $quotes = array_map(
-            fn($r) => ['msg' => json_decode($r['details'], true)['msg'] ?? '', 'at' => $r['event_time']],
-            $conn->execute(
-                "SELECT details, event_time FROM events WHERE type = 'chat' AND actor_id = ? ORDER BY id DESC LIMIT 5",
-                [$player->id]
-            )->fetchAll('assoc')
-        );
-
         $records = $this->getPlayerRecords((string)$player->id);
         // the aim trainer's best round next to the game records (Hall of Fame category 'aim')
         if ($aimRecord = (new \App\Service\AimTrainer())->personalRecord((string)$player->id)) {
@@ -1100,7 +1092,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             'dpm' => $live['mins'] > 0 ? (int)round($live['damage'] / $live['mins']) : null,
         ] : null;
 
-        $this->set(compact('nemeses', 'victims', 'quotes', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
+        $this->set(compact('nemeses', 'victims', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
             'milestones', 'milestoneProgress', 'funFacts', 'lastSeen', 'weapons', 'ping', 'accuracy'));
         $this->set(compact(
             'player',
@@ -1418,12 +1410,6 @@ $gamesDataGlobal = [];        // games inside lastGameIds
                 [$playerId]
             )->fetchColumn(0);
 
-            $gg = (int)$conn->execute(
-                "SELECT COUNT(*) FROM events WHERE type = 'chat' AND actor_id = ?
-                 AND LOWER(JSON_VALUE(details, '$.msg')) REGEXP '(^|[^a-z])gg([^a-z]|$)'",
-                [$playerId]
-            )->fetchColumn(0);
-
             $names = (int)$conn->execute('SELECT COUNT(DISTINCT alias) FROM player_aliases WHERE player_id = ?', [$playerId])->fetchColumn(0);
 
             return [
@@ -1436,7 +1422,6 @@ $gamesDataGlobal = [];        // games inside lastGameIds
                 ] : null,
                 'weekday' => $weekday,
                 'since' => $since ?: null,
-                'gg' => $gg,
                 'names' => $names,
             ];
         }, 'rankings');
