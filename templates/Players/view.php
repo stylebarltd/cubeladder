@@ -40,7 +40,7 @@ if ((int)$player->track === 1):
         $ogText .= ' · ' . $this->Layout->duration((int)$timePlayed['all']) . ' played';
     }
     // a new picture URL whenever the rating changes, so previews don't stay stale
-    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $rating?->trend, $player->name, $player->picture, array_column($weapons['choice'] ?? [], 'pct', 'key'), $rating?->archetype, $rating?->archetype_rank, $rating?->archetype_pct, $rating?->skill, $rating?->skill_rank, $rating?->skill_trend, 'card-v4'])), 0, 8);
+    $ogImage = $site . '/players/card/' . $player->id . '?v=' . substr(md5(json_encode([$rating?->rating, $rating?->type, $rating?->rank, $rating?->trend, $player->name, $player->picture, array_column($weapons['choice'] ?? [], 'pct', 'key'), $rating?->archetype, $rating?->archetype_rank, $rating?->archetype_pct, $rating?->skill, $rating?->skill_rank, $rating?->skill_trend, $qrProfile['card_color'] ?? null, $qrProfile['card_tagline'] ?? null, 'card-v4'])), 0, 8);
     $this->assign('title', $ogTitle);
     $this->start('meta'); ?>
     <meta property="og:type" content="profile">
@@ -127,6 +127,21 @@ endif;
                     <?= $this->element('achievement_badge', ['event' => $a->event_type, 'title' => ($achievementLabels[$a->event_type] ?? $a->event_type) . ' last week', 'large' => true]) ?>
                 <?php endforeach; ?>
             </div>
+            <?php endif; ?>
+            <?php if (!empty($qrProfile['bio']) && \App\Service\QrHunt::unlocked((int)($qrLevel ?? 0), 'bio')): ?>
+                <!-- the player's own text (QR hunt, 2 points) -->
+                <p class="mb-3 max-w-2xl text-base italic text-zinc-200">&ldquo;<?= h($qrProfile['bio']) ?>&rdquo;
+                    <?php if (!empty($isAdmin)): ?>
+                        <?= $this->Form->postLink('<i class="fa-solid fa-eraser"></i> remove', ['action' => 'clearTexts', $player->id],
+                            ['escape' => false, 'confirm' => 'Remove this player\'s tagline and text?', 'class' => 'ml-2 text-xs not-italic text-red-300 hover:text-red-200']) ?>
+                    <?php endif; ?>
+                </p>
+            <?php elseif (!empty($isAdmin) && !empty($qrProfile['card_tagline'])): ?>
+                <!-- admin: the tagline only shows on the share card picture -->
+                <p class="mb-3 text-xs text-zinc-400">Share card tagline: <?= h($qrProfile['card_tagline']) ?>
+                    <?= $this->Form->postLink('<i class="fa-solid fa-eraser"></i> remove', ['action' => 'clearTexts', $player->id],
+                        ['escape' => false, 'confirm' => 'Remove this player\'s tagline and text?', 'class' => 'ml-2 text-red-300 hover:text-red-200']) ?>
+                </p>
             <?php endif; ?>
             <div class="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-zinc-200">
                 <?php if ($player->rankAllTime > 0): ?>

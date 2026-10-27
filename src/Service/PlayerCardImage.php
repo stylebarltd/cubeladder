@@ -79,6 +79,8 @@ class PlayerCardImage
     private string $bold;
     private string $icons;
     private GdImage $im;
+    /** headline / frame / icon colour: the player's choice or BLUE */
+    private array $accent = self::BLUE;
     private ?array $tier = null;
 
     public function __construct()
@@ -106,6 +108,8 @@ class PlayerCardImage
         imageantialias($this->im, true);
         $this->rect(0, 0, $w, $h, self::BG);
         $r = $card['rating'] ?? null;
+        // the player's own colour (QR hunt unlock): headline, plain frame, stat icons; a rating tier keeps its earned frame
+        $this->accent = !empty($card['accent']) ? array_map('intval', $card['accent']) : self::BLUE;
         $this->tier = self::tier($r ? (float)$r['rating'] : null);
         $t = $this->tier;
 
@@ -128,7 +132,7 @@ class PlayerCardImage
             }
             $this->sparkles(crc32($card['name']), $t['sparkles'], $t['stops'][0]);
         } else {
-            $this->roundRect(10, 10, $w - 20, $h - 20, 16, null, [37, 99, 235], 2);
+            $this->roundRect(10, 10, $w - 20, $h - 20, 16, null, $this->accent === self::BLUE ? [37, 99, 235] : $this->accent, 2);
         }
 
         // brand
@@ -143,7 +147,8 @@ class PlayerCardImage
         $pad = 40;
 
         // headline
-        $this->text($this->fit($card['name'] . ' · cubeLadder', 34, $w - 2 * $pad, $this->bold), $pad, 128, 34, $this->bold, self::BLUE);
+        // the player's tagline (QR hunt unlock) instead of the site name
+        $this->text($this->fit($card['name'] . ' · ' . (!empty($card['tagline']) ? $card['tagline'] : 'cubeLadder'), 34, $w - 2 * $pad, $this->bold), $pad, 128, 34, $this->bold, $this->accent);
         $x = $pad;
         if ($r) {
             $x = $this->run($x, 162, 19, $this->regular, self::WHITE, 'CTF rating ' . number_format((float)$r['rating'], 1) . ' ');
@@ -304,7 +309,7 @@ class PlayerCardImage
             if ($i > 0) {
                 $this->rect($cx - 14, $y + 30, 1, 52, self::LINE);
             }
-            $this->icon($ic, $cx, $y + 70, 26, self::BLUE);
+            $this->icon($ic, $cx, $y + 70, 26, $this->accent);
             $this->text($num, $cx + 44, $y + 58, 24, $this->bold, self::WHITE);
             $this->text($label, $cx + 44, $y + 80, 13, $this->regular, self::MUTED);
         }
@@ -318,7 +323,7 @@ class PlayerCardImage
             if ($i > 0) {
                 $this->rect($cx - 8, $y + 118, 1, 92, self::LINE);
             }
-            $this->icon($ic, $cx, $y + 146, 20, self::BLUE);
+            $this->icon($ic, $cx, $y + 146, 20, $this->accent);
             $num = number_format((int)($totals[$key] ?? 0));
             $numSize = 19;
             while ($numSize > 12 && $this->width($num, $numSize, $this->bold) > $cw - 16) {

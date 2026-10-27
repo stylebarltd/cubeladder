@@ -17,6 +17,79 @@ class QrHunt
     /** level (codes found) => name; a level beyond the list keeps the last name */
     public const LEVELS = [1 => 'Explorer', 2 => 'Temple Raider'];
 
+    /**
+     * What a player's points unlock: the one place that decides it (reorder
+     * here, the features follow). key => [points, title, what it does, built].
+     * Unbuilt ones are shown greyed as a preview of what is coming.
+     */
+    public const UNLOCKS = [
+        'card' => [1, 'Your share card', 'Pick the colour of your share card and add a tagline after your name.', true],
+        'bio' => [2, 'About me', 'A short text about yourself on your player page.', true],
+        'nemesis' => [3, 'Nemesis advanced stats', 'Your duels in detail: per weapon, per map and over time.', false],
+        'stats' => [4, 'Special stats', 'Accuracy and K/D over time, your best and worst maps, your hours.', false],
+        'avatars1' => [5, 'New avatars', 'A set of avatars only explorers can pick.', false],
+        'weapons' => [6, 'Weapon colours', 'Tint your weapon icons on your profile and in the rankings.', false],
+        'upload' => [7, 'Your own avatar', 'Upload your own picture.', false],
+        'name' => [8, 'Name style', 'A coloured frame around your name in the rankings.', false],
+        'banner' => [9, 'Profile banner', 'One of our maps behind your profile header.', false],
+        'avatars2' => [10, 'The last avatars', 'The final avatar set and a gold badge: all codes found.', false],
+    ];
+
+    /** Share card colours (a fixed palette, so every card stays readable): key => [label, rgb] */
+    public const CARD_COLORS = [
+        'blue' => ['Blue', [59, 130, 246]], 'red' => ['Red', [239, 68, 68]], 'orange' => ['Orange', [249, 115, 22]],
+        'gold' => ['Gold', [234, 179, 8]], 'green' => ['Green', [34, 197, 94]], 'teal' => ['Teal', [20, 184, 166]],
+        'purple' => ['Purple', [168, 85, 247]], 'pink' => ['Pink', [236, 72, 153]],
+    ];
+
+    /** Lengths of the texts a player writes */
+    public const TAGLINE_MAX = 40;
+    public const BIO_MAX = 160;
+
+    public static function unlocked(int $level, string $key): bool
+    {
+        return isset(self::UNLOCKS[$key]) && $level >= self::UNLOCKS[$key][0];
+    }
+
+    /**
+     * A player's text cleaned for display: one line, no control characters,
+     * cut to $max. Returns null and an error when it contains a link (no
+     * advertising, no phishing on the ladder).
+     *
+     * @return array{0: ?string, 1: ?string} [text, error]
+     */
+    public static function cleanText(string $text, int $max): array
+    {
+        $text = trim(preg_replace('/\s+/u', ' ', preg_replace('/[\x00-\x1F\x7F]/u', ' ', $text)));
+        if ($text === '') {
+            return [null, null];
+        }
+        if (preg_match('~(https?:|www\.|://|\b[a-z0-9-]+\.(?:com|net|org|io|gg|ru|de|xyz|me|tv|ovh|co|info|biz|app|link|ly)\b)~i', $text)) {
+            return [null, 'No links, please.'];
+        }
+
+        return [mb_substr($text, 0, $max), null];
+    }
+
+    /** A player's profile settings (player_profiles), or defaults */
+    public function profile(string $playerId): array
+    {
+        $row = ConnectionManager::get('default')->execute('SELECT card_color, card_tagline, bio FROM player_profiles WHERE player_id = ?', [$playerId])->fetch('assoc');
+
+        return $row ?: ['card_color' => null, 'card_tagline' => null, 'bio' => null];
+    }
+
+    /** Saves some of a player's profile fields (others stay) */
+    public function saveProfile(string $playerId, array $fields): void
+    {
+        $fields = array_intersect_key($fields, ['card_color' => 1, 'card_tagline' => 1, 'bio' => 1]);
+        $p = array_merge($this->profile($playerId), $fields);
+        ConnectionManager::get('default')->execute(
+            'INSERT INTO player_profiles (player_id, card_color, card_tagline, bio, modified) VALUES (?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE card_color = VALUES(card_color), card_tagline = VALUES(card_tagline), bio = VALUES(bio), modified = VALUES(modified)',
+            [$playerId, $p['card_color'], $p['card_tagline'], $p['bio'], date('Y-m-d H:i:s')]);
+    }
+
     public static function levelName(int $level): ?string
     {
         if ($level < 1) {

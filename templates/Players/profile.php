@@ -22,6 +22,70 @@
 
 
 
+    <!-- QR hunt unlocks (QrHunt::UNLOCKS): what the player's points open; the built ones have their settings here -->
+    <?php
+    $unlocks = \App\Service\QrHunt::UNLOCKS;
+    $level = (int)($qrLevel ?? 0);
+    $profile = $profile ?? ['card_color' => null, 'card_tagline' => null, 'bio' => null];
+    $field = 'w-full rounded-lg border border-zinc-600 bg-zinc-950 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-yellow-400 focus:outline-none';
+    ?>
+    <div class="mb-10 max-w-3xl rounded-xl border border-yellow-400/40 bg-zinc-900 p-6" id="unlocks">
+        <div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 class="text-xl font-semibold"><i class="fa-solid fa-qrcode mr-1 text-yellow-300"></i> Unlocks</h2>
+            <span class="text-sm text-zinc-400">
+                <b class="text-yellow-300"><?= $level ?></b> point<?= $level === 1 ? '' : 's' ?>
+                &middot; one for every QR code you find hidden in our maps
+            </span>
+        </div>
+
+        <div class="space-y-3">
+            <?php foreach ($unlocks as $key => [$pts, $title, $desc, $built]): $open = $level >= $pts; ?>
+                <div class="rounded-lg border <?= $open ? 'border-yellow-400/40 bg-black/40' : 'border-zinc-700 bg-black/20 opacity-60' ?> p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold <?= $open ? 'bg-yellow-400 text-black' : 'bg-zinc-700 text-zinc-300' ?>"><?= (int)$pts ?></div>
+                        <div class="min-w-0 flex-1">
+                            <div class="font-semibold"><?= h($title) ?>
+                                <?php if (!$open): ?><span class="ml-1 text-xs font-normal text-zinc-400"><i class="fa-solid fa-lock"></i> unlocks at <?= (int)$pts ?> point<?= $pts === 1 ? '' : 's' ?></span>
+                                <?php elseif (!$built): ?><span class="ml-1 text-xs font-normal text-zinc-400">coming soon</span><?php endif; ?>
+                            </div>
+                            <div class="text-sm text-zinc-400"><?= h($desc) ?></div>
+
+                            <?php if ($open && $key === 'card'): ?>
+                                <?= $this->Form->create(null, ['url' => ['controller' => 'Players', 'action' => 'cardStyle'], 'class' => 'mt-3 space-y-3']) ?>
+                                    <?php $this->Form->unlockField('card_color'); $this->Form->unlockField('card_tagline'); // hand-written inputs (swatches), CSRF still applies ?>
+                                    <div class="flex flex-wrap gap-2">
+                                        <?php foreach (\App\Service\QrHunt::CARD_COLORS as $ck => [$label, $rgb]): ?>
+                                            <label class="cursor-pointer" title="<?= h($label) ?>">
+                                                <input type="radio" name="card_color" value="<?= h($ck) ?>" class="peer sr-only" <?= ($profile['card_color'] ?? 'blue') === $ck ? 'checked' : '' ?>>
+                                                <span class="block h-8 w-8 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-zinc-900 peer-checked:ring-white" style="background: rgb(<?= implode(',', $rgb) ?>)"></span>
+                                            </label>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <input type="text" name="card_tagline" maxlength="<?= \App\Service\QrHunt::TAGLINE_MAX ?>" value="<?= h((string)$profile['card_tagline']) ?>"
+                                           placeholder="Tagline after your name (up to <?= \App\Service\QrHunt::TAGLINE_MAX ?> characters, no links)" class="<?= $field ?>">
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <button type="submit" class="rounded-lg bg-yellow-400 px-4 py-2 text-sm font-semibold text-black hover:bg-yellow-300 transition">Save card</button>
+                                        <a href="/players/card/<?= h($player->id) ?>?v=<?= time() ?>" target="_blank" rel="noopener" class="text-sm text-yellow-300 hover:underline">See your card</a>
+                                    </div>
+                                <?= $this->Form->end() ?>
+                            <?php elseif ($open && $key === 'bio'): ?>
+                                <?= $this->Form->create(null, ['url' => ['controller' => 'Players', 'action' => 'bio'], 'class' => 'mt-3 space-y-3']) ?>
+                                    <?php $this->Form->unlockField('bio'); ?>
+                                    <textarea name="bio" rows="3" maxlength="<?= \App\Service\QrHunt::BIO_MAX ?>"
+                                              placeholder="A few words about you (up to <?= \App\Service\QrHunt::BIO_MAX ?> characters, no links)" class="<?= $field ?>"><?= h((string)$profile['bio']) ?></textarea>
+                                    <button type="submit" class="rounded-lg bg-yellow-400 px-4 py-2 text-sm font-semibold text-black hover:bg-yellow-300 transition">Save text</button>
+                                <?= $this->Form->end() ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php if ($level < 1): ?>
+            <p class="mt-4 text-sm text-zinc-400">QR codes are hidden in cubeLadder maps &ndash; start in cl_angkorwat. Scan one with your phone in the game.</p>
+        <?php endif; ?>
+    </div>
+
     <!-- Privacy -->
     <div class="mb-10 max-w-2xl rounded-xl border border-zinc-700 bg-zinc-900 p-6">
         <h2 class="text-xl font-semibold mb-3">Privacy</h2>

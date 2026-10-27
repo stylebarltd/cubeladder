@@ -74,7 +74,7 @@ class Application extends BaseApplication
                 'cacheTime' => Configure::read('Asset.cacheTime'),
             ]))
             ->add(new EncryptedCookieMiddleware(
-                ['selected_player_id'],   // cookies to encrypt
+                ['selected_player_id', 'link_proof'],   // cookies to encrypt (link_proof: AppController::ownsPlayer)
                 Security::getSalt()
             ))
             // Add routing middleware.

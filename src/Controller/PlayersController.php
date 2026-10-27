@@ -1093,7 +1093,8 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         ] : null;
 
         $qrLevel = (new \App\Service\QrHunt())->level((string)$player->id);   // QR hunt badge
-        $this->set(compact('qrLevel', 'nemeses', 'victims', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
+        $qrProfile = (new \App\Service\QrHunt())->profile((string)$player->id);   // QR hunt unlocks: card style, text
+        $this->set(compact('qrLevel', 'qrProfile', 'nemeses', 'victims', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
             'milestones', 'milestoneProgress', 'funFacts', 'lastSeen', 'weapons', 'ping', 'accuracy'));
         $this->set(compact(
             'player',
@@ -1111,9 +1112,24 @@ $gamesDataGlobal = [];        // games inside lastGameIds
     {
         $player = $this->request->getAttribute('identity');
         if (!$this->ownsPlayer($player)) {
-            $this->Flash->error($this->ownershipHint('edit your profile'));
-            return $this->redirect(['action' => 'index']);
+            // not proven yet: the chat code (PlayerLink) right here, the page waits and reloads once it matched
+            $link = new \App\Service\PlayerLink();
+            $linkCode = $this->request->getCookie('link_code');
+            if (!$link->open($linkCode)) {
+                $linkCode = $link->issue();
+                $this->response = $this->response->withCookie((new \Cake\Http\Cookie\Cookie('link_code', $linkCode))
+                    ->withExpiry(new \DateTime('+' . \App\Service\PlayerLink::VALID_HOURS . ' hours'))->withPath('/')
+                    ->withSecure($this->request->is('https'))->withHttpOnly(true)->withSameSite(\Cake\Http\Cookie\SameSiteEnum::LAX));
+            }
+            $this->set(['player' => $player, 'linkCode' => $linkCode, 'needsProof' => true]);
+
+            return $this->render('profile_proof');
         }
+        // QR hunt unlocks (QrHunt::UNLOCKS) and what the player set up with them
+        $hunt = new \App\Service\QrHunt();
+        $qrLevel = $hunt->level((string)$player->id);
+        $profile = $hunt->profile((string)$player->id);
+        $this->set(compact('qrLevel', 'profile'));
         // all avatar files
         $avatars = glob(WWW_ROOT . 'img/players/*.jpg');
         $avatars = array_map('basename', $avatars);
@@ -1212,6 +1228,80 @@ $gamesDataGlobal = [];        // games inside lastGameIds
 
 
 
+
+    /**
+     * POST /players/card-style: the share card's colour and tagline (QR hunt, 1 point).
+     */
+    public function cardStyle()
+    {
+        $this->request->allowMethod(['post']);
+        $player = $this->request->getAttribute('identity');
+        if (!$this->ownsPlayer($player)) {
+            $this->Flash->error($this->ownershipHint('edit your profile'));
+            return $this->redirect(['action' => 'profile']);
+        }
+        $hunt = new \App\Service\QrHunt();
+        if (!\App\Service\QrHunt::unlocked($hunt->level((string)$player->id), 'card')) {
+            $this->Flash->error('Find a hidden QR code in one of our maps first.');
+            return $this->redirect(['action' => 'profile']);
+        }
+        $color = (string)$this->request->getData('card_color');
+        [$tagline, $err] = \App\Service\QrHunt::cleanText((string)$this->request->getData('card_tagline'), \App\Service\QrHunt::TAGLINE_MAX);
+        if ($err) {
+            $this->Flash->error($err);
+            return $this->redirect(['action' => 'profile']);
+        }
+        $hunt->saveProfile((string)$player->id, [
+            'card_color' => isset(\App\Service\QrHunt::CARD_COLORS[$color]) ? $color : null,
+            'card_tagline' => $tagline,
+        ]);
+        $this->Flash->success('Your share card is updated - post your player page anywhere to show it.');
+
+        return $this->redirect(['action' => 'profile']);
+    }
+
+    /**
+     * POST /players/bio: a short text about yourself (QR hunt, 2 points).
+     */
+    public function bio()
+    {
+        $this->request->allowMethod(['post']);
+        $player = $this->request->getAttribute('identity');
+        if (!$this->ownsPlayer($player)) {
+            $this->Flash->error($this->ownershipHint('edit your profile'));
+            return $this->redirect(['action' => 'profile']);
+        }
+        $hunt = new \App\Service\QrHunt();
+        if (!\App\Service\QrHunt::unlocked($hunt->level((string)$player->id), 'bio')) {
+            $this->Flash->error('This unlocks at 2 points: find more hidden QR codes in our maps.');
+            return $this->redirect(['action' => 'profile']);
+        }
+        [$bio, $err] = \App\Service\QrHunt::cleanText((string)$this->request->getData('bio'), \App\Service\QrHunt::BIO_MAX);
+        if ($err) {
+            $this->Flash->error($err);
+            return $this->redirect(['action' => 'profile']);
+        }
+        $hunt->saveProfile((string)$player->id, ['bio' => $bio]);
+        $this->Flash->success($bio ? 'Your text is on your player page.' : 'Your text is removed.');
+
+        return $this->redirect(['action' => 'profile']);
+    }
+
+    /**
+     * POST /players/clear-texts/<id>: an admin removes a player's tagline and
+     * text (abuse). The colour stays.
+     */
+    public function clearTexts(string $id)
+    {
+        $this->request->allowMethod(['post']);
+        if (!$this->isAdmin()) {
+            throw new \Cake\Http\Exception\ForbiddenException();
+        }
+        (new \App\Service\QrHunt())->saveProfile($id, ['card_tagline' => null, 'bio' => null]);
+        $this->Flash->success('Tagline and text removed.');
+
+        return $this->redirect(['action' => 'view', $id]);
+    }
 
     public function search()
     {
@@ -1446,7 +1536,12 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         $progress = $progressRow ? (json_decode($progressRow->progress, true) ?: []) : [];
         $map = $this->mostPlayedMap($id);
 
+        // QR hunt (1 point): the player's colour and tagline on the card
+        $hunt = new \App\Service\QrHunt();
+        $style = \App\Service\QrHunt::unlocked($hunt->level($id), 'card') ? $hunt->profile($id) : [];
         $card = [
+            'accent' => \App\Service\QrHunt::CARD_COLORS[$style['card_color'] ?? '']['1'] ?? null,
+            'tagline' => $style['card_tagline'] ?? null,
             'name' => (string)$player->name,
             'country' => (string)$player->country,
             'hours' => (float)($progress['hours'] ?? 0),

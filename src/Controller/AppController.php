@@ -145,8 +145,10 @@ class AppController extends Controller
 
     /**
      * The visitor may edit this player's profile: it is their identity
-     * (cookie / IP detection) AND they are on the IP the player last
-     * played from. A cookie alone is not enough.
+     * (cookie / IP detection) AND either they are on the IP the player last
+     * played from, or this browser proved it by saying a chat code in a game
+     * (PlayerLink, the encrypted link_proof cookie). A selection cookie alone
+     * is not enough.
      */
     protected function ownsPlayer(?Player $player): bool
     {
@@ -155,6 +157,9 @@ class AppController extends Controller
         if ($player === null || $identity === null || $identity->id !== $player->id) {
             return false;
         }
+        if ((string)$this->request->getCookie('link_proof') === (string)$player->id) {
+            return true;
+        }
         // Local dev (debug): requests come from the Docker network and can
         // never match a real player IP - the identity alone is enough there.
         if (Configure::read('debug')) {
@@ -162,6 +167,14 @@ class AppController extends Controller
         }
 
         return !empty($player->ip) && $player->ip === $this->request->clientIp();
+    }
+
+    /** Proof that this browser belongs to a player: set after a chat code matched (PlayController::link) */
+    public function writeLinkProof(string $playerId): void
+    {
+        $this->response = $this->response->withCookie((new Cookie('link_proof', $playerId))
+            ->withExpiry(new \DateTime('+365 days'))->withPath('/')
+            ->withSecure($this->request->is('https'))->withHttpOnly(true)->withSameSite(SameSiteEnum::LAX));
     }
 
     /**

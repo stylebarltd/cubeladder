@@ -7,6 +7,15 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-27',
+            'title' => 'QR codes unlock things',
+            'link' => '/players/profile',
+            'items' => [
+                'Every hidden QR code you find in our maps is a point, and points unlock things on your profile. 1 point: pick the colour of your share card and add a tagline after your name. 2 points: write a short text about yourself on your player page. More unlocks come with more maps - your profile shows them all.',
+                'Editing your profile works from anywhere now: if cubeLadder does not recognise your connection, your profile page shows a code - say it in a game and that browser is yours for a year.',
+            ],
+        ],
+        [
+            'date' => '2026-10-27',
             'title' => 'Something is hidden in cl_angkorwat',
             'items' => [
                 'Two QR codes are hidden in the temple. Scan one with your phone and you level up on cubeLadder: your level shows as a badge on your profile, and the QR hunters list who found what first. Not part of the ladder - just for the explorers. The cubeLadder logo\'s code is not one of them.',

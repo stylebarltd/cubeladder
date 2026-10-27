@@ -58,6 +58,7 @@ class PlayController extends AppController
             return $this->json(['linked' => false]);
         }
         $this->writePlayerCookie($player['id'], '+365 days');
+        $this->writeLinkProof($player['id']);   // the chat code is proof: profile editing works from this browser too
         $this->response = $this->response->withExpiredCookie(new Cookie('link_code'));
 
         return $this->json(['linked' => true, 'name' => $player['name']]);
