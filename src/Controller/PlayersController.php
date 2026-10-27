@@ -1092,7 +1092,8 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             'dpm' => $live['mins'] > 0 ? (int)round($live['damage'] / $live['mins']) : null,
         ] : null;
 
-        $this->set(compact('nemeses', 'victims', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
+        $qrLevel = (new \App\Service\QrHunt())->level((string)$player->id);   // QR hunt badge
+        $this->set(compact('qrLevel', 'nemeses', 'victims', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
             'milestones', 'milestoneProgress', 'funFacts', 'lastSeen', 'weapons', 'ping', 'accuracy'));
         $this->set(compact(
             'player',
@@ -1298,6 +1299,7 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             'progress' => $progress,
             'lastSeen' => $lastSeen,
             'badges' => $badges,
+            'qrLevel' => (new \App\Service\QrHunt())->level((string)$id),   // QR hunt badge
             'weapons' => $this->weaponsOfChoice($id),
             'map' => $this->mostPlayedMap($id),
         ]);

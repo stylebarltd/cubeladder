@@ -58,6 +58,10 @@ return function (RouteBuilder $routes): void {
         $builder->connect('/', ['controller' => 'Pages', 'action' => 'display', 'home']);
         $builder->connect('/about', ['controller' => 'Pages', 'action' => 'display', 'about']);
         $builder->connect('/privacy', ['controller' => 'Pages', 'action' => 'display', 'privacy']);
+        // QR codes hidden in our maps (QrHunt)
+        // (the codes in the maps are uppercase, HTTPS://CUBELADDER.OVH/Q/<TOKEN>: QR alphanumeric mode keeps them small)
+        $builder->connect('/q/{token}', ['controller' => 'Qr', 'action' => 'find'], ['pass' => ['token'], 'token' => '[A-Za-z0-9]{8,24}']);
+        $builder->connect('/Q/{token}', ['controller' => 'Qr', 'action' => 'find'], ['pass' => ['token'], 'token' => '[A-Za-z0-9]{8,24}']);
 
         /*
          * ...and connect the rest of 'Pages' controller's URLs.

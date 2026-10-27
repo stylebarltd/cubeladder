@@ -110,8 +110,9 @@ endif;
                 && (is_string($a->week_end) ? $a->week_end : $a->week_end->format('Y-m-d')) === $lastWeek);
             $inactive = !\App\Utility\Activity::isActive($lastSeen['started_at'] ?? null);
             ?>
-            <?php if ($inactive || !empty($rating->archetype) || $weekBadges): ?>
+            <?php if ($inactive || !empty($rating->archetype) || $weekBadges || !empty($qrLevel)): ?>
             <div class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <?= $this->element('qr_badge', ['level' => (int)($qrLevel ?? 0), 'large' => true]) ?>
                 <?php if ($inactive): ?>
                     <!-- no game in the last Activity::ACTIVE_DAYS: out of the rankings until the next one -->
                     <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-sm font-semibold tracking-normal text-zinc-300"

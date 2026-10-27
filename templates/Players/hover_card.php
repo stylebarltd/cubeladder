@@ -14,4 +14,4 @@
  * @var array|null $map most played map ['name', 'n']
  */
 ?>
-<?= $this->element('player_card_hover', compact('player', 'rating', 'ratedPlayers', 'progress', 'lastSeen', 'badges', 'weapons', 'map')) ?>
+<?= $this->element('player_card_hover', compact('player', 'rating', 'ratedPlayers', 'progress', 'lastSeen', 'badges', 'weapons', 'map') + ['qrLevel' => $qrLevel ?? 0]) ?>

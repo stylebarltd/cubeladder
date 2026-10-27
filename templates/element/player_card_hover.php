@@ -25,6 +25,7 @@ $ratedPlayers = $ratedPlayers ?? 0;
 $progress = $progress ?? [];
 $lastSeen = $lastSeen ?? null;
 $badges = $badges ?? [];
+$qrLevel = (int)($qrLevel ?? 0);   // QR hunt: codes found in our maps
 $weapons = $weapons ?? [];
 $map = $map ?? null;
 $subtitle = $subtitle ?? null;
@@ -126,8 +127,9 @@ $archetypeColor = match ($archetype) {
         </div>
     </div>
 
-    <?php if ($inactive || $badges): ?>
+    <?php if ($inactive || $badges || $qrLevel): ?>
         <div class="mt-2 flex flex-wrap items-center gap-1.5">
+            <?= $this->element('qr_badge', ['level' => $qrLevel]) ?>
             <?php if ($inactive): ?>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-zinc-300"><i class="fa-solid fa-moon text-[10px]"></i>Inactive &ndash; no game in <?= \App\Utility\Activity::ACTIVE_DAYS ?> days</span>
             <?php endif; ?>

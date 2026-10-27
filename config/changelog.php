@@ -6,6 +6,13 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-10-27',
+            'title' => 'Something is hidden in cl_angkorwat',
+            'items' => [
+                'Two QR codes are hidden in the temple. Scan one with your phone and you level up on cubeLadder: your level shows as a badge on your profile, and the QR hunters list who found what first. Not part of the ladder - just for the explorers. The cubeLadder logo\'s code is not one of them.',
+            ],
+        ],
+        [
             'date' => '2026-10-26',
             'title' => 'Privacy: less data, and a privacy page',
             'link' => '/privacy',
