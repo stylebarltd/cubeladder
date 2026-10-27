@@ -7,6 +7,16 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-27',
+            'title' => 'cl_angkorwat - the first official cubeLadder map',
+            'items' => [
+                'Our first own map is out: **cl_angkorwat**, a CTF map in the ruins of Angkor Wat. Five temple towers, vaulted hallways, sunken courtyards, a flooded pool, and the jungle taking it all back. Only on the **aCKa servers**.',
+                'Both bases on the upper floor, red in the south-west tower, blue in the north-east. Three lanes: through the courtyards and the great hall, over the north-west tower, or down to the ground floor and back up. Sniper balconies in the great hall, ladders onto the roofs.',
+                '**Install the model pack once** - a server only sends the map, not its models: download from [github.com/stylebarltd/cl_angkorwat](https://github.com/stylebarltd/cl_angkorwat) and unzip `cubeladder_khmer_pack.zip` into `packages/models/mapmodels/`. Without it the roofs and towers are missing.',
+                '**QR hunt:** two QR codes are hidden in the temple. Find one, scan it off your screen with your phone and you level up on cubeLadder. Every code is a point: 1 point unlocks your own colour and tagline on your share card, 2 points a short text about yourself on your player page. More unlocks with every new map - 10 codes in total. (The code on the cubeLadder logo cube just links to the site.)',
+            ],
+        ],
+        [
+            'date' => '2026-10-27',
             'title' => 'QR codes unlock things',
             'link' => '/players/profile',
             'items' => [

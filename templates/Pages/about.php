@@ -330,6 +330,14 @@ $rules = [
             </div>
         </section>
 
+        <?php
+        // the changelog's little markdown (the same text goes to Discord): **bold**, `code`, [text](https://...);
+        // applied after escaping, so a line cannot inject markup
+        $md = fn(string $s): string => preg_replace(
+            ['/\*\*(.+?)\*\*/', '/`([^`]+)`/', '/\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/'],
+            ['<b class="text-white">$1</b>', '<code class="rounded bg-white/10 px-1 text-[0.85em]">$1</code>', '<a href="$2" rel="noopener" class="underline hover:text-white">$1</a>'],
+            h($s));
+        ?>
         <?php if (!empty($changelog)): ?>
         <!-- What's new (config/changelog.php) -->
         <section class="rounded-xl border border-white/15 bg-black/60 p-6 backdrop-blur-[2px] lg:col-span-3">
@@ -343,7 +351,7 @@ $rules = [
                         </div>
                         <ul class="mt-1 list-disc space-y-0.5 pl-5 text-sm text-zinc-300">
                             <?php foreach ($entry['items'] as $item): ?>
-                                <li><?= h($item) ?></li>
+                                <li><?= $md($item) ?></li>
                             <?php endforeach; ?>
                         </ul>
                     </div>
