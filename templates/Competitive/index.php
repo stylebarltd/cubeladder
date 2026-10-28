@@ -15,6 +15,9 @@
  * @var array $servers
  * @var int $minGames
  * @var bool $public
+ * @var array|null $example a rated player of the latest counted game, for "How the Elo works"
+ * @var array $k K factors: new (first newGames games) / normal
+ * @var float $minShare part of a game a player needs to be rated
  */
 $this->assign('title', 'Competitive · cubeLadder');
 $serverName = fn(string $key) => $this->Layout->serverName($key);
@@ -58,8 +61,55 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
         </section>
     <?php endif; ?>
 
+    <?php $start = (int)\App\Controller\CompetitiveController::start(); ?>
+    <details class="group scroll-mt-20 rounded-xl border border-amber-300/30 bg-black/50 p-4" id="how">
+        <summary class="cursor-pointer list-none text-lg font-bold">
+            <i class="fa-solid fa-calculator mr-2 text-amber-300"></i>How the Elo works
+            <span class="ml-1 text-sm font-normal text-zinc-400 group-open:hidden">&ndash; show the calculation</span>
+        </summary>
+        <div class="mt-3 grid gap-4 text-sm text-zinc-300 lg:grid-cols-2">
+            <ol class="list-decimal space-y-2 pl-5">
+                <li>Everyone starts at <b class="text-white"><?= $start ?></b>.</li>
+                <li><b class="text-white">Team strength</b> = the average Elo of the team's players before the game. Only players who
+                    played at least <?= round($minShare * 100) ?>% of the game count, and only they gain or lose.</li>
+                <li><b class="text-white">Win chance</b> = 1 / (1 + 10<sup>(their strength &minus; your strength) / 400</sup>).
+                    Equal teams: 50%. A team 100 stronger: 64%; 200 stronger: 76%.</li>
+                <li><b class="text-white">Result</b>: a win is 1, a draw &frac12;, a loss 0.</li>
+                <li><b class="text-white">Change</b> = K &times; (result &minus; win chance). K is <?= (int)$k['new'] ?> for your first
+                    <?= (int)$k['newGames'] ?> games (finding your level fast), then <?= (int)$k['normal'] ?>.
+                    Beating a stronger team brings more than beating a weaker one; losing to a weaker one costs more.</li>
+                <li>Everything is replayed from the first counted game in order, so every number below can be checked on the game pages.</li>
+            </ol>
+            <div class="space-y-3">
+                <?php if ($example):
+                    $res = $example['winner'] === null ? 0.5 : ($example['winner'] === $example['team'] ? 1 : 0);
+                    $chg = (float)$example['rating_after'] - (float)$example['rating_before']; ?>
+                    <div class="rounded-lg bg-white/5 p-3">
+                        <div class="mb-1 text-xs uppercase tracking-wide text-zinc-400">Example: the latest game,
+                            <a class="text-blue-300 hover:underline" href="<?= $this->Url->build(['action' => 'game', $example['game_id']]) ?>"><?= h($this->Layout->cleanMapName((string)$example['map'])) ?> <?= h($example['team_size']) ?></a></div>
+                        <table class="w-full font-mono text-xs">
+                            <tr><td class="py-0.5 text-zinc-400">Player</td><td class="text-right text-white"><?= h($example['name']) ?> (<?= h($example['team']) ?>)</td></tr>
+                            <tr><td class="py-0.5 text-zinc-400">Elo before</td><td class="text-right"><?= number_format((float)$example['rating_before'], 1, '.', '') ?></td></tr>
+                            <tr><td class="py-0.5 text-zinc-400">Own team strength</td><td class="text-right"><?= number_format((float)$example['team_rating'], 1, '.', '') ?></td></tr>
+                            <tr><td class="py-0.5 text-zinc-400">Other team strength</td><td class="text-right"><?= number_format((float)$example['opp_rating'], 1, '.', '') ?></td></tr>
+                            <tr><td class="py-0.5 text-zinc-400">Win chance</td><td class="text-right">1 / (1 + 10<sup>(<?= number_format((float)$example['opp_rating'], 1, '.', '') ?> &minus; <?= number_format((float)$example['team_rating'], 1, '.', '') ?>) / 400</sup>) = <?= number_format((float)$example['expected'] * 100, 1) ?>%</td></tr>
+                            <tr><td class="py-0.5 text-zinc-400">Result</td><td class="text-right"><?= $res === 1 ? 'win = 1' : ($res === 0 ? 'loss = 0' : 'draw = 0.5') ?></td></tr>
+                            <tr><td class="py-0.5 text-zinc-400">Change</td><td class="text-right"><?= (int)$example['k_factor'] ?> &times; (<?= $res ?> &minus; <?= number_format((float)$example['expected'], 3) ?>) = <b class="<?= $chg >= 0 ? 'text-green-400' : 'text-red-400' ?>"><?= ($chg >= 0 ? '+' : '') . number_format($chg, 1) ?></b></td></tr>
+                            <tr class="border-t border-white/10"><td class="pt-1 text-zinc-400">Elo after</td><td class="pt-1 text-right font-bold text-amber-300"><?= number_format((float)$example['rating_after'], 1, '.', '') ?></td></tr>
+                        </table>
+                    </div>
+                <?php endif; ?>
+                <p class="text-xs text-zinc-400">In the table: <b class="text-zinc-200">Elo = <?= $start ?> + Gained &minus; Lost</b>.
+                    <b class="text-zinc-200">Score</b> is what you got (wins + &frac12; per draw), <b class="text-zinc-200">Expected</b> what the win chances
+                    of all your games add up to: scoring more than expected is what raises your Elo. <b class="text-zinc-200">Opp.</b> is the average
+                    strength of the teams you played against.</p>
+            </div>
+        </div>
+    </details>
+    <script>if (location.hash === '#how') document.getElementById('how').open = true;</script>
+
     <section class="rounded-xl border border-white/10 bg-black/50 p-4">
-        <h2 class="mb-3 text-lg font-bold">Elo ranking</h2>
+        <h2 class="mb-3 text-lg font-bold">Elo ranking <a href="#how" onclick="document.getElementById('how').open = true" class="ml-1 text-xs font-normal text-amber-300 hover:underline">how it works</a></h2>
         <?php if (!$ratings): ?>
             <p class="text-sm text-zinc-500">Nobody active has <?= $minGames ?> counted games yet.</p>
         <?php else: ?>
@@ -71,8 +121,13 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
                         <th class="px-2 py-1 text-left">Player</th>
                         <th class="px-2 py-1 text-right">Elo</th>
                         <th class="px-2 py-1 text-right">Peak</th>
+                        <th class="hidden px-2 py-1 text-right sm:table-cell" title="Elo won in the games you gained from (Elo = <?= $start ?> + Gained - Lost)">Gained</th>
+                        <th class="hidden px-2 py-1 text-right sm:table-cell" title="Elo given up in the games you lost points in">Lost</th>
+                        <th class="hidden px-2 py-1 text-right md:table-cell" title="what you scored: wins + half a point per draw">Score</th>
+                        <th class="hidden px-2 py-1 text-right md:table-cell" title="the win chances of all your games added up: what an average player would have scored in your games">Expected</th>
+                        <th class="hidden px-2 py-1 text-right lg:table-cell" title="average strength (Elo) of the teams you played against">Opp.</th>
                         <th class="px-2 py-1 text-right" title="frags per death">K/D</th>
-                        <th class="hidden px-2 py-1 text-right md:table-cell" title="damage done out of the damage the shots could have done - not in match mode, the server hides it there">Acc</th>
+                        <th class="hidden px-2 py-1 text-right xl:table-cell" title="damage done out of the damage the shots could have done - not in match mode, the server hides it there">Acc</th>
                         <th class="px-2 py-1 text-right">Games</th>
                         <th class="px-2 py-1 text-right" title="wins - draws - losses">W-D-L</th>
                         <th class="hidden px-2 py-1 text-right sm:table-cell">Last game</th>
@@ -88,8 +143,14 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
                             <td class="px-2 py-1 <?= $shade ?>" title="last game <?= $idle ?> days ago"><?= $playerLink($r['player_id'], (string)($r['profile_name'] ?? $r['name']), $r['country']) ?></td>
                             <td class="px-2 py-1 text-right font-mono font-bold text-amber-300"><?= (int)round((float)$r['rating']) ?></td>
                             <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= (int)round((float)$r['peak']) ?></td>
+                            <td class="hidden px-2 py-1 text-right font-mono text-green-400 sm:table-cell">+<?= (int)round($r['gained']) ?></td>
+                            <td class="hidden px-2 py-1 text-right font-mono text-red-400 sm:table-cell">&minus;<?= (int)round($r['lost']) ?></td>
+                            <td class="hidden px-2 py-1 text-right font-mono md:table-cell"><?= rtrim(rtrim(number_format($r['score'], 1), '0'), '.') ?></td>
+                            <td class="hidden px-2 py-1 text-right font-mono md:table-cell <?= $r['expected'] !== null && $r['score'] >= $r['expected'] ? 'text-green-300' : 'text-red-300' ?>"
+                                title="<?= $r['expected'] !== null ? 'score against expected: ' . ($r['score'] >= $r['expected'] ? '+' : '') . number_format($r['score'] - $r['expected'], 1) : '' ?>"><?= $r['expected'] !== null ? number_format($r['expected'], 1) : '–' ?></td>
+                            <td class="hidden px-2 py-1 text-right font-mono text-zinc-400 lg:table-cell"><?= $r['opp'] !== null ? (int)round($r['opp']) : '–' ?></td>
                             <td class="px-2 py-1 text-right font-mono"><?= $r['kd'] !== null ? number_format($r['kd'], 2) : '–' ?></td>
-                            <td class="hidden px-2 py-1 text-right font-mono text-zinc-300 md:table-cell"><?= $r['acc'] !== null ? round($r['acc']) . '%' : '<span class="text-zinc-600">–</span>' ?></td>
+                            <td class="hidden px-2 py-1 text-right font-mono text-zinc-300 xl:table-cell"><?= $r['acc'] !== null ? round($r['acc']) . '%' : '<span class="text-zinc-600">–</span>' ?></td>
                             <td class="px-2 py-1 text-right font-mono"><?= (int)$r['games'] ?></td>
                             <td class="px-2 py-1 text-right font-mono"><span class="text-green-400"><?= (int)$r['wins'] ?></span>-<?= (int)$r['draws'] ?>-<span class="text-red-400"><?= (int)$r['losses'] ?></span></td>
                             <td class="hidden px-2 py-1 text-right text-zinc-400 sm:table-cell"><?= h(date('d M Y', strtotime((string)$r['last_game_at']))) ?></td>

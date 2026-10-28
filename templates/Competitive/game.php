@@ -72,6 +72,54 @@ $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'R
             </section>
         <?php endforeach; ?>
     </div>
+    <?php // the Elo calculation of every rated player (CompetitiveRatings): before + K x (result - win chance) = after
+    $rated = array_values(array_filter($players, fn($p) => $p['rating_after'] !== null && $p['expected'] !== null));
+    usort($rated, fn($a, $b) => [$a['team'], -(float)$a['rating_before']] <=> [$b['team'], -(float)$b['rating_before']]); ?>
+    <?php if ($rated): ?>
+        <section class="overflow-hidden rounded-xl border border-white/10 bg-black/50">
+            <div class="flex flex-wrap items-baseline justify-between gap-2 px-4 pt-3">
+                <h2 class="text-lg font-bold"><i class="fa-solid fa-calculator mr-2 text-amber-300"></i>Elo calculation</h2>
+                <a href="<?= $this->Url->build(['action' => 'index']) ?>#how" class="text-xs text-amber-300 hover:underline">how the Elo works</a>
+            </div>
+            <p class="px-4 pb-2 text-xs text-zinc-400">Team strength = average Elo of its rated players before the game.
+                Win chance = 1 / (1 + 10<sup>(other &minus; own) / 400</sup>). Change = K &times; (result &minus; win chance).</p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="text-[11px] uppercase tracking-wide text-zinc-400">
+                    <tr>
+                        <th class="px-3 py-1 text-left">Player</th>
+                        <th class="px-2 py-1 text-right">Before</th>
+                        <th class="px-2 py-1 text-right" title="average Elo of the player's team">Team</th>
+                        <th class="px-2 py-1 text-right" title="average Elo of the other team">Other</th>
+                        <th class="px-2 py-1 text-right">Win chance</th>
+                        <th class="px-2 py-1 text-right" title="win 1, draw 0.5, loss 0">Result</th>
+                        <th class="px-2 py-1 text-right" title="<?= (int)\App\Service\CompetitiveRatings::K_NEW ?> for the first <?= \App\Service\CompetitiveRatings::NEW_GAMES ?> games, then <?= (int)\App\Service\CompetitiveRatings::K ?>">K</th>
+                        <th class="px-2 py-1 text-right">Change</th>
+                        <th class="px-2 py-1 text-right">After</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($rated as $p):
+                        $res = $game['winner'] === null ? 0.5 : ($game['winner'] === $p['team'] ? 1 : 0);
+                        $delta = (float)$p['rating_after'] - (float)$p['rating_before']; ?>
+                        <tr class="border-t border-white/5">
+                            <td class="px-3 py-1 <?= $teamStyle[$p['team']]['text'] ?>"><?= h((string)($p['player_id'] ? ($p['profile_name'] ?? $p['name']) : $p['name'])) ?></td>
+                            <td class="px-2 py-1 text-right font-mono"><?= number_format((float)$p['rating_before'], 1, '.', '') ?></td>
+                            <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= number_format((float)$p['team_rating'], 1, '.', '') ?></td>
+                            <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= number_format((float)$p['opp_rating'], 1, '.', '') ?></td>
+                            <td class="px-2 py-1 text-right font-mono"><?= number_format((float)$p['expected'] * 100, 1) ?>%</td>
+                            <td class="px-2 py-1 text-right font-mono"><?= $res === 1 ? '1' : ($res === 0 ? '0' : '½') ?></td>
+                            <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= (int)$p['k_factor'] ?></td>
+                            <td class="px-2 py-1 text-right font-mono <?= $delta >= 0 ? 'text-green-400' : 'text-red-400' ?>"
+                                title="<?= (int)$p['k_factor'] ?> × (<?= $res ?> − <?= number_format((float)$p['expected'], 3) ?>)"><?= ($delta >= 0 ? '+' : '') . number_format($delta, 1) ?></td>
+                            <td class="px-2 py-1 text-right font-mono font-bold text-amber-300"><?= number_format((float)$p['rating_after'], 1, '.', '') ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    <?php endif; ?>
     <p class="text-xs text-zinc-500"><?= $afps
         ? 'From actionfps.com, the clan scene\'s old ladder: flags and frags only.'
         : 'Seen by the live view every few seconds (these servers have no logs we get): no kills by weapon' . ($hasAcc ? '.' : ', and no accuracy - the server hides it in match mode.') ?></p>

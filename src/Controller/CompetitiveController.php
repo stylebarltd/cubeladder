@@ -44,10 +44,15 @@ class CompetitiveController extends AppController
              LEFT JOIN players p ON p.id = r.player_id
              WHERE r.last_game_at >= ? AND COALESCE(p.cheater, 0) = 0 AND COALESCE(p.track, 1) = 1
              ORDER BY r.rating DESC', [date('Y-m-d H:i:s', strtotime('-' . self::ACTIVE_DAYS . ' days'))])->fetchAll('assoc');
-        // K/D and accuracy over their counted games (accuracy only from games without match mode)
+        // K/D and accuracy over their counted games (accuracy only from games without match mode), and the parts
+        // of the Elo (CompetitiveRatings): points gained and lost, the expected score (sum of the win chances)
+        // and the average strength of the teams they played against
         $totals = [];
         foreach ($conn->execute(
-            'SELECT s.player_key, SUM(s.frags) frags, SUM(s.deaths) deaths, SUM(s.damage) damage, SUM(s.shot_damage) shot
+            'SELECT s.player_key, SUM(s.frags) frags, SUM(s.deaths) deaths, SUM(s.damage) damage, SUM(s.shot_damage) shot,
+                    SUM(GREATEST(s.rating_after - s.rating_before, 0)) gained,
+                    SUM(GREATEST(s.rating_before - s.rating_after, 0)) lost,
+                    SUM(s.expected) expected, AVG(s.opp_rating) opp
              FROM comp_player_stats s INNER JOIN comp_games g ON g.id = s.comp_game_id AND g.counted = 1
              GROUP BY s.player_key')->fetchAll('assoc') as $t) {
             $totals[$t['player_key']] = $t;
@@ -56,8 +61,23 @@ class CompetitiveController extends AppController
             $t = $totals[$r['player_key']] ?? null;
             $r['kd'] = $t ? (int)$t['frags'] / max(1, (int)$t['deaths']) : null;
             $r['acc'] = $t && (int)$t['shot'] > 0 ? (int)$t['damage'] / (int)$t['shot'] * 100 : null;
+            $r['gained'] = $t ? (float)$t['gained'] : 0.0;
+            $r['lost'] = $t ? (float)$t['lost'] : 0.0;
+            $r['expected'] = $t && $t['expected'] !== null ? (float)$t['expected'] : null;
+            $r['score'] = (int)$r['wins'] + (int)$r['draws'] / 2;
+            $r['opp'] = $t && $t['opp'] !== null ? (float)$t['opp'] : null;
         }
         unset($r);
+        // a worked example for "How the Elo works": a rated player of the latest counted game
+        $example = $conn->execute(
+            'SELECT s.name, s.team, s.rating_before, s.rating_after, s.team_rating, s.opp_rating, s.expected, s.k_factor,
+                    g.id game_id, g.map, g.winner, g.team_size, p.track
+             FROM comp_player_stats s INNER JOIN comp_games g ON g.id = s.comp_game_id AND g.counted = 1
+             LEFT JOIN players p ON p.id = s.player_id
+             WHERE s.expected IS NOT NULL ORDER BY g.ended_at DESC, s.team, s.flags DESC, s.frags DESC LIMIT 1')->fetch('assoc') ?: null;
+        if ($example && $example['track'] !== null && (int)$example['track'] !== 1) {
+            $example['name'] = 'Anonymous';
+        }
         $ratings = array_values(array_filter($active, fn($r) => (int)$r['games'] >= self::MIN_GAMES));
         $provisional = array_values(array_filter($active, fn($r) => (int)$r['games'] < self::MIN_GAMES));
         $inactive = (int)$conn->execute('SELECT COUNT(*) FROM comp_ratings WHERE games >= ? AND last_game_at < ?',
@@ -67,7 +87,9 @@ class CompetitiveController extends AppController
         $players = $this->gamePlayers(array_column($games, 'id'));
         $running = $conn->execute('SELECT server_name, state, updated_at FROM comp_running')->fetchAll('assoc');
 
-        $this->set(compact('ratings', 'provisional', 'inactive', 'games', 'players', 'running'));
+        $this->set(compact('ratings', 'provisional', 'inactive', 'games', 'players', 'running', 'example'));
+        $this->set('k', ['new' => CompetitiveRatings::K_NEW, 'normal' => CompetitiveRatings::K, 'newGames' => CompetitiveRatings::NEW_GAMES]);
+        $this->set('minShare', CompetitiveTracker::MIN_SHARE);
         $this->set('activeDays', self::ACTIVE_DAYS);
         $this->set('servers', CompetitiveTracker::servers());
         $this->set('minGames', self::MIN_GAMES);

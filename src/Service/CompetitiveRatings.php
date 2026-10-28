@@ -42,7 +42,7 @@ class CompetitiveRatings
                 if (!$nobody && (float)$r['share'] >= CompetitiveTracker::MIN_SHARE && isset($teams[$r['team']])) {
                     $teams[$r['team']][] = $r;
                 } else {
-                    $updates[] = [null, null, $r['id']];
+                    $updates[] = [null, null, null, null, null, null, $r['id']];
                 }
             }
             if (!$teams['CLA'] || !$teams['RVSF']) {
@@ -70,14 +70,17 @@ class CompetitiveRatings
                     $p['name'] = $r['name'];
                     $p['player_id'] = $r['player_id'] ?? ($p['player_id'] ?? null);
                     $players[$r['player_key']] = $p;
-                    $updates[] = [round($before, 1), round($p['rating'], 1), $r['id']];
+                    // the parts of the change, for the game page: team strengths, win chance, K
+                    $updates[] = [round($before, 1), round($p['rating'], 1), round($strength[$t], 1), round($strength[$other], 1),
+                        round($expected, 4), $k, $r['id']];
                 }
             }
         }
 
         $conn->transactional(function ($conn) use ($players, $updates) {
             foreach ($updates as $u) {
-                $conn->execute('UPDATE comp_player_stats SET rating_before = ?, rating_after = ? WHERE id = ?', $u);
+                $conn->execute('UPDATE comp_player_stats SET rating_before = ?, rating_after = ?, team_rating = ?, opp_rating = ?,
+                    expected = ?, k_factor = ? WHERE id = ?', $u);
             }
             $conn->execute('DELETE FROM comp_ratings');
             foreach ($players as $key => $p) {
