@@ -6,6 +6,14 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-10-28',
+            'title' => 'New server on the ladder: Vortex CTF UK',
+            'link' => '/live',
+            'items' => [
+                'Games on Vortex CTF UK count for the ladder from today on, like the other Vortex CTF servers. It is on the Live page too.',
+            ],
+        ],
+        [
             'date' => '2026-10-27',
             'title' => 'cl_angkorwat - the first official cubeLadder map',
             'items' => [

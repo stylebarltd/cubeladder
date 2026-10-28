@@ -32,6 +32,7 @@ declare -A VORTEX_SERVERS=(
     ["vortex-brazil"]="vortex-brazil-ctf-533df59e2a"             # Vortex CTF Brazil
     ["vortex-germany"]="vortex-germany-ctf-45593f565f"           # Vortex CTF Germany
     ["vortex-singapore"]="vortex-singapore-ctf-c824d24e74"       # Vortex CTF Singapore
+    ["vortex-uk"]="vortex-united-kingdom-ctf-2a2ed4ffcf"         # Vortex CTF UK
 )
 
 # VORTEX_TOKEN in .env.local (skipped when unset). The token goes to curl via a
