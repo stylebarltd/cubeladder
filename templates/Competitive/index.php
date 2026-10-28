@@ -99,6 +99,16 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
                         </table>
                     </div>
                 <?php endif; ?>
+                <?php $iw = \App\Service\CompetitiveRatings::IND_WEIGHTS['flags']; ?>
+                <div class="rounded-lg bg-white/5 p-3 text-xs text-zinc-300">
+                    <div class="mb-1 font-bold text-white"><i class="fa-solid fa-user mr-1 text-amber-300"></i>Individual rating (Ind.)</div>
+                    The Elo only knows who won. Next to it, <b>Ind.</b> rates your own play, 0.1 &ndash; 9.9 (5.0 = average): in every rated game
+                    your numbers are compared with the other players of that game, per share of the game you played &ndash;
+                    flags scored <?= round($iw['flags'] * 100) ?>%, damage dealt <?= round($iw['damage'] * 100) ?>%, K/D <?= round($iw['kd'] * 100) ?>%,
+                    team result <?= round($iw['win'] * 100) ?>%, teamkills <?= round($iw['discipline'] * 100) ?>% (minus). In modes without flags:
+                    damage <?= round(\App\Service\CompetitiveRatings::IND_WEIGHTS['other']['damage'] * 100) ?>%, K/D <?= round(\App\Service\CompetitiveRatings::IND_WEIGHTS['other']['kd'] * 100) ?>%.
+                    Your Ind. is the average of your last <?= \App\Service\CompetitiveRatings::IND_WINDOW ?> games; each game's own rating is on the game page. It never changes the Elo.
+                </div>
                 <p class="text-xs text-zinc-400">In the table: <b class="text-zinc-200">Elo = <?= $start ?> + Gained &minus; Lost</b>.
                     <b class="text-zinc-200">Score</b> is what you got (wins + &frac12; per draw), <b class="text-zinc-200">Expected</b> what the win chances
                     of all your games add up to: scoring more than expected is what raises your Elo. <b class="text-zinc-200">Opp.</b> is the average
@@ -120,6 +130,7 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
                         <th class="px-2 py-1 text-right">#</th>
                         <th class="px-2 py-1 text-left">Player</th>
                         <th class="px-2 py-1 text-right">Elo</th>
+                        <th class="px-2 py-1 text-right" title="individual rating 0.1 - 9.9 (5.0 = average): own play against the others in the same games, average of the last <?= \App\Service\CompetitiveRatings::IND_WINDOW ?> games - does not change the Elo">Ind.</th>
                         <th class="px-2 py-1 text-right">Peak</th>
                         <th class="hidden px-2 py-1 text-right sm:table-cell" title="Elo won in the games you gained from (Elo = <?= $start ?> + Gained - Lost)">Gained</th>
                         <th class="hidden px-2 py-1 text-right sm:table-cell" title="Elo given up in the games you lost points in">Lost</th>
@@ -142,6 +153,8 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
                             $shade = $idle >= 80 ? 'text-zinc-600' : ($idle >= 60 ? 'text-zinc-500' : ($idle >= 40 ? 'text-zinc-400' : ($idle >= 20 ? 'text-zinc-300' : 'text-white'))); ?>
                             <td class="px-2 py-1 <?= $shade ?>" title="last game <?= $idle ?> days ago"><?= $playerLink($r['player_id'], (string)($r['profile_name'] ?? $r['name']), $r['country']) ?></td>
                             <td class="px-2 py-1 text-right font-mono font-bold text-amber-300"><?= (int)round((float)$r['rating']) ?></td>
+                            <?php $ind = $r['ind_rating'] !== null ? (float)$r['ind_rating'] : null; ?>
+                            <td class="px-2 py-1 text-right font-mono font-bold <?= $ind === null ? 'text-zinc-600' : ($ind >= 6 ? 'text-green-400' : ($ind >= 4 ? 'text-zinc-200' : 'text-red-400')) ?>"><?= $ind !== null ? number_format($ind, 1) : '–' ?></td>
                             <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= (int)round((float)$r['peak']) ?></td>
                             <td class="hidden px-2 py-1 text-right font-mono text-green-400 sm:table-cell">+<?= (int)round($r['gained']) ?></td>
                             <td class="hidden px-2 py-1 text-right font-mono text-red-400 sm:table-cell">&minus;<?= (int)round($r['lost']) ?></td>

@@ -17,7 +17,7 @@
     <?= $this->Html->meta('csrfToken', $this->request->getAttribute('csrfToken')) ?>
 
     <!-- Tailwind CSS -->
-    <?= $this->Html->css('tailwind.css?ver=1.93') ?>
+    <?= $this->Html->css('tailwind.css?ver=1.94') ?>
 
     <!-- cubeLadder icon (webroot/img/brand) -->
     <?= $this->Html->meta('icon', '/favicon.ico') ?>

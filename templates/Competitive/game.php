@@ -45,6 +45,7 @@ $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'R
                         <th class="px-2 py-1 text-right">Frags</th>
                         <th class="px-2 py-1 text-right">Deaths</th>
                         <?php if ($hasAcc): ?><th class="px-2 py-1 text-right" title="damage done out of the damage the shots could have done">Acc</th><?php endif; ?>
+                        <th class="px-2 py-1 text-right" title="individual rating of this game, 0.1 - 9.9 (5.0 = average): flags, damage, K/D, result, teamkills against the others in this game">Rtg</th>
                         <th class="px-2 py-1 text-right" title="Elo change in this game">Elo</th>
                     </tr>
                     </thead>
@@ -61,6 +62,8 @@ $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'R
                             <td class="px-2 py-1 text-right font-mono"><?= (int)$p['frags'] ?></td>
                             <td class="px-2 py-1 text-right font-mono text-zinc-400"><?= $afps ? '–' : (int)$p['deaths'] ?></td>
                             <?php if ($hasAcc): ?><td class="px-2 py-1 text-right font-mono text-zinc-300" title="<?= (int)$p['damage'] ?> of <?= (int)$p['shot_damage'] ?> damage"><?= (int)$p['shot_damage'] > 0 ? round((int)$p['damage'] / (int)$p['shot_damage'] * 100) . '%' : '–' ?></td><?php endif; ?>
+                            <?php $ir = $p['ind_rating'] !== null ? (float)$p['ind_rating'] : null; ?>
+                            <td class="px-2 py-1 text-right font-mono <?= $ir === null ? 'text-zinc-600' : ($ir >= 6 ? 'text-green-400' : ($ir >= 4 ? 'text-zinc-200' : 'text-red-400')) ?>"><?= $ir !== null ? number_format($ir, 1) : '–' ?></td>
                             <td class="px-2 py-1 text-right font-mono <?= $delta === null ? 'text-zinc-600' : ($delta >= 0 ? 'text-green-400' : 'text-red-400') ?>"
                                 title="<?= $delta === null ? 'not rated (played under half of it, or the game was not counted)' : (int)round((float)$p['rating_before']) . ' → ' . (int)round((float)$p['rating_after']) ?>">
                                 <?= $delta === null ? '–' : ($delta >= 0 ? '+' : '') . number_format($delta, 1) ?>
