@@ -80,6 +80,7 @@ class PlayController extends AppController
             (string)($body['token'] ?? ''),
             (string)($body['events'] ?? ''),
             is_array($body['reactions'] ?? null) ? $body['reactions'] : [],
+            is_array($body['setup'] ?? null) ? $body['setup'] : [],
         );
         if (isset($result['error'])) {
             return $this->json($result, 422);

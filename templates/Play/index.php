@@ -31,8 +31,9 @@ $this->start('meta'); ?>
     <meta name="description" content="<?= h($ogText) ?>">
 <?php $this->end(); ?>
 <style>
-.at-wrap { position: relative; border-radius: .75rem; overflow: hidden; border: 1px solid rgb(255 255 255 / .15); background: #0b0b0d; }
-.at-wrap canvas { display: block; width: 100%; aspect-ratio: 16 / 9; touch-action: none; cursor: none; }
+.at-wrap { position: relative; border-radius: .75rem; overflow: hidden; outline: 1px solid rgb(255 255 255 / .15); background: #0b0b0d;
+  width: <?= AimTrainer::WIDTH ?>px; height: <?= AimTrainer::HEIGHT ?>px; }
+.at-wrap canvas { display: block; width: <?= AimTrainer::WIDTH ?>px; height: <?= AimTrainer::HEIGHT ?>px; touch-action: none; cursor: none; }
 .at-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem;
   text-align: center; padding: 1.5rem; background: rgb(0 0 0 / .62); backdrop-filter: blur(2px); }
 .at-overlay[hidden] { display: none; }
@@ -107,34 +108,40 @@ $this->start('meta'); ?>
             Just for fun &ndash; not part of the ladder.
         </p>
     </div>
+</div>
 
-    <div class="grid gap-6 lg:grid-cols-3">
-        <!-- the game needs a mouse: on phones only this note, the boards and the points -->
-        <div class="at-card md:hidden">
-            <h3>On a bigger screen</h3>
-            <p class="at-note">The aim trainer is played with a mouse &ndash; open <b>cubeladder.ovh/play</b> on a desktop or laptop. The boards and the points are below.</p>
-        </div>
-        <div class="hidden md:block lg:col-span-2">
+<!-- the game: always 1280 x 720 (AimTrainer::WIDTH / HEIGHT, so every round is played at the same size) and only
+     with a mouse; it shows from a 1340 px window (1280 + scrollbar + page padding), the script checks the mouse -->
+<div class="mx-auto hidden px-4 pb-6 min-[1340px]:block" style="width: <?= AimTrainer::WIDTH + 32 ?>px">
             <div class="at-wrap" id="at">
-                <canvas id="at-canvas" width="1280" height="720" aria-label="Aim trainer"></canvas>
+                <canvas id="at-canvas" width="<?= AimTrainer::WIDTH ?>" height="<?= AimTrainer::HEIGHT ?>" aria-label="Aim trainer"></canvas>
                 <div class="at-overlay" id="at-start">
                     <h2>READY?</h2>
-                    <p>Targets pop up on the map and run away fast. Click or tap them &ndash; a headshot counts double.
+                    <p>Targets pop up on the map and run away fast. Click them &ndash; a headshot counts double.
                         Every shot that hits nothing ends your streak.</p>
-                    <p><b>Grenades (<?= AimTrainer::GRENADES ?>):</b> right-click or press <b>G</b> &ndash; on a touch screen tap the grenade, then where it should land.
+                    <p><b>Grenades (<?= AimTrainer::GRENADES ?>):</b> right-click or press <b>G</b>.
                         It explodes after half a second: wait until targets stand close together.</p>
                     <p class="at-note"><?= $authPlayer
                         ? 'Playing as <b>' . h($authPlayer->name) . '</b> &ndash; your best round goes on the board.'
                         : 'You are playing as a guest: your score counts only for you. To get on the board, say <b>' . h($linkCode) . '</b> in a game on a cubeLadder server.' ?></p>
+                    <p class="at-note js-at-gate" hidden></p>
                     <button type="button" class="at-btn" id="at-go">START</button>
                 </div>
                 <button type="button" class="at-nade" id="at-nade" aria-label="Grenade"><img src="/img/weapons/grenade.svg" alt=""><span id="at-nade-n"></span></button>
                 <div class="at-overlay" id="at-end" hidden></div>
             </div>
             <button type="button" class="at-sound" id="at-sound"></button>
-        </div>
+</div>
 
-        <div class="space-y-6">
+<div class="mx-auto w-full max-w-7xl px-4 pb-6 md:px-16 md:pb-8">
+    <div class="grid items-start gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <!-- below the game's width only this note, the boards and the points -->
+        <div class="at-card min-[1340px]:hidden">
+            <h3>On a desktop with a mouse</h3>
+            <p class="at-note">To keep the board fair the aim trainer is played at one fixed size (<?= AimTrainer::WIDTH ?> &times; <?= AimTrainer::HEIGHT ?>) and only with a mouse:
+                open <b>cubeladder.ovh/play</b> on a desktop or laptop with a browser window at least 1340 px wide. The boards and the points are below.</p>
+        </div>
+        <div class="contents">
             <?php if (!$authPlayer && $linkCode): ?>
             <!-- not recognised by IP: prove who you are with a code in the game chat (PlayerLink); the page waits for it -->
             <div class="at-card at-link" id="at-link">
@@ -179,7 +186,7 @@ $this->start('meta'); ?>
         'seconds' => AimTrainer::ROUND_SECONDS, 'hit' => AimTrainer::POINTS_HIT, 'headshot' => AimTrainer::POINTS_HEADSHOT,
         'streakBonus' => AimTrainer::POINTS_STREAK, 'streak' => AimTrainer::STREAK,
         'grenades' => AimTrainer::GRENADES, 'gib' => AimTrainer::POINTS_GIB, 'multiGib' => AimTrainer::POINTS_MULTI_GIB,
-        'maxAlive' => AimTrainer::MAX_ALIVE,
+        'maxAlive' => AimTrainer::MAX_ALIVE, 'width' => AimTrainer::WIDTH, 'height' => AimTrainer::HEIGHT,
     ]) ?>;
     const MAPS = <?= json_encode($maps) ?>;
     const ME = <?= json_encode($authPlayer?->id) ?>;
@@ -236,16 +243,31 @@ $this->start('meta'); ?>
     // --- canvas ----------------------------------------------------------
     const canvas = document.getElementById('at-canvas');
     const ctx = canvas.getContext('2d');
-    let W = 1280, H = 720, dpr = 1;
+    // one fixed size for everyone (AimTrainer::WIDTH x HEIGHT CSS pixels): targets and distances are the same
+    // on every screen; only the sharpness follows the screen's pixel ratio
+    const W = RULES.width, H = RULES.height;
+    let dpr = 1;
     function resize() {
         dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const r = canvas.getBoundingClientRect();
-        W = r.width; H = r.width * 9 / 16;
         canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        gate();
+    }
+    // the round may only start with a mouse and a window wide enough for the whole game
+    let touched = false;
+    const gateNote = document.querySelector('.js-at-gate');
+    function gate() {
+        const mouseOk = window.matchMedia('(any-pointer: fine)').matches;
+        const width = document.documentElement.clientWidth;
+        const sizeOk = width >= W + 32;
+        const why = !mouseOk ? 'The aim trainer needs a mouse.'
+            : !sizeOk ? 'Make the browser window wider: the game is ' + W + ' × ' + H + ' and needs ' + (W + 32) + ' px (now ' + width + ').' : '';
+        if (gateNote) { gateNote.textContent = why; gateNote.hidden = !why; }
+        const go = document.getElementById('at-go');
+        if (go && state !== 'play') go.disabled = !!why;
+        return !why;
     }
     window.addEventListener('resize', resize);
-    resize();
 
     const img = (src) => { const i = new Image(); i.src = src; return i; };
     const ICONS = {hs: img('/img/achievements/headshot.svg'), gun: img('/img/weapons/sniper.svg'),
@@ -437,6 +459,7 @@ $this->start('meta'); ?>
 
     // --- round state -------------------------------------------------------
     let state = 'idle', token = null, rnd = Math.random, t0 = 0, nextSpawn = 0;
+    resize();                                                // sharpness + the start gate (needs state)
     let targets = [], effects = [], feed = [];
     let events = '', reactions = [], score = 0, streak = 0, hits = 0, shots = 0, heads = 0;
     let nades = 0, flying = [], gibs = 0, gibPoints = 0, armed = false;
@@ -550,7 +573,7 @@ $this->start('meta'); ?>
     canvas.addEventListener('pointerleave', () => { mouse = null; });
     canvas.addEventListener('pointerdown', (e) => {
         e.preventDefault();
-        if (e.pointerType !== 'mouse') document.getElementById('at').classList.add('at-touch');
+        if (e.pointerType !== 'mouse') touched = true;          // a touch or a pen: the round won't count (server)
         if (e.button === 2 || armed) throwNade(...pos(e)); else shoot(...pos(e));
     });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -721,6 +744,7 @@ $this->start('meta'); ?>
     });
 
     async function begin(btn) {
+        if (!gate()) return;
         btn.disabled = true;
         try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); loadSounds(); } catch (e) {}
         try {
@@ -736,7 +760,7 @@ $this->start('meta'); ?>
         }
         nextMap();
         targets = []; effects = []; feed = [];
-        events = ''; reactions = []; score = streak = hits = shots = heads = 0;
+        events = ''; reactions = []; score = streak = hits = shots = heads = 0; touched = false;
         nades = RULES.grenades; flying = []; gibs = gibPoints = 0; armed = false;
         updateNadeButton();
         startBox.hidden = true; endBox.hidden = true;
@@ -777,7 +801,11 @@ $this->start('meta'); ?>
         again.addEventListener('click', () => begin(again));
         const note = endBox.querySelector('.js-at-rank');
         try {
-            const res = await post('/play/finish', {token, events, reactions});
+            // how the round was played, checked and kept by the server: mouse only, the fixed size, zoom for reference
+            const r = canvas.getBoundingClientRect();
+            const setup = {input: touched ? 'touch' : 'mouse', width: Math.round(r.width), height: Math.round(r.height),
+                dpr: window.devicePixelRatio || 1, zoom: window.outerWidth && window.innerWidth ? window.outerWidth / window.innerWidth : null};
+            const res = await post('/play/finish', {token, events, reactions, setup});
             const data = await res.json();
             if (!res.ok) { note.textContent = data.error || 'Not saved.'; return; }
             if (data.player) {

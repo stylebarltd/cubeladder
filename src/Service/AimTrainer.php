@@ -24,10 +24,19 @@ use DateTimeImmutable;
  * players (identity) are on it. The week's best round is a weekly
  * achievement (CalculateAchievementsCommand, event_type aim_trainer) and
  * the all-time top 10 is a Hall of Fame category (HallOfFameService 'aim').
+ *
+ * Fair play (since 2026-10-30): the game is always WIDTH x HEIGHT CSS pixels
+ * and played with a mouse only - a touch screen taps the targets directly and
+ * a smaller game shortens the mouse paths. The page sends how the round was
+ * played (input, size, pixel ratio, browser zoom); rounds not played with a
+ * mouse at the fixed size are refused, the rest keep these values for checks.
  */
 class AimTrainer
 {
     public const ROUND_SECONDS = 40;
+    /** The game's fixed size in CSS pixels (templates/Play/index.php) */
+    public const WIDTH = 1280;
+    public const HEIGHT = 720;
     /** Points: body hit, headshot, bonus for every 5 hits in a row */
     public const POINTS_HIT = 10;
     public const POINTS_HEADSHOT = 20;
@@ -115,9 +124,10 @@ class AimTrainer
      * is unknown, already finished, too short or not humanly possible.
      *
      * @param list<int> $reactions ms per hit, in order
+     * @param array $setup how it was played: input (mouse / touch), width, height, dpr, zoom
      * @return array{error?: string, score?: int, ...}
      */
-    public function finish(string $token, string $events, array $reactions): array
+    public function finish(string $token, string $events, array $reactions, array $setup = []): array
     {
         $conn = ConnectionManager::get('default');
         $round = $conn->execute('SELECT id, player_id, seconds, started_at, finished_at FROM aim_rounds WHERE token = ?', [$token])->fetch('assoc');
@@ -127,6 +137,13 @@ class AimTrainer
         $elapsed = time() - strtotime($round['started_at'] . ' UTC');
         if ($elapsed < (int)$round['seconds'] - 2 || $elapsed > self::TOKEN_TTL) {
             return ['error' => 'This round took too short or too long.'];
+        }
+        // fair play: only with a mouse, only at the fixed size
+        if (($setup['input'] ?? null) !== 'mouse') {
+            return ['error' => 'Only rounds played with a mouse count - this one had a touch.'];
+        }
+        if ((int)($setup['width'] ?? 0) !== self::WIDTH || (int)($setup['height'] ?? 0) !== self::HEIGHT) {
+            return ['error' => 'This round was not played at the fixed size (' . self::WIDTH . ' x ' . self::HEIGHT . ').'];
         }
         // a grenade's gibs come right after it, at most MAX_ALIVE
         if (strlen($events) > 1000 || !preg_match('/^(?:[hsme]|ng{0,' . self::MAX_ALIVE . '})*$/', $events)) {
@@ -143,9 +160,12 @@ class AimTrainer
         }
         $avg = $reactions ? (int)round(array_sum($reactions) / count($reactions)) : null;
         $conn->execute(
-            'UPDATE aim_rounds SET finished_at = ?, score = ?, shots = ?, hits = ?, headshots = ?, gibs = ?, escapes = ?, avg_reaction_ms = ?
+            'UPDATE aim_rounds SET finished_at = ?, score = ?, shots = ?, hits = ?, headshots = ?, gibs = ?, escapes = ?, avg_reaction_ms = ?,
+                    input = ?, width = ?, height = ?, dpr = ?, zoom = ?
              WHERE id = ? AND finished_at IS NULL',
-            [gmdate('Y-m-d H:i:s'), $r['score'], $r['shots'], $r['hits'], $r['headshots'], $r['gibs'], $r['escaped'], $avg, $round['id']]);
+            [gmdate('Y-m-d H:i:s'), $r['score'], $r['shots'], $r['hits'], $r['headshots'], $r['gibs'], $r['escaped'], $avg,
+             'mouse', self::WIDTH, self::HEIGHT, $this->number($setup['dpr'] ?? null, 0.25, 8), $this->number($setup['zoom'] ?? null, 0.1, 5),
+             $round['id']]);
 
         $out = $r + ['avg_reaction_ms' => $avg, 'player' => $round['player_id'] !== null];
         if ($round['player_id'] !== null) {
@@ -300,5 +320,11 @@ class AimTrainer
             'SELECT COUNT(*) FROM (SELECT r.player_id FROM aim_rounds r INNER JOIN players p ON p.id = r.player_id
               WHERE r.finished_at >= ? AND r.seconds = ? AND p.track = 1 AND p.cheater = 0 AND r.player_id <> ?
               GROUP BY r.player_id HAVING MAX(r.score) > ?) better', [$since, self::ROUND_SECONDS, $playerId, $mine])->fetchColumn(0);
+    }
+
+    /** A number the page sent, if it is one within [min, max] (rounded to 0.01), else null */
+    private function number(mixed $v, float $min, float $max): ?float
+    {
+        return is_numeric($v) && (float)$v >= $min && (float)$v <= $max ? round((float)$v, 2) : null;
     }
 }

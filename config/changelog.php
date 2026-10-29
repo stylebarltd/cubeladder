@@ -6,6 +6,15 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-10-30',
+            'title' => 'Aim trainer: one size and a mouse for everyone',
+            'link' => '/play',
+            'items' => [
+                'The aim trainer is now always **1280 × 720** and played **with a mouse only** - so every round on the board is played under the same conditions. Tapping targets on a touch screen, or shrinking the game to shorten the mouse paths, no longer counts.',
+                'You need a desktop or laptop with a browser window at least 1340 px wide. On smaller screens the page shows the boards and the points.',
+            ],
+        ],
+        [
             'date' => '2026-10-28',
             'title' => 'New server on the ladder: Vortex CTF UK',
             'link' => '/live',
