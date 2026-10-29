@@ -15,12 +15,15 @@ use Cake\Datasource\ConnectionManager;
  * New players move faster (K_NEW for their first NEW_GAMES games).
  *
  * Individual rating, next to it (the Elo stays team-only): in every rated game
- * each part (IND_WEIGHTS) is compared with the other rated players of that
- * game - flags scored, damage dealt, K/D, the team result, teamkills - per share
- * of the game played, as z-scores. Their weighted sum gives the game's rating
- * on the ladder's 0.1 - 9.9 scale (5.0 = an average game); a player's rating is
- * the average of the last IND_WINDOW games. Games without damage numbers (the
- * server hid them) use frags for the damage part.
+ * each part (IND_WEIGHTS) is compared with the average of the rated players of
+ * that game - flags scored, damage dealt, K/D, the team result, teamkills - per
+ * share of the game played. The gaps are measured on one scale for all games
+ * (each part divided by its spread over every rated game, as the skill
+ * rating does), not by each game's own spread, so a close game gives close
+ * ratings. Their weighted sum gives the game's rating on the ladder's
+ * 0.1 - 9.9 scale (5.0 = an average game); a player's rating is the average of
+ * the last IND_WINDOW games. Games without damage numbers (the server hid
+ * them) use frags for the damage part, with the frags' own spread.
  */
 class CompetitiveRatings
 {
@@ -66,7 +69,7 @@ class CompetitiveRatings
             if (!$teams['CLA'] || !$teams['RVSF']) {
                 continue;
             }
-            $raw = $this->individualScores($g, array_merge($teams['CLA'], $teams['RVSF']));
+            $gaps = $this->individualGaps($g, array_merge($teams['CLA'], $teams['RVSF']));
             $rating = fn($r) => $players[$r['player_key']]['rating'] ?? self::START;
             $strength = [];
             foreach ($teams as $t => $members) {
@@ -92,12 +95,31 @@ class CompetitiveRatings
                     $players[$r['player_key']] = $p;
                     // the parts of the change, for the game page: team strengths, win chance, K
                     $updates[$r['id']] = [round($before, 1), round($p['rating'], 1), round($strength[$t], 1), round($strength[$other], 1),
-                        round($expected, 4), $k, $raw[$r['id']]];
+                        round($expected, 4), $k, $gaps[$r['id']]];
                 }
             }
         }
 
-        // individual: the raw scores of all rated games on the 0.1 - 9.9 scale, then each player's average
+        // individual: each part's gaps over all rated games give its spread; the
+        // weighted gaps / spread are the raw scores, then on the 0.1 - 9.9 scale
+        $spread = [];
+        foreach ($updates as $u) {
+            foreach ($u[6] ?? [] as $part => $gap) {
+                $spread[$part] = ($spread[$part] ?? 0.0) + $gap['gap'] ** 2;
+                $spread["{$part}#n"] = ($spread["{$part}#n"] ?? 0) + 1;
+            }
+        }
+        foreach ($updates as &$u) {
+            if ($u[6] !== null) {
+                $raw = 0.0;
+                foreach ($u[6] as $part => $gap) {
+                    $sd = sqrt($spread[$part] / $spread["{$part}#n"]);
+                    $raw += $sd > 0 ? $gap['weight'] * $gap['gap'] / $sd : 0.0;
+                }
+                $u[6] = $raw;
+            }
+        }
+        unset($u);
         $scores = array_values(array_filter(array_column($updates, 6), fn($v) => $v !== null));
         $mean = $scores ? array_sum($scores) / count($scores) : 0.0;
         $sd = $scores ? (sqrt(array_sum(array_map(fn($v) => ($v - $mean) ** 2, $scores)) / count($scores)) ?: 1.0) : 1.0;
@@ -131,11 +153,15 @@ class CompetitiveRatings
     }
 
     /**
-     * Raw individual score of each rated player of one game (by stats row id):
-     * every part as a z-score against the game's rated players, weighted.
-     * Counts are divided by the share of the game played.
+     * Individual parts of each rated player of one game (by stats row id): the
+     * gap to the game's average of the rated players and the part's weight.
+     * Counts are divided by the share of the game played. The damage part
+     * is keyed 'frags' in games without damage numbers, so it gets its own
+     * spread in recalculate().
+     *
+     * @return array<int|string, array<string, array{gap: float, weight: float}>>
      */
-    private function individualScores(array $game, array $rated): array
+    private function individualGaps(array $game, array $rated): array
     {
         $w = self::IND_WEIGHTS[in_array($game['mode'], self::FLAG_MODES, true) ? 'flags' : 'other'];
         $hasDamage = !array_filter($rated, fn($r) => $r['damage'] === null);
@@ -151,19 +177,19 @@ class CompetitiveRatings
                 'discipline' => -(int)$r['teamkills'] / $share,
             ];
         }
-        $raw = array_fill_keys(array_keys($parts), 0.0);
+        $gaps = array_fill_keys(array_keys($parts), []);
         foreach ($w as $part => $weight) {
-            $vals = array_column($parts, $part);
-            $m = array_sum($vals) / count($vals);
-            $s = sqrt(array_sum(array_map(fn($v) => ($v - $m) ** 2, $vals)) / count($vals));
-            if ($weight <= 0 || $s <= 0) {
+            if ($weight <= 0) {
                 continue;
             }
+            $vals = array_column($parts, $part);
+            $m = array_sum($vals) / count($vals);
+            $key = $part === 'damage' && !$hasDamage ? 'frags' : $part;
             foreach ($parts as $id => $p) {
-                $raw[$id] += $weight * ($p[$part] - $m) / $s;
+                $gaps[$id][$key] = ['gap' => $p[$part] - $m, 'weight' => $weight];
             }
         }
 
-        return $raw;
+        return $gaps;
     }
 }

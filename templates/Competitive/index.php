@@ -103,7 +103,8 @@ $teamText = ['CLA' => 'text-red-400', 'RVSF' => 'text-blue-400'];
                 <div class="rounded-lg bg-white/5 p-3 text-xs text-zinc-300">
                     <div class="mb-1 font-bold text-white"><i class="fa-solid fa-user mr-1 text-amber-300"></i>Individual rating (Ind.)</div>
                     The Elo only knows who won. Next to it, <b>Ind.</b> rates your own play, 0.1 &ndash; 9.9 (5.0 = average): in every rated game
-                    your numbers are compared with the other players of that game, per share of the game you played &ndash;
+                    your numbers are compared with the average of that game, per share of the game you played, on one scale for all games
+                    (a close game gives close ratings) &ndash;
                     flags scored <?= round($iw['flags'] * 100) ?>%, damage dealt <?= round($iw['damage'] * 100) ?>%, K/D <?= round($iw['kd'] * 100) ?>%,
                     team result <?= round($iw['win'] * 100) ?>%, teamkills <?= round($iw['discipline'] * 100) ?>% (minus). In modes without flags:
                     damage <?= round(\App\Service\CompetitiveRatings::IND_WEIGHTS['other']['damage'] * 100) ?>%, K/D <?= round(\App\Service\CompetitiveRatings::IND_WEIGHTS['other']['kd'] * 100) ?>%.
