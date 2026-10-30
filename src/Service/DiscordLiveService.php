@@ -303,12 +303,17 @@ class DiscordLiveService
     /**
      * Build the webhook payload: a summary embed followed by one embed per
      * server (team columns as inline fields, top player's avatar as thumbnail).
+     * "On air" feeds (Ladder.discord.on_air, the default) only show the
+     * servers somebody plays on; the summary counts the empty / offline ones,
+     * and busy servers beyond Discord's embed limit become a "+ N more" line.
      */
     public function buildPayload(array $servers): array
     {
-        $profiles = $this->profiles($servers);
+        $onAir = ($this->cfg['on_air'] ?? true) !== false;
+        $shown = $onAir ? array_values(array_filter($servers, fn($s) => $this->isOnAir($s))) : $servers;
+        $profiles = $this->profiles($shown);
         $this->images = [];
-        foreach ($servers as $s) {
+        foreach ($shown as $s) {
             $this->scoreboardImage($s);
         }
 
@@ -322,37 +327,83 @@ class DiscordLiveService
         }
         $color = $online === 0 ? self::COLOR_OFFLINE : ($players > 0 ? self::COLOR_ONLINE : self::COLOR_EMPTY);
 
-        $summary = [
-            'title' => $this->cfg['title'] ?? 'cubeLadder – live servers',
-            // Discord counts a future <t:…:R> down by itself ("in 12 seconds")
-            'description' => sprintf(
-                '**%d** player%s on **%d/%d** server%s · %s <t:%d:R>',
+        // Discord counts a future <t:…:R> down by itself ("in 12 seconds")
+        $when = sprintf('%s <t:%d:R>', $this->nextIn !== null ? 'next update' : 'updated', time() + ($this->nextIn ?? 0));
+        if (!$onAir) {
+            $description = sprintf(
+                '**%d** player%s on **%d/%d** server%s · %s',
                 $players,
                 $players === 1 ? '' : 's',
                 $online,
                 count($servers),
                 count($servers) === 1 ? '' : 's',
-                $this->nextIn !== null ? 'next update' : 'updated',
-                time() + ($this->nextIn ?? 0)
-            ),
+                $when
+            );
+        } elseif ($shown) {
+            $playing = array_sum(array_map(fn($s) => $this->activePlayers($s), $shown));
+            $description = sprintf(
+                '**%d** player%s on **%d** server%s · %s',
+                $playing,
+                $playing === 1 ? '' : 's',
+                count($shown),
+                count($shown) === 1 ? '' : 's',
+                $when
+            );
+        } else {
+            $description = sprintf(
+                "Nobody is playing right now – %d servers watched.\nThe next game shows up here. · %s",
+                count($servers),
+                $when
+            );
+        }
+        $summary = [
+            'title' => $this->cfg['title'] ?? ($onAir ? 'cubeLadder – on air' : 'cubeLadder – live servers'),
+            'description' => $description,
             'color' => $color,
         ];
         if ($this->site()) {
             $summary['url'] = $this->site() . '/live';
         }
 
-        $summary['footer'] = ['text' => ($this->cfg['brand'] ?? 'CubeLadder') . ' · refreshes automatically, this message is edited in place'];
+        $footer = ($this->cfg['brand'] ?? 'CubeLadder') . ' · refreshes automatically, this message is edited in place';
+        if ($onAir) {
+            $empty = count(array_filter($servers, fn($s) => $s['online'] && !$this->isOnAir($s)));
+            $offline = count($servers) - $online;
+            $rest = array_filter([
+                $empty > 0 ? sprintf('%d server%s empty', $empty, $empty === 1 ? '' : 's') : null,
+                $offline > 0 ? sprintf('%d offline', $offline) : null,
+            ]);
+            if ($rest) {
+                $footer = implode(' · ', $rest) . ' · ' . $footer;
+            }
+        }
+        $summary['footer'] = ['text' => $footer];
         $summary['timestamp'] = gmdate('c');
 
         $embeds = [$summary];
-        foreach ($servers as $s) {
+        $left = 0;
+        foreach ($shown as $s) {
             $group = $this->serverEmbeds($s, $profiles);
             if (count($embeds) + count($group) > self::MAX_EMBEDS) {
+                // no room for the profile links: the server itself first
                 $group = array_slice($group, 0, max(0, self::MAX_EMBEDS - count($embeds)));
+            }
+            if (!$group) {
+                $left++;
+                unset($this->images[$s['key']]);
+                continue;
             }
             foreach ($group as $e) {
                 $embeds[] = $e;
             }
+        }
+        if ($left > 0) {
+            $embeds[0]['description'] .= sprintf(
+                "\n+ %d more server%s%s",
+                $left,
+                $left === 1 ? '' : 's',
+                $this->site() ? sprintf(' on [%s/live](%s/live)', preg_replace('#^https?://#', '', $this->site()), $this->site()) : ''
+            );
         }
 
         $payload = [
@@ -364,11 +415,30 @@ class DiscordLiveService
             // by their index in the upload (see send())
             'attachments' => $this->attachmentList(),
         ];
-        if (($components = $this->buttons($servers)) !== []) {
+        if (($components = $this->buttons($shown)) !== []) {
             $payload['components'] = $components;
         }
 
         return $payload;
+    }
+
+    /**
+     * Players in the game on a server, spectators not counted. Players the
+     * server reports but whose packets got lost count as playing, so a busy
+     * server never drops off the message.
+     */
+    private function activePlayers(array $s): int
+    {
+        $listed = $s['players'] ?? [];
+        $active = count(array_filter($listed, fn($p) => empty($p['is_spectator'])));
+
+        return $active + max(0, (int)($s['numplayers'] ?? 0) - count($listed));
+    }
+
+    /** "On air": an online server with at least one player who is not spectating */
+    private function isOnAir(array $s): bool
+    {
+        return $s['online'] && $this->activePlayers($s) > 0;
     }
 
     /**

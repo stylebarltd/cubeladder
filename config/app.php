@@ -607,6 +607,9 @@ return [
                 'vortex-usa-west', 'vortex-usa-east', 'vortex-brazil', 'vortex-germany', 'vortex-singapore', 'vortex-uk'],
             'site' => env('APP_FULL_BASE_URL', 'https://cubeladder.ovh'),
             'state' => TMP . 'discord_live.json',
+            // "on air": only servers somebody plays on are shown (empty and
+            // offline ones are just counted); false lists every server
+            'on_air' => true,
             /*
              * Post a NEW message (edits never make a sound) when a server
              * reaches `threshold` players coming from below it, at most once
@@ -643,6 +646,8 @@ return [
                     'brand' => 'MyS Inter',
                     // inter: spectators are people waiting for a mix – name them
                     'show_spectators' => true,
+                    // and every server stays listed, empty ones too
+                    'on_air' => false,
                 ],
             ],
 

@@ -7,6 +7,14 @@ return [
     'Changelog' => [
         [
             'date' => '2026-10-30',
+            'title' => 'Discord: only the servers that are on air',
+            'link' => '/live',
+            'items' => [
+                'The live message in our Discord now shows only the servers somebody is playing on, with the scoreboard as before. Empty and offline servers are just counted at the bottom; when nobody plays, it says so. All 13 ladder servers are watched again - the Vortex servers at the end of the list were cut off before.',
+            ],
+        ],
+        [
+            'date' => '2026-10-30',
             'title' => 'Aim trainer: one size and a mouse for everyone',
             'link' => '/play',
             'items' => [
