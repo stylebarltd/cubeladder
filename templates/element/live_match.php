@@ -163,7 +163,7 @@
 
     <p class="js-specs text-sm text-zinc-300 mt-4 drop-shadow" hidden></p>
 
-    <p class="text-xs text-zinc-400 mt-6 text-center drop-shadow">updates every 5 seconds &middot; <span class="js-updated"></span></p>
+    <p class="text-xs text-zinc-400 mt-6 text-center drop-shadow">updates every 10 seconds &middot; <span class="js-updated"></span></p>
 </div>
 
 <script>
@@ -456,7 +456,7 @@ window.initLiveMatch = function (root, key) {
     }
     function start() {
         tick();
-        timer = setInterval(tick, 5000);
+        timer = setInterval(tick, 10000);
     }
     start();
 

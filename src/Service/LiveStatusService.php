@@ -14,7 +14,8 @@ use Cake\Core\Configure;
  * Cheapest source first: the state files the discord_live cron rewrites
  * every few seconds (both feeds). When they are stale (cron not running,
  * e.g. locally) our servers are polled directly; other servers come from
- * the master server list. Polls are cached in "live_slow" (30 s).
+ * the master server list. Polls are cached in "live_slow" (30 s), the master
+ * list in "live_others" (60 s, see others()).
  */
 class LiveStatusService
 {
@@ -50,7 +51,7 @@ class LiveStatusService
 
         // nothing on our servers: any other public server?
         if ($poll) {
-            $other = Cache::remember('onair_elsewhere', fn() => $this->busiestElsewhere(), 'live_slow');
+            $other = $this->busiestElsewhere();
             if ($other && $other['players'] >= self::MIN_PLAYERS) {
                 return ['live' => true] + $other;
             }
@@ -60,20 +61,36 @@ class LiveStatusService
     }
 
     /**
+     * The other public servers from the master list (ours and the clan match
+     * servers excluded), extinfo results keyed "ip:port". Polled at most once a
+     * minute (cache "live_others") for the Live page and the "on air" check together.
+     *
+     * @return array<string, array>
+     */
+    public static function others(): array
+    {
+        return Cache::remember('others', function () {
+            // master list entries are "ip:port"; resolve our own hosts so none
+            // of our servers is polled again under its address
+            $ownAddr = [];
+            foreach (Configure::read('Ladder.servers') ?: [] as $cfg) {
+                $ownAddr[gethostbyname($cfg['host']) . ':' . (int)$cfg['port']] = true;
+            }
+            $targets = array_diff_key((new AcMasterServerService())->servers(), $ownAddr);
+
+            return (new AcExtInfoService())->queryMany($targets);
+        }, 'live_others');
+    }
+
+    /**
      * Busiest other public server from the master list (ours excluded).
      *
      * @return array{players: int, server: string}|null
      */
     private function busiestElsewhere(): ?array
     {
-        $ownAddr = [];
-        foreach (Configure::read('Ladder.servers') ?: [] as $cfg) {
-            $ownAddr[gethostbyname($cfg['host']) . ':' . (int)$cfg['port']] = true;
-        }
-        $targets = array_diff_key((new AcMasterServerService())->servers(), $ownAddr);
-
         $best = null;
-        foreach ((new AcExtInfoService())->queryMany($targets) as $key => $info) {
+        foreach (self::others() as $key => $info) {
             $n = !empty($info['online']) ? (int)$info['numplayers'] : 0;
             if ($n > ($best['players'] ?? 0)) {
                 $best = ['players' => $n, 'server' => trim((string)($info['description'] ?? '')) ?: $key];

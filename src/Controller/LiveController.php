@@ -5,6 +5,7 @@ namespace App\Controller;
 
 use App\Service\AcExtInfoService;
 use App\Service\AcMasterServerService;
+use App\Service\LiveStatusService;
 use Cake\Cache\Cache;
 use Cake\Core\Configure;
 
@@ -12,9 +13,10 @@ use Cake\Core\Configure;
  * Live server status, read straight from the game servers via the
  * AssaultCube extinfo UDP protocol (see AcExtInfoService).
  *
- * Our own servers (Ladder.servers) are always shown; every other public
- * server known to the AC master server (AcMasterServerService) is polled
- * too and listed under "Other AC servers" while it answers.
+ * Our own servers (Ladder.servers) are always shown and refreshed with the
+ * page (10 s); every other public server known to the AC master server is
+ * polled at most once a minute (LiveStatusService::others()) and listed under
+ * "Other AC servers" while it answers.
  */
 class LiveController extends AppController
 {
@@ -183,26 +185,14 @@ class LiveController extends AppController
         // "clan match / inter" group on the live page
         $clan = array_filter($all, fn($cfg) => ($cfg['live'] ?? true) === false);
 
-        // Master list entries are "ip:port"; resolve our own hosts so the
-        // same server is not polled twice under two names.
-        $targets = $own + $clan;
-        $ownAddr = [];
-        foreach ($all as $cfg) {
-            $ownAddr[gethostbyname($cfg['host']) . ':' . (int)$cfg['port']] = true;
-        }
-        $master = (new AcMasterServerService())->servers();
-        foreach ($master as $key => $cfg) {
-            if (!isset($ownAddr[$key]) && !isset($targets[$key])) {
-                $targets[$key] = $cfg;
-            }
-        }
-
+        // ours and the clan match servers on every refresh, other people's
+        // servers from the shared once-a-minute poll of the master list
         $ext = new AcExtInfoService();
         $servers = [];
         $clanServers = [];
         $elsewhere = [];
         $polled = $online = $players = 0;
-        foreach ($ext->queryMany($targets) as $key => $info) {
+        foreach ($ext->queryMany($own + $clan) + LiveStatusService::others() as $key => $info) {
             $info['key'] = $key;
             if (isset($own[$key])) {
                 $info['own'] = true;

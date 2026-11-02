@@ -129,8 +129,8 @@ return [
             'prefix' => 'myapp_live_',
             'path' => CACHE . 'live' . DS,
             'serialize' => true,
-            // just under the 5 s refresh of the Live page
-            'duration' => '+4 seconds',
+            // just under the 10 s refresh of the Live page
+            'duration' => '+9 seconds',
         ],
 
         /*
@@ -143,6 +143,19 @@ return [
             'path' => CACHE . 'live' . DS,
             'serialize' => true,
             'duration' => '+30 seconds',
+        ],
+
+        /*
+         * The other public servers from the master list (LiveStatusService::others()):
+         * polled at most once a minute, shared by the Live page and the "on air"
+         * check, so other people's servers get one query a minute from the website.
+         */
+        'live_others' => [
+            'className' => FileEngine::class,
+            'prefix' => 'myapp_live_others_',
+            'path' => CACHE . 'live' . DS,
+            'serialize' => true,
+            'duration' => '+60 seconds',
         ],
 
         /*

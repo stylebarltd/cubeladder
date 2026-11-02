@@ -82,7 +82,7 @@
     const byKey = () => new Map(groups.flatMap(g => g.servers).map(s => [s.key, s]));
 
     // countdown to the next refresh
-    const POLL_MS = 5000;
+    const POLL_MS = 10000;
     let nextPollAt = Date.now() + POLL_MS;
     setInterval(() => {
         const sec = Math.max(0, Math.ceil((nextPollAt - Date.now()) / 1000));

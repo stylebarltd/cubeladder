@@ -6,6 +6,14 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-11-02',
+            'title' => 'Live page: lighter on the game servers',
+            'link' => '/live',
+            'items' => [
+                'The Live page now refreshes every **10 seconds** instead of every 5. Other public AC servers (not on the ladder) are checked once a minute - the website asks each of them at most once a minute, however many people watch.',
+            ],
+        ],
+        [
             'date' => '2026-10-30',
             'title' => 'Discord: only the servers that are on air',
             'link' => '/live',
