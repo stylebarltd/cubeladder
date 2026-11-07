@@ -187,7 +187,7 @@ $this->start('meta'); ?>
                 <h3>Points <small>per right answer</small></h3>
                 <table class="at-board at-points">
                     <?php foreach (Radar::POINTS as $s => [$from, $to]): ?>
-                    <tr><td class="p"><?= ['Half of the map', 'Three quarters of the map', 'The whole map'][$s] ?? 'Step ' . ($s + 1) ?> shown
+                    <tr><td class="p"><?= ['Two thirds of the map', 'Three quarters of the map', 'The whole map'][$s] ?? 'Step ' . ($s + 1) ?> shown
                         <small><?= $s * Radar::STEP_SECONDS ?>&ndash;<?= ($s + 1) * Radar::STEP_SECONDS ?> s</small></td>
                         <td class="s"><?= $from ?>&ndash;<?= $to ?></td></tr>
                     <?php endforeach; ?>
