@@ -9,14 +9,15 @@ use Cake\Core\Configure;
 use Cake\Http\Client;
 use DateTimeImmutable;
 use App\Service\AimTrainer;
+use App\Service\Radar;
 use App\Service\LastGamesTrait;
 use Throwable;
 
 /**
  * Weekly achievements (cron, Monday 00:01, for the week that just ended):
  * the #1 of each category over the last 100 games, the best player on
- * every map and the best aim trainer round of the week (AimTrainer, event
- * type aim_trainer), stored in achievements, sent to the winners' inbox and
+ * every map, the best aim trainer round of the week (AimTrainer, event
+ * type aim_trainer) and the best Radar round (Radar, event type radar), stored in achievements, sent to the winners' inbox and
  * posted to the Discord achievements channel (Ladder.discord.achievements.webhook).
  *
  *   bin/cake CalculateAchievements              calculate, store, post
@@ -38,6 +39,7 @@ class CalculateAchievementsCommand extends Command
         'teamkills' => ['🤦', 'Most teamkills'],
         'suicided' => ['☠️', 'Most suicides'],
         'aim_trainer' => ['🕹️', 'Aim trainer'],
+        'radar' => ['🗺️', 'Radar'],
     ];
 
     protected function buildOptionParser(ConsoleOptionParser $parser): ConsoleOptionParser
@@ -211,6 +213,29 @@ class CalculateAchievementsCommand extends Command
         }
 
         /**
+         * Best Radar round of the week (the map quiz, rounds finished Monday - Sunday, UTC)
+         */
+        $radar = (new Radar())->bestBetween($weekStart->format('Y-m-d'), $weekEnd->format('Y-m-d'));
+        if ($radar && !$Achievements->exists(['week_start' => $weekStart->format('Y-m-d'), 'event_type' => 'radar'])) {
+            $Achievements->saveOrFail($Achievements->newEntity([
+                'week_start' => $weekStart->format('Y-m-d'),
+                'week_end'   => $weekEnd->format('Y-m-d'),
+                'player_id'  => $radar['player_id'],
+                'event_type' => 'radar',
+                'count'      => $radar['score'],
+                'created'    => (new DateTimeImmutable())->format('Y-m-d H:i:s'),
+            ]));
+            $saved++;
+            $this->sendAchievementMessage(
+                $Messages,
+                $radar['player_id'],
+                'Weekly Achievement Unlocked!',
+                sprintf("You ranked #1 for **Radar** this week with a value of **%s**.\n\nNobody knows the maps better! 🗺️", $radar['score'])
+            );
+            $io->out(sprintf('✔ radar → player %s (%s)', $radar['player_id'], $radar['score']));
+        }
+
+        /**
          * Best player per map (last 100 games)
          */
         $maps = $Maps->find()
@@ -300,6 +325,9 @@ class CalculateAchievementsCommand extends Command
             ));
         }
 
+        // Radar's maps follow what is played: the pool is rebuilt once a week, here
+        $this->executeCommand(RadarPoolCommand::class, [], $io);
+
         // the week's achievements in the Discord channel (once: only when
         // this run stored new ones)
         if ($saved > 0) {
@@ -385,7 +413,7 @@ class CalculateAchievementsCommand extends Command
         $embeds = [[
             'title' => '🥇 Weekly achievements · ' . $period,
             'url' => $site . '/players',
-            'description' => 'The best of the week over the last 100 games, and the week\'s best aim trainer round.',
+            'description' => 'The best of the week over the last 100 games, and the week\'s best aim trainer and Radar rounds.',
             'color' => 0xEAB308,
             'fields' => $fields,
         ]];

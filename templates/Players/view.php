@@ -14,6 +14,7 @@ $achievementLabels = [
     'slashed' => 'Most Slashes', 'scored_with_the_flag' => 'Most Flags scored',
     'headshot' => 'Most Headshots', 'best_on_map' => 'Best on Map', 'games' => 'Most Games Played',
     'aim_trainer' => 'Best aim trainer round',
+    'radar' => 'Best Radar round',
 ];
 ?>
 <?php
@@ -350,6 +351,7 @@ endif;
             'gibbed' => ['icon' => 'fa-bomb', 'color' => 'text-yellow-400'],
             'flag_helper' => ['icon' => 'fa-flag', 'color' => 'text-blue-400'],
             'aim' => ['icon' => 'fa-bullseye', 'color' => 'text-cyan-400'],   // the aim trainer (/play), not a game
+            'radar' => ['icon' => 'fa-satellite-dish', 'color' => 'text-amber-400'],   // Radar, the map quiz (/radar)
         ];
         $rankBadge = fn(int $rank) => match (true) {
             $rank === 1 => 'bg-yellow-400 text-black',

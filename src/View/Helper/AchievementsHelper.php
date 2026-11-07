@@ -67,6 +67,13 @@ class AchievementsHelper extends Helper
             'icon'   => 'aim_trainer.svg',
             'format' => 'int',
         ],
+
+        // the week's best round in Radar, the map quiz (/radar)
+        'radar' => [
+            'label'  => 'Cartographer',
+            'icon'   => 'radar.svg',
+            'format' => 'int',
+        ],
     ];
 
 //    public function label(string $eventType): string

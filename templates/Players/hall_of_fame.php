@@ -83,6 +83,13 @@ $genres = [
         'color' => 'text-cyan-400',
         'data'  => $topAim,
     ],
+    [
+        // Radar, the map quiz (/radar): best round per player, no game and no map
+        'key'   => 'radar',
+        'title' => 'Radar',
+        'color' => 'text-amber-400',
+        'data'  => $topRadar ?? [],
+    ],
 ];
 
 $achievementLabels = [
@@ -95,6 +102,7 @@ $achievementLabels = [
     'scored_with_the_flag' => 'Most Flags scored last week',
     'headshot' => 'Most Headshots last week',
     'aim_trainer' => 'Best aim trainer round last week',
+    'radar' => 'Best Radar round last week',
 ];
 
 // Only categories that actually have players.
@@ -144,6 +152,8 @@ shuffle($playerImages);
                         <div class="mt-3 text-sm text-zinc-300"><?= h(HallOfFameService::CATEGORIES[$genre['key']]['scope'] ?? 'Best single game since ' . date('M Y', strtotime(\App\Controller\PlayersController::HOF_SINCE))) ?></div>
                         <?php if ($genre['key'] === 'aim'): ?>
                             <a href="/play" class="mt-2 inline-flex items-center gap-2 text-sm text-cyan-300 hover:text-cyan-200"><i class="fa-solid fa-play"></i> Play a round</a>
+                        <?php elseif ($genre['key'] === 'radar'): ?>
+                            <a href="/radar" class="mt-2 inline-flex items-center gap-2 text-sm text-amber-300 hover:text-amber-200"><i class="fa-solid fa-play"></i> Play a round</a>
                         <?php endif; ?>
                         <button type="button" class="js-hof-share mt-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-4 py-2 text-sm text-white transition hover:bg-black/70">
                             <i class="fa-solid fa-share-nodes"></i> <span>Share</span>
@@ -170,7 +180,7 @@ shuffle($playerImages);
                                     'busted'     => (int)($player->busted ?? 0),
                                 ];
                                 // an aim trainer round has no game: no weapons, the round's accuracy instead
-                                $weapons = $genre['key'] === 'aim' ? ['weapons' => []] : $this->Layout->weapon($recordStats);
+                                $weapons = in_array($genre['key'], ['aim', 'radar'], true) ? ['weapons' => []] : $this->Layout->weapon($recordStats);
                                 $medals = $achievementPlayers[$player->player_id] ?? [];
                                 ?>
                                 <div class="flex items-start gap-3 py-2">
@@ -244,6 +254,12 @@ shuffle($playerImages);
                                             <a href="/play" class="mt-0.5 ml-auto block whitespace-nowrap text-[10px] text-blue-500 hover:underline"
                                                title="<?= (int)$player->accuracy ?>% accuracy · <?= (int)$player->headshots ?> headshots · <?= (int)$player->gibs ?> gibs<?= $player->avg_reaction_ms !== null ? ' · ' . (int)$player->avg_reaction_ms . ' ms reaction' : '' ?>">
                                                 <?= (int)$player->accuracy ?>% · <?= (int)$player->headshots ?> HS · <?= (int)$player->gibs ?> gibs
+                                            </a>
+                                        <?php elseif ($genre['key'] === 'radar'): ?>
+                                            <!-- the round's right answers and average time; the link opens Radar -->
+                                            <a href="/radar" class="mt-0.5 ml-auto block whitespace-nowrap text-[10px] text-blue-500 hover:underline"
+                                               title="<?= (int)$player->correct ?>/<?= \App\Service\Radar::QUESTIONS ?> maps right<?= $player->avg_ms !== null ? ' · ' . number_format($player->avg_ms / 1000, 1) . ' s per right answer' : '' ?>">
+                                                <?= (int)$player->correct ?>/<?= \App\Service\Radar::QUESTIONS ?> right<?= $player->avg_ms !== null ? ' · ' . number_format($player->avg_ms / 1000, 1) . ' s' : '' ?>
                                             </a>
                                         <?php else: ?>
                                         <!-- the record game's map, under its date -->

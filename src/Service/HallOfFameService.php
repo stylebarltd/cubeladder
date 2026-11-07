@@ -24,7 +24,8 @@ class HallOfFameService
      * (HallOfFameImage: Font Awesome name or png:<weapon>). The game
      * categories are the best single game since PlayersController::HOF_SINCE;
      * 'aim' is the best round in the browser aim trainer (AimTrainer, /play),
-     * its rows have no game and no map ('scope' says what counts instead).
+     * its rows have no game and no map ('scope' says what counts instead);
+     * 'radar' the same for Radar, the map quiz (/radar).
      */
     public const CATEGORIES = [
         'kills' => ['slug' => 'kills', 'title' => 'Most Kills', 'unit' => 'kills', 'emoji' => '💀', 'icon' => 'skull'],
@@ -36,6 +37,8 @@ class HallOfFameService
         'helper' => ['slug' => 'flag-helper', 'title' => 'Flag Helper', 'unit' => 'steals + returns', 'emoji' => '🤝', 'icon' => 'handshake'],
         'aim' => ['slug' => 'aim-trainer', 'title' => 'Aim Trainer', 'unit' => 'points', 'emoji' => '🕹️', 'icon' => 'bullseye',
             'scope' => 'Best ' . AimTrainer::ROUND_SECONDS . '-second round in the aim trainer', 'link' => '/play'],
+        'radar' => ['slug' => 'radar', 'title' => 'Radar', 'unit' => 'points', 'emoji' => '🗺️', 'icon' => 'satellite-dish',
+            'scope' => 'Best round of ' . Radar::QUESTIONS . ' maps in Radar, the map quiz', 'link' => '/radar'],
     ];
 
     /** The page of a category's records: the game, or the aim trainer */
@@ -122,6 +125,7 @@ class HallOfFameService
             'gibbed' => $this->topPlayers('gibbed'),
             'helper' => $this->topPlayers(['stole_the_flag', 'returned_the_flag']),
             'aim' => (new AimTrainer())->hallOfFame(self::TOP),
+            'radar' => (new Radar())->hallOfFame(self::TOP),
         ];
     }
 

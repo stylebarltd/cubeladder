@@ -65,6 +65,7 @@ class PlayersController extends AppController
 
         $bestFlagHelpers = $top['helper'];
         $topAim       = $top['aim'] ?? [];   // the aim trainer's best rounds (no game, no map)
+        $topRadar     = $top['radar'] ?? [];   // Radar's best rounds (no game, no map)
 
         // Weekly achievement medals, keyed by player (same source as Players::index)
         $achievePlayers = $this->Players->Achievements->find()
@@ -114,6 +115,7 @@ class PlayersController extends AppController
             'topStreaks',
             'bestFlagHelpers',
             'topAim',
+            'topRadar',
             'achievementPlayers',
             'playerRatings',
             'inactivePlayers'
@@ -1026,6 +1028,10 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         // the aim trainer's best round next to the game records (Hall of Fame category 'aim')
         if ($aimRecord = (new \App\Service\AimTrainer())->personalRecord((string)$player->id)) {
             $records['aim'] = $aimRecord;
+        }
+        // and Radar's (Hall of Fame category 'radar')
+        if ($radarRecord = (new \App\Service\Radar())->personalRecord((string)$player->id)) {
+            $records['radar'] = $radarRecord;
         }
 
         // Most played map (counted games) - the page background
