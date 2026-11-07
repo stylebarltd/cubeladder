@@ -54,6 +54,9 @@ $this->start('meta'); ?>
 .rd-hint b { color: #fff; }
 .rd-hint .pts { color: #facc15; font-weight: 800; }
 .rd-hint .no { color: #f87171; font-weight: 800; }
+.rd-next { text-align: center; min-height: 3.2rem; }
+.rd-next .rd-btn { margin-top: .2rem; padding: .55rem 1.4rem; font-size: .9rem; }
+.rd-next span { font-weight: 600; opacity: .7; }
 .rd-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem;
   text-align: center; padding: 1.5rem; background: rgb(0 0 0 / .72); backdrop-filter: blur(2px); border-radius: .75rem; z-index: 2; }
 .rd-overlay[hidden] { display: none; }
@@ -133,7 +136,7 @@ $this->start('meta'); ?>
                     <h2>WHICH MAP?</h2>
                     <?php if ($ready): ?>
                     <p>A piece of a map's floor plan, seen from above: dark is low ground, sand is high.
-                        It grows every <?= Radar::STEP_SECONDS ?> seconds &ndash; pick the map before the time runs out.</p>
+                        It grows every <?= Radar::STEP_SECONDS ?> seconds until you see the whole map &ndash; pick it before the time runs out.</p>
                     <p class="at-note"><?= $authPlayer
                         ? 'Playing as <b>' . h($authPlayer->name) . '</b> &ndash; your best round goes on the board.'
                         : 'You are playing as a guest: your score counts only for you. To get on the board, say <b>' . h((string)$linkCode) . '</b> in a game on a cubeLadder server.' ?></p>
@@ -155,6 +158,7 @@ $this->start('meta'); ?>
                 <?php endfor; ?>
             </div>
             <div class="rd-hint" id="rd-hint"></div>
+            <div class="rd-next"><button type="button" class="rd-btn" id="rd-next" hidden>NEXT MAP <span id="rd-next-s"></span></button></div>
             <div class="rd-dots" id="rd-dots"><?= str_repeat('<i></i>', Radar::QUESTIONS) ?></div>
         </div>
 
@@ -183,7 +187,7 @@ $this->start('meta'); ?>
                 <h3>Points <small>per right answer</small></h3>
                 <table class="at-board at-points">
                     <?php foreach (Radar::POINTS as $s => [$from, $to]): ?>
-                    <tr><td class="p"><?= ['A third', 'Half', 'Three quarters'][$s] ?? 'Step ' . ($s + 1) ?> of the map shown
+                    <tr><td class="p"><?= ['Half of the map', 'Three quarters of the map', 'The whole map'][$s] ?? 'Step ' . ($s + 1) ?> shown
                         <small><?= $s * Radar::STEP_SECONDS ?>&ndash;<?= ($s + 1) * Radar::STEP_SECONDS ?> s</small></td>
                         <td class="s"><?= $from ?>&ndash;<?= $to ?></td></tr>
                     <?php endforeach; ?>
@@ -279,6 +283,18 @@ $this->start('meta'); ?>
     const dots = [...$('rd-dots').children];
     const go = $('rd-go');
     let token = null, total = 0, q = 0, choices = [], t0 = 0, step = 0, open = false, timers = [], raf = 0;
+    // after an answer the whole map stays until NEXT (or NEXT_SECONDS), so there is time to look at it
+    const NEXT_SECONDS = 10;
+    const nextBtn = $('rd-next'), nextS = $('rd-next-s');
+    let waiting = null;
+    function wait(then, last) {
+        let left = NEXT_SECONDS;
+        nextBtn.firstChild.textContent = last ? 'SEE RESULT ' : 'NEXT MAP ';
+        nextS.textContent = '(' + left + ')';
+        nextBtn.hidden = false;
+        const go = () => { if (!waiting) return; clearInterval(waiting.iv); waiting = null; nextBtn.hidden = true; then(); };
+        waiting = {go, iv: setInterval(() => { if (--left <= 0) go(); else nextS.textContent = '(' + left + ')'; }, 1000)};
+    }
 
     async function post(path, data) {
         const r = await fetch('/radar/' + path, {
@@ -377,7 +393,7 @@ $this->start('meta'); ?>
             '<br><b>' + esc(r.map) + '</b>' + who;
         // the whole plan, so you learn the map
         show(full, pieceUrl('full')).then(ok => ok && view.classList.add('reveal'));
-        setTimeout(() => { if (r.last) finish(); else { q++; next(); } }, r.right ? 2200 : 3200);
+        wait(() => { if (r.last) finish(); else { q++; next(); } }, r.last);
     }
 
     async function finish() {
@@ -407,6 +423,7 @@ $this->start('meta'); ?>
 
     function fail(text) {
         open = false; playing = false;
+        if (waiting) { clearInterval(waiting.iv); waiting = null; nextBtn.hidden = true; }
         timers.forEach(clearTimeout); timers = [];
         cancelAnimationFrame(raf);
         const end = $('rd-end');
@@ -417,10 +434,13 @@ $this->start('meta'); ?>
     }
 
     if (go) go.addEventListener('click', start);
+    nextBtn.addEventListener('click', () => waiting && waiting.go());
     buttons.forEach((b, i) => b.addEventListener('click', () => answer(i)));
     // keys 1-4 on a keyboard
     document.addEventListener('keydown', (e) => {
-        if (!open || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (waiting && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); waiting.go(); return; }
+        if (!open) return;
         const i = '1234'.indexOf(e.key);
         if (i >= 0 && i < buttons.length) { e.preventDefault(); answer(i); }
     });

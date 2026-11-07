@@ -10,7 +10,7 @@ return [
             'title' => 'Radar: which map is this?',
             'link' => '/radar',
             'items' => [
-                'A new game in your browser - **also on your phone**: you see a piece of a map\'s floor plan from above and pick the map from four. The piece grows every 5 seconds; the sooner you know it, the more points. 10 maps per round, from the 16 played most on cubeLadder.',
+                'A new game in your browser - **also on your phone**: you see a piece of a map\'s floor plan from above and pick the map from four. The piece grows every 6 seconds until it shows the whole map; the sooner you know it, the more points. After each answer the whole map stays on screen until you tap Next. 10 maps per round, from the 16 played most on cubeLadder.',
                 'Maps played less are worth more (up to x1.5), and every 3 right answers in a row give +20. After each answer you see the whole map, so you learn them as you play.',
                 'The best round of the week is a weekly achievement - the **Cartographer** badge - and the all-time top 10 is a new Hall of Fame category. Your best round shows with your personal records.',
             ],

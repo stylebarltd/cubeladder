@@ -10,7 +10,7 @@ use DateTimeImmutable;
 /**
  * Radar (/radar): which map is this? A round is QUESTIONS maps; each shows a
  * piece of the map's floor plan with CHOICES map names. The piece grows by
- * itself (STEPS: a third, half, three quarters of the map, STEP_SECONDS
+ * itself (STEPS: half, three quarters, then the whole map, STEP_SECONDS
  * apart) and the question ends after QUESTION_SECONDS.
  *
  * The plans are drawn offline from the map files (tools/radar/radar_plans.py)
@@ -34,10 +34,10 @@ class Radar
     public const QUESTIONS = 10;
     public const CHOICES = 4;
     public const POOL_SIZE = 16;
-    /** Piece sizes: share of the plan's longer side */
-    public const STEPS = [1 / 3, 1 / 2, 3 / 4];
-    public const STEP_SECONDS = 5;
-    public const QUESTION_SECONDS = 15;
+    /** Piece sizes: share of the plan's longer side (1 = the whole map). Easier since 2026-11-07 evening: was 1/3, 1/2, 3/4 at 5 s */
+    public const STEPS = [1 / 2, 3 / 4, 1];
+    public const STEP_SECONDS = 6;
+    public const QUESTION_SECONDS = 18;
     /** Points per step: at the step's start, at its end (falling in between) */
     public const POINTS = [[100, 70], [60, 40], [30, 15]];
     /** Multiplier by the map's place in the pool (rarer maps are worth more): up to place => factor */
