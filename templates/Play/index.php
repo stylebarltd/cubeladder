@@ -106,6 +106,7 @@ $this->start('meta'); ?>
             Head <?= AimTrainer::POINTS_HEADSHOT ?>, body <?= AimTrainer::POINTS_HIT ?>, every <?= AimTrainer::STREAK ?> hits in a row +<?= AimTrainer::POINTS_STREAK ?>.
             <?= AimTrainer::GRENADES ?> grenades: <?= AimTrainer::POINTS_GIB ?> per gib, +<?= AimTrainer::POINTS_MULTI_GIB ?> for every further gib of the same grenade.
             Just for fun &ndash; not part of the ladder.
+            Know your maps? Try <a href="/radar" class="text-yellow-300 hover:underline">Radar</a> &ndash; also on your phone.
         </p>
     </div>
 </div>
