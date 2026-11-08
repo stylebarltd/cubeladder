@@ -100,3 +100,4 @@ __pycache__/
 # working material: map screenshots and player illustrations (licence / privacy, size)
 /webroot/img/_maps_from_screens/
 /webroot/img/illustrated_players/
+/webroot/img/legend_players/

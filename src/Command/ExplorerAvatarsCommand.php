@@ -13,8 +13,8 @@ use Cake\Console\ConsoleOptionParser;
  * The QR hunt avatar sets, 400x400 JPGs in webroot/img/players:
  * - explorer avatars (unlock 'avatars1', 5 points): the illustrated portraits
  *   img/illustrated_players/ai-generated-*.png as explorer-01.jpg .. explorer-NN.jpg;
- * - the last avatars (unlock 'avatars2', 10 points, every code): the emblems
- *   img/illustrated_players/zombie-*.png (not used by the explorer set) as
+ * - the last avatars (unlock 'avatars2', 10 points, every code): every picture
+ *   in their own folder img/legend_players/ (png, jpg, webp) as
  *   legend-01.jpg .. legend-NN.jpg, on a dark gold ground with a gold ring and
  *   a gold tint, so they stand out from every other avatar.
  * Both folders are not in git; run this on every machine after copying the
@@ -99,10 +99,11 @@ class ExplorerAvatarsCommand extends Command
     /** The last avatars (unlock 'avatars2'): gold ground, gold ring, gold-tinted emblem */
     private function legend(Arguments $args, ConsoleIo $io): int
     {
-        $sources = glob(WWW_ROOT . 'img' . DS . 'illustrated_players' . DS . 'zombie-*.png') ?: [];
+        $sources = array_values(array_filter(glob(WWW_ROOT . 'img' . DS . 'legend_players' . DS . '*') ?: [],
+            fn($f) => is_file($f) && preg_match('/\.(png|jpe?g|webp)$/i', $f)));
         sort($sources, SORT_STRING);
         if (!$sources) {
-            $io->error('No source pictures in webroot/img/illustrated_players/ (zombie-*.png).');
+            $io->error('No source pictures in webroot/img/legend_players/ (png, jpg, webp).');
 
             return static::CODE_ERROR;
         }

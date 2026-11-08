@@ -57,7 +57,8 @@ merge players, mark a game inaccurate. Read the source before running one.
 - GeoLite2 databases and `webroot/img/players|maps` are not in git (licence / size).
 - **QR hunt unlocks** are decided in `QrHunt::UNLOCKS` (level = codes found). The explorer avatars
   (`img/players/explorer-NN.jpg`, level 5) and the last avatars (`legend-NN.jpg`, level 10) are built
-  from `img/illustrated_players` by `bin/cake explorer_avatars`; both folders are outside git, so run it
+  by `bin/cake explorer_avatars` from `img/illustrated_players` and `img/legend_players` (their own folder); both
+  folders are outside git, so run it
   on every machine. Uploaded pictures (level 7) are `img/players/upload-<random>.jpg`, re-encoded by
   `AvatarUpload`; `QrHunt::isHuntAvatar()` keeps all three out of the plain avatar list and random backgrounds.
 - **Cave lighting in the 3D viewer** (`webroot/map3d/light.js`): a map config line `darkzone x0 y0 x1 y1 ambient top`
