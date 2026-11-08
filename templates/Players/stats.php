@@ -40,6 +40,7 @@ $kdColor = fn(float $kd) => $kd >= 1.2 ? 'text-green-400' : ($kd < 0.9 ? 'text-r
         <p class="text-zinc-300">Special stats open at <b>QR hunt level <?= (int)$need ?></b>: find <?= (int)$need ?> of the QR codes hidden in our maps
             and scan them with your phone. <?= h($player->name) ?> is at level <?= (int)$qrLevel ?>.</p>
         <p class="mt-2 text-zinc-300">Then everyone can see their K/D and accuracy week by week, their best and worst maps and when they play.</p>
+        <a href="/run" class="mt-4 inline-block rounded-md bg-amber-500 px-4 py-2 font-bold text-black hover:bg-amber-400">Start the QR hunt</a>
     </section>
 <?php else:
     $t = $stats['totals'];

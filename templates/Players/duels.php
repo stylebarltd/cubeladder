@@ -45,6 +45,7 @@ $stat = fn($v, string $label, string $color = '') => '<div class="rounded-lg bg-
         <p class="text-zinc-300">Nemesis advanced stats open at <b>QR hunt level <?= (int)$need ?></b>: find <?= (int)$need ?> of the QR codes hidden in our maps
             and scan them with your phone. <?= h($player->name) ?> is at level <?= (int)$qrLevel ?>.</p>
         <p class="mt-2 text-zinc-300">Then everyone can see their duels here: each opponent, per map, week by week and per weapon.</p>
+        <a href="/run" class="mt-4 inline-block rounded-md bg-amber-500 px-4 py-2 font-bold text-black hover:bg-amber-400">Start the QR hunt</a>
     </section>
 <?php else:
     $t = $stats['totals'];

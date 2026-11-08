@@ -92,6 +92,10 @@
                     <a href="/play" class="hidden md:inline-block p-2 hover:text-zinc-500 transition" title="Aim trainer" aria-label="Aim trainer">
                         <i class="fa-solid fa-crosshairs"></i>
                     </a>
+                    <!-- Flag run, Run & Gun, QR hunt: first person in the browser (desktop only) -->
+                    <a href="/run" class="hidden md:inline-block p-2 hover:text-zinc-500 transition" title="Flag run, Run &amp; Gun, QR hunt: AssaultCube in your browser" aria-label="Flag run, Run &amp; Gun, QR hunt">
+                        <i class="fa-solid fa-flag"></i>
+                    </a>
 
                     <!-- Search -->
                     <button class="p-2 hover:text-zinc-500 transition" id="search-btn" aria-label="Search players">
@@ -198,6 +202,7 @@
                 </a>
                 <a href="/maps" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Maps</a>
                 <a href="/play" class="hidden md:flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-crosshairs"></i> Aim trainer</a><!-- the game is not played on phones -->
+                <a href="/run" class="hidden md:flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-flag"></i> Flag run, Run &amp; Gun, QR hunt</a><!-- mouse and keyboard only -->
 
                 <a href="/stats" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-users"></i> Community stats</a>
                 <a href="/about" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-circle-question"></i> About, rules &amp; what's new</a>

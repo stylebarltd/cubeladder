@@ -106,6 +106,7 @@ $this->start('meta'); ?>
             Head <?= AimTrainer::POINTS_HEADSHOT ?>, body <?= AimTrainer::POINTS_HIT ?>, every <?= AimTrainer::STREAK ?> hits in a row +<?= AimTrainer::POINTS_STREAK ?>.
             <?= AimTrainer::GRENADES ?> grenades: <?= AimTrainer::POINTS_GIB ?> per gib, +<?= AimTrainer::POINTS_MULTI_GIB ?> for every further gib of the same grenade.
             Just for fun &ndash; not part of the ladder.
+            Want to move while you shoot? Try <a href="/run" class="text-yellow-300 hover:underline">Run &amp; Gun</a> &ndash; the real maps in first person, with flag runs and the QR hunt.
         </p>
     </div>
 </div>

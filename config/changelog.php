@@ -8,9 +8,21 @@ return [
     'Changelog' => [
         [
             'date' => '2026-11-08',
+            'title' => 'AssaultCube in your browser: the QR hunt is open',
+            'link' => '/run',
+            'items' => [
+                '**cubeladder.ovh/run is open:** walk the real maps in first person in your browser, with AssaultCube\'s own movement: strafe jumps, crouch jumps, ladders and all. Desktop with a mouse.',
+                '**The QR hunt:** 10 codes hidden in three maps. Three in **cl_angkorwat**, three on **cl_lost**, the island from Lost (beach camp, the Swan, the Barracks, the Pearl, the Orchid, the Flame and a cave under it), and four inside **cl_cube**, our logo as a giant cube with a pyramid inside. Scan a code with your phone, level up, and unlock things on your profile: stats, avatars, name frames, banners, and a gold crown for all ten.',
+                '**Deep in cl_cube:** the **Hall of Fame** as a great hall with the top three of every list, a chamber that shows **you**, and above the maze **the star chamber**: one star for each of our more than 6,000 players, grouped by country. Yours is gold.',
+                '**Flag run:** from your flag to theirs and home again, against the clock, on ac_werk, ac_casa, ac_favela and ac_desert3.',
+                '**Run & Gun:** 90 seconds with the assault rifle on ac_village, ac_werk, ac_dusk and ac_ingress. Collect the pickups in order and shoot the players standing at the spawn points; points for hits, headshots, pickups and the time left.',
+                'Weekly and all-time boards for both. Just for fun, not part of the ladder.',
+            ],
+        ],
+        [
+            'date' => '2026-11-08',
             'title' => 'New QR hunt map: cl_cube, inside the cubeLadder logo',
             'link' => '/run',
-            'hidden' => true,                       // /run is not public yet
             'items' => [
                 '**cl_cube**: a white world and our logo as a giant cube in the middle, blue paint dripping down its sides. Climb the blue ladder to the small door near the top (browser only, on /run).',
                 'Inside it feels like a pyramid: a long descending passage, a dark maze, the grand gallery, a hidden queen\'s chamber and the king\'s chamber at the top. **The last four QR codes** are hidden in there: levels 7 to 10.',
@@ -23,12 +35,11 @@ return [
             'date' => '2026-11-08',
             'title' => 'QR hunt levels 7 to 10: your own avatar, name frames, profile banners, the last avatars',
             'link' => '/run',
-            'hidden' => true,                       // /run is not public yet
             'items' => [
                 '**7 codes - Your own avatar:** upload your own picture (JPEG, PNG or WebP up to 2 MB) on your profile settings page. We cut it to a square and save a fresh copy without any photo data. Keep it friendly: offensive pictures get removed.',
                 '**8 codes - Name style:** a coloured frame around your name in the rankings, the Hall of Fame, your hover card and your player page. Pick from 9 colours.',
                 '**9 codes - Profile banner:** pick one of our maps to show behind the header of your player page.',
-                '**10 codes - The last avatars:** a final set of 21 gold-framed avatars and a **gold crown badge** next to your name, for those who found every code.',
+                '**10 codes - The last avatars:** a final set of 16 gold-framed avatars and a **gold crown badge** next to your name, for those who found every code.',
                 'New level names for the next map, a giant cube with a maze inside: Cube Climber, Passage Seeker, Chamber Keeper and Cube Master.',
             ],
         ],
@@ -36,7 +47,6 @@ return [
             'date' => '2026-11-08',
             'title' => 'New QR hunt map: cl_lost, the island',
             'link' => '/run',
-            'hidden' => true,                       // /run is not public yet
             'items' => [
                 '**cl_lost**, the island from the TV show Lost, rebuilt for the QR hunt on /run (browser only, not on the servers): the whole island is playable - beaches, jungle, hills and trails.',
                 'Six places to explore: the **crash beach camp**, **the Swan** (down the hatch), **the Barracks**, **the Pearl**, **the Orchid** and **the Flame**. **Three new QR codes** are hidden there: levels 4 to 6.',
@@ -48,7 +58,6 @@ return [
             'date' => '2026-11-08',
             'title' => 'QR hunt levels 4 to 6: special stats, explorer avatars, weapon colours',
             'link' => '/run',
-            'hidden' => true,                       // /run is not public yet
             'items' => [
                 '**4 codes - Special stats:** your K/D week by week for the last 26 weeks, your accuracy over time (measured since Oct 2026), your best and worst maps and **your hours**: by weekday and time of day, in your own time zone. Open it with "Special stats" next to Nemesis on your profile; everyone can see it once you have unlocked it.',
                 '**5 codes - Explorer avatars:** 45 new avatars that only QR hunters can pick, in their own group on your profile settings page.',
@@ -60,7 +69,6 @@ return [
             'date' => '2026-11-08',
             'title' => 'QR hunt level 3: Nemesis advanced stats',
             'link' => '/run',
-            'hidden' => true,                       // /run is not public yet
             'items' => [
                 'Find **three QR codes** and your profile gets **all your duels in detail**: every opponent with your kills and deaths against them, per map (with who rules you there), week by week with the nemesis of each week, and per weapon.',
                 'Pick any opponent for the **head to head**: per map, per weapon, week by week and your last games together. Open it with "All duels" next to Nemesis on your profile; everyone can see it once you have unlocked it.',
@@ -71,7 +79,6 @@ return [
             'date' => '2026-11-07',
             'title' => 'Flag run, Run & Gun, QR hunt: AssaultCube in your browser',
             'link' => '/run',
-            'hidden' => true,                       // /run is not public yet
             'items' => [
                 'New games - **walk the real maps in first person** in your browser. **Flag run:** from your flag to the enemy flag and back home, against the clock, on ac_werk, ac_casa, ac_favela and ac_desert3.',
                 '**Run & Gun:** 90 seconds with the assault rifle on ac_village, ac_werk, ac_dusk and ac_ingress - collect the map\'s pickups in their order and shoot the players standing at the spawn points, five at a time. The same course and the same players for everyone; points for hits, headshots, pickups and the time you have left.',
