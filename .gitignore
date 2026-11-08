@@ -95,6 +95,8 @@ __pycache__/
 /webroot/map3d/maps/
 /webroot/map3d/textures/
 /webroot/map3d/models/
+/webroot/map3d/sounds/
+/webroot/map3d/crosshairs/
 # working material: map screenshots and player illustrations (licence / privacy, size)
 /webroot/img/_maps_from_screens/
 /webroot/img/illustrated_players/

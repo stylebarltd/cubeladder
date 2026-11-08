@@ -1100,7 +1100,13 @@ $gamesDataGlobal = [];        // games inside lastGameIds
 
         $qrLevel = (new \App\Service\QrHunt())->level((string)$player->id);   // QR hunt badge
         $qrProfile = (new \App\Service\QrHunt())->profile((string)$player->id);   // QR hunt unlocks: card style, text
-        $this->set(compact('qrLevel', 'qrProfile', 'nemeses', 'victims', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
+        $weaponTint = \App\Service\QrHunt::unlocked($qrLevel, 'weapons') ? (\App\Service\QrHunt::WEAPON_COLORS[$qrProfile['weapon_color'] ?? ''][1] ?? null) : null;
+        $nameStyle = \App\Service\QrHunt::nameStyles([(string)$player->id])[(string)$player->id] ?? null;   // QR hunt: name frame, gold badge
+        // QR hunt: the map behind the profile header (unlock 'banner'), only while its screenshot exists
+        $banner = \App\Service\QrHunt::unlocked($qrLevel, 'banner') && !empty($qrProfile['banner_map'])
+            && is_file(WWW_ROOT . 'img/maps/' . basename((string)$qrProfile['banner_map']) . '.jpg')
+            ? \App\View\Helper\LayoutHelper::mapUrl(basename((string)$qrProfile['banner_map']) . '.jpg') : null;
+        $this->set(compact('qrLevel', 'qrProfile', 'weaponTint', 'nameStyle', 'banner', 'nemeses', 'victims', 'records', 'favoriteMap', 'timePlayed', 'rating', 'ratedPlayers',
             'milestones', 'milestoneProgress', 'funFacts', 'lastSeen', 'weapons', 'ping', 'accuracy'));
         $this->set(compact(
             'player',
@@ -1160,8 +1166,20 @@ $gamesDataGlobal = [];        // games inside lastGameIds
         if ($player->picture && in_array($player->picture, $avatars, true)) {
             $avatars = array_values(array_unique([$player->picture, ...$avatars]));
         }
+        // the explorer avatars (QR hunt, unlock 'avatars1') and the last avatars ('avatars2') are groups of their own,
+        // only from that level on; uploaded pictures ('upload') are never offered to anyone
+        $explorerAvatars = array_values(array_filter($avatars, [\App\Service\QrHunt::class, 'isExplorerAvatar']));
+        $legendAvatars = array_values(array_filter($avatars, [\App\Service\QrHunt::class, 'isLegendAvatar']));
+        $avatars = array_values(array_filter($avatars, fn($a) => !\App\Service\QrHunt::isHuntAvatar($a)));
+        if (!\App\Service\QrHunt::unlocked($qrLevel, 'avatars1')) {
+            $explorerAvatars = [];
+        }
+        if (!\App\Service\QrHunt::unlocked($qrLevel, 'avatars2')) {
+            $legendAvatars = [];
+        }
+        $bannerMaps = \App\Service\QrHunt::unlocked($qrLevel, 'banner') ? \App\Service\QrHunt::bannerMaps() : [];
 
-        $this->set(compact('player', 'avatars'));
+        $this->set(compact('player', 'avatars', 'explorerAvatars', 'legendAvatars', 'bannerMaps'));
     }
 
     public function avatar(?string $picture = null)
@@ -1186,8 +1204,10 @@ $gamesDataGlobal = [];        // games inside lastGameIds
 
         // Reset avatar
         if ($picture === 'none') {
+            $old = $player->picture;
             $player->picture = null;
             $this->Players->saveOrFail($player);
+            \App\Service\AvatarUpload::delete($old);   // an uploaded picture is not kept for later
             $this->Flash->success('Avatar removed');
             return $this->redirect(['action' => 'profile']);
         }
@@ -1198,9 +1218,28 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             $this->Flash->error('Invalid avatar');
             return $this->redirect(['action' => 'profile']);
         }
+        if (\App\Service\QrHunt::isExplorerAvatar($picture)
+            && !\App\Service\QrHunt::unlocked((new \App\Service\QrHunt())->level((string)$player->id), 'avatars1')) {
+            $this->Flash->error('The explorer avatars unlock at ' . \App\Service\QrHunt::UNLOCKS['avatars1'][0] . ' points: find more hidden QR codes in our maps.');
+            return $this->redirect(['action' => 'profile']);
+        }
+        if (\App\Service\QrHunt::isLegendAvatar($picture)
+            && !\App\Service\QrHunt::unlocked((new \App\Service\QrHunt())->level((string)$player->id), 'avatars2')) {
+            $this->Flash->error('The last avatars unlock at ' . \App\Service\QrHunt::UNLOCKS['avatars2'][0] . ' points: find every hidden QR code in our maps.');
+            return $this->redirect(['action' => 'profile']);
+        }
+        // uploaded pictures only through uploadAvatar(), never picked by name
+        if (\App\Service\QrHunt::isUploadedAvatar($picture) && $picture !== $player->picture) {
+            $this->Flash->error('Invalid avatar');
+            return $this->redirect(['action' => 'profile']);
+        }
 
+        $old = $player->picture;
         $player->picture = $picture;
         $this->Players->saveOrFail($player);
+        if ($old !== $picture) {
+            \App\Service\AvatarUpload::delete($old);   // an uploaded picture is not kept for later
+        }
 
         $this->Flash->success('Avatar updated');
         return $this->redirect(['action' => 'profile']);
@@ -1294,6 +1333,138 @@ $gamesDataGlobal = [];        // games inside lastGameIds
     }
 
     /**
+     * POST /players/weapon-color: the tint of the player's weapon icons (QR hunt, 6 points).
+     */
+    public function weaponColor()
+    {
+        $this->request->allowMethod(['post']);
+        $player = $this->request->getAttribute('identity');
+        if (!$this->ownsPlayer($player)) {
+            $this->Flash->error($this->ownershipHint('edit your profile'));
+            return $this->redirect(['action' => 'profile']);
+        }
+        $hunt = new \App\Service\QrHunt();
+        if (!\App\Service\QrHunt::unlocked($hunt->level((string)$player->id), 'weapons')) {
+            $this->Flash->error('This unlocks at ' . \App\Service\QrHunt::UNLOCKS['weapons'][0] . ' points: find more hidden QR codes in our maps.');
+            return $this->redirect(['action' => 'profile']);
+        }
+        $color = (string)$this->request->getData('weapon_color');
+        $color = isset(\App\Service\QrHunt::WEAPON_COLORS[$color]) ? $color : null;
+        $hunt->saveProfile((string)$player->id, ['weapon_color' => $color]);
+        $this->Flash->success($color ? 'Your weapon icons are tinted now.' : 'Your weapon icons are white again.');
+
+        return $this->redirect(['action' => 'profile', '#' => 'unlocks']);
+    }
+
+    /**
+     * POST /players/upload-avatar: the player's own picture (QR hunt, 7 points).
+     * AvatarUpload checks and re-encodes it; the previous upload is deleted.
+     */
+    public function uploadAvatar()
+    {
+        $this->request->allowMethod(['post']);
+        $player = $this->request->getAttribute('identity');
+        if (!$this->ownsPlayer($player)) {
+            $this->Flash->error($this->ownershipHint('edit your profile'));
+            return $this->redirect(['action' => 'profile']);
+        }
+        if (!\App\Service\QrHunt::unlocked((new \App\Service\QrHunt())->level((string)$player->id), 'upload')) {
+            $this->Flash->error('This unlocks at ' . \App\Service\QrHunt::UNLOCKS['upload'][0] . ' points: find more hidden QR codes in our maps.');
+            return $this->redirect(['action' => 'profile']);
+        }
+        [$file, $err] = (new \App\Service\AvatarUpload())->store($this->request->getUploadedFile('avatar'));
+        if ($err) {
+            $this->Flash->error($err);
+            return $this->redirect(['action' => 'profile', '#' => 'unlocks']);
+        }
+        $old = $player->picture;
+        $player->picture = $file;
+        if (!$this->Players->save($player)) {
+            \App\Service\AvatarUpload::delete($file);
+            $this->Flash->error('Your picture could not be saved, please try again.');
+            return $this->redirect(['action' => 'profile', '#' => 'unlocks']);
+        }
+        \App\Service\AvatarUpload::delete($old);
+        $this->Flash->success('Your own picture is your avatar now.');
+
+        return $this->redirect(['action' => 'profile', '#' => 'unlocks']);
+    }
+
+    /**
+     * POST /players/name-color: the frame around the player's name (QR hunt, 8 points).
+     */
+    public function nameColor()
+    {
+        $this->request->allowMethod(['post']);
+        $player = $this->request->getAttribute('identity');
+        if (!$this->ownsPlayer($player)) {
+            $this->Flash->error($this->ownershipHint('edit your profile'));
+            return $this->redirect(['action' => 'profile']);
+        }
+        $hunt = new \App\Service\QrHunt();
+        if (!\App\Service\QrHunt::unlocked($hunt->level((string)$player->id), 'name')) {
+            $this->Flash->error('This unlocks at ' . \App\Service\QrHunt::UNLOCKS['name'][0] . ' points: find more hidden QR codes in our maps.');
+            return $this->redirect(['action' => 'profile']);
+        }
+        $color = (string)$this->request->getData('name_color');
+        $color = isset(\App\Service\QrHunt::NAME_COLORS[$color]) ? $color : null;
+        $hunt->saveProfile((string)$player->id, ['name_color' => $color]);
+        $this->Flash->success($color ? 'Your name has its frame now.' : 'Your name frame is removed.');
+
+        return $this->redirect(['action' => 'profile', '#' => 'unlocks']);
+    }
+
+    /**
+     * POST /players/banner: the map behind the player's profile header (QR hunt, 9 points),
+     * one of QrHunt::bannerMaps().
+     */
+    public function banner()
+    {
+        $this->request->allowMethod(['post']);
+        $player = $this->request->getAttribute('identity');
+        if (!$this->ownsPlayer($player)) {
+            $this->Flash->error($this->ownershipHint('edit your profile'));
+            return $this->redirect(['action' => 'profile']);
+        }
+        $hunt = new \App\Service\QrHunt();
+        if (!\App\Service\QrHunt::unlocked($hunt->level((string)$player->id), 'banner')) {
+            $this->Flash->error('This unlocks at ' . \App\Service\QrHunt::UNLOCKS['banner'][0] . ' points: find more hidden QR codes in our maps.');
+            return $this->redirect(['action' => 'profile']);
+        }
+        $map = (string)$this->request->getData('banner_map');
+        if ($map !== '' && !isset(\App\Service\QrHunt::bannerMaps()[$map])) {
+            $this->Flash->error('Pick one of the maps in the list.');
+            return $this->redirect(['action' => 'profile', '#' => 'unlocks']);
+        }
+        $hunt->saveProfile((string)$player->id, ['banner_map' => $map !== '' ? $map : null]);
+        $this->Flash->success($map !== '' ? $map . ' is behind your profile header now.' : 'Your profile banner is removed.');
+
+        return $this->redirect(['action' => 'profile', '#' => 'unlocks']);
+    }
+
+    /**
+     * POST /players/remove-upload/<id>: an admin removes a player's uploaded
+     * picture (abuse). The file is deleted; the player has no avatar then.
+     */
+    public function removeUpload(string $id)
+    {
+        $this->request->allowMethod(['post']);
+        if (!$this->isAdmin()) {
+            throw new \Cake\Http\Exception\ForbiddenException();
+        }
+        $player = $this->Players->get($id);
+        if (\App\Service\QrHunt::isUploadedAvatar($player->picture)) {
+            $old = $player->picture;
+            $player->picture = null;
+            $this->Players->saveOrFail($player);
+            \App\Service\AvatarUpload::delete($old);
+            $this->Flash->success('Uploaded picture removed.');
+        }
+
+        return $this->redirect(['action' => 'view', $id]);
+    }
+
+    /**
      * POST /players/clear-texts/<id>: an admin removes a player's tagline and
      * text (abuse). The colour stays.
      */
@@ -1356,6 +1527,43 @@ $gamesDataGlobal = [];        // games inside lastGameIds
     }
 
 
+    /**
+     * Nemesis advanced stats: GET /players/duels/{id}[?vs={rival id}]. Public, like
+     * the profile, once the player has unlocked it in the QR hunt (level 3); before
+     * that a locked page tells how. NemesisStats has the numbers.
+     */
+    public function duels(string $id)
+    {
+        $this->request->allowMethod(['get']);
+        $player = $this->Players->find()->select(['id', 'name', 'country', 'picture'])->where(['id' => $id, 'track' => 1])->first();
+        if (!$player) {
+            throw new \Cake\Http\Exception\NotFoundException();
+        }
+        $qrLevel = (new \App\Service\QrHunt())->level((string)$player->id);
+        $unlocked = \App\Service\QrHunt::unlocked($qrLevel, 'nemesis');
+        $vs = $this->request->getQuery('vs');
+        $stats = $unlocked ? (new \App\Service\NemesisStats())->player((string)$player->id, is_string($vs) && $vs !== '' ? $vs : null) : null;
+        $this->set(compact('player', 'qrLevel', 'unlocked', 'stats'));
+    }
+
+    /**
+     * Special stats: GET /players/stats/{id}. Public, like the profile, once the
+     * player has unlocked it in the QR hunt (level 4); before that a locked page
+     * tells how. SpecialStats has the numbers.
+     */
+    public function stats(string $id)
+    {
+        $this->request->allowMethod(['get']);
+        $player = $this->Players->find()->select(['id', 'name', 'country', 'picture'])->where(['id' => $id, 'track' => 1])->first();
+        if (!$player) {
+            throw new \Cake\Http\Exception\NotFoundException();
+        }
+        $qrLevel = (new \App\Service\QrHunt())->level((string)$player->id);
+        $unlocked = \App\Service\QrHunt::unlocked($qrLevel, 'stats');
+        $stats = $unlocked ? (new \App\Service\SpecialStats())->player((string)$player->id) : null;
+        $this->set(compact('player', 'qrLevel', 'unlocked', 'stats'));
+    }
+
     public function map()
     {
 
@@ -1396,6 +1604,8 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             'lastSeen' => $lastSeen,
             'badges' => $badges,
             'qrLevel' => (new \App\Service\QrHunt())->level((string)$id),   // QR hunt badge
+            'weaponTint' => \App\Service\QrHunt::weaponColors([(string)$id])[(string)$id] ?? null,   // QR hunt: weapon colours
+            'nameStyle' => \App\Service\QrHunt::nameStyles([(string)$id])[(string)$id] ?? null,   // QR hunt: name frame, gold badge
             'weapons' => $this->weaponsOfChoice($id),
             'map' => $this->mostPlayedMap($id),
         ]);

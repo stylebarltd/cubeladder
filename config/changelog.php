@@ -2,9 +2,84 @@
 /**
  * "What's new" box on the front page. Newest first; the front page shows the
  * latest few. Add an entry here with every change players can notice.
+ * 'hidden' => true keeps an entry off the site and Discord until its feature is public.
  */
 return [
     'Changelog' => [
+        [
+            'date' => '2026-11-08',
+            'title' => 'New QR hunt map: cl_cube, inside the cubeLadder logo',
+            'link' => '/run',
+            'hidden' => true,                       // /run is not public yet
+            'items' => [
+                '**cl_cube**: a white world and our logo as a giant cube in the middle, blue paint dripping down its sides. Climb the blue ladder to the small door near the top (browser only, on /run).',
+                'Inside it feels like a pyramid: a long descending passage, a dark maze, the grand gallery, a hidden queen\'s chamber and the king\'s chamber at the top. **The last four QR codes** are hidden in there: levels 7 to 10.',
+                'Deep inside: **the Hall of Fame** as a huge hall of arches and great lamps, with the first three of every list on its walls, live. And a chamber that shows **you**: your picture, your numbers and your places in the Hall of Fame.',
+                'Above the maze, up a ladder from one of its dead ends: **the star chamber**. A dome with one star for every player who has ever played on our servers, more than 6,000 of them, grouped by country into constellations. More games make a brighter star, a higher rating a hotter one. **Your own star is gold**, and its light falls on you.',
+                'Sound: both cl_cube and cl_lost now have their own soundscapes. Listen in the jungle at night.',
+            ],
+        ],
+        [
+            'date' => '2026-11-08',
+            'title' => 'QR hunt levels 7 to 10: your own avatar, name frames, profile banners, the last avatars',
+            'link' => '/run',
+            'hidden' => true,                       // /run is not public yet
+            'items' => [
+                '**7 codes - Your own avatar:** upload your own picture (JPEG, PNG or WebP up to 2 MB) on your profile settings page. We cut it to a square and save a fresh copy without any photo data. Keep it friendly: offensive pictures get removed.',
+                '**8 codes - Name style:** a coloured frame around your name in the rankings, the Hall of Fame, your hover card and your player page. Pick from 9 colours.',
+                '**9 codes - Profile banner:** pick one of our maps to show behind the header of your player page.',
+                '**10 codes - The last avatars:** a final set of 21 gold-framed avatars and a **gold crown badge** next to your name, for those who found every code.',
+                'New level names for the next map, a giant cube with a maze inside: Cube Climber, Passage Seeker, Chamber Keeper and Cube Master.',
+            ],
+        ],
+        [
+            'date' => '2026-11-08',
+            'title' => 'New QR hunt map: cl_lost, the island',
+            'link' => '/run',
+            'hidden' => true,                       // /run is not public yet
+            'items' => [
+                '**cl_lost**, the island from the TV show Lost, rebuilt for the QR hunt on /run (browser only, not on the servers): the whole island is playable - beaches, jungle, hills and trails.',
+                'Six places to explore: the **crash beach camp**, **the Swan** (down the hatch), **the Barracks**, **the Pearl**, **the Orchid** and **the Flame**. **Three new QR codes** are hidden there: levels 4 to 6.',
+                'Below the Flame a **cave** opens onto the east beach: a dark maze lit by torches, glowing crystals and fungi, and old Dharma lamps. The 3D view now draws real light and darkness underground.',
+                'A big map: give it a moment to load. Start on the beach.',
+            ],
+        ],
+        [
+            'date' => '2026-11-08',
+            'title' => 'QR hunt levels 4 to 6: special stats, explorer avatars, weapon colours',
+            'link' => '/run',
+            'hidden' => true,                       // /run is not public yet
+            'items' => [
+                '**4 codes - Special stats:** your K/D week by week for the last 26 weeks, your accuracy over time (measured since Oct 2026), your best and worst maps and **your hours**: by weekday and time of day, in your own time zone. Open it with "Special stats" next to Nemesis on your profile; everyone can see it once you have unlocked it.',
+                '**5 codes - Explorer avatars:** 45 new avatars that only QR hunters can pick, in their own group on your profile settings page.',
+                '**6 codes - Weapon colours:** tint your weapon icons on your profile, in the rankings, the Hall of Fame and your hover card. Pick from 9 colours on your profile settings page.',
+                'The hunt levels have names now: Explorer, Temple Raider, Relic Hunter, Castaway, Dharma Recruit and Island Survivor.',
+            ],
+        ],
+        [
+            'date' => '2026-11-08',
+            'title' => 'QR hunt level 3: Nemesis advanced stats',
+            'link' => '/run',
+            'hidden' => true,                       // /run is not public yet
+            'items' => [
+                'Find **three QR codes** and your profile gets **all your duels in detail**: every opponent with your kills and deaths against them, per map (with who rules you there), week by week with the nemesis of each week, and per weapon.',
+                'Pick any opponent for the **head to head**: per map, per weapon, week by week and your last games together. Open it with "All duels" next to Nemesis on your profile; everyone can see it once you have unlocked it.',
+                'Weapons are counted from today on (the servers\' kill messages: sprayed, shredded, headshot ...), duels since Sep 2026. The third code in cl_angkorwat is now **higher up and smaller** - look up from the logo.',
+            ],
+        ],
+        [
+            'date' => '2026-11-07',
+            'title' => 'Flag run, Run & Gun, QR hunt: AssaultCube in your browser',
+            'link' => '/run',
+            'hidden' => true,                       // /run is not public yet
+            'items' => [
+                'New games - **walk the real maps in first person** in your browser. **Flag run:** from your flag to the enemy flag and back home, against the clock, on ac_werk, ac_casa, ac_favela and ac_desert3.',
+                '**Run & Gun:** 90 seconds with the assault rifle on ac_village, ac_werk, ac_dusk and ac_ingress - collect the map\'s pickups in their order and shoot the players standing at the spawn points, five at a time. The same course and the same players for everyone; points for hits, headshots, pickups and the time you have left.',
+                '**QR hunt:** cl_angkorwat free to roam with the rifle - find the hidden QR codes and level up on cubeLadder. **A third code** is now hidden in the temple (map revision 4, your game fetches it by itself). Its recoil pushes you: shoot at the ground while you jump to reach higher edges.',
+                'It moves like the game, because it uses AssaultCube\'s own movement code: same speed, jumps, crouch (Shift), **crouch jumps** (jump, then Shift), strafe jumps, ladders, boxes and barrels to stand on. The rifle fires, kicks and reloads like the game\'s. With the game\'s sounds and music, the real flags and pickups, and a radar.',
+                'The best time or score per map goes on a weekly and an all-time board. Desktop with a mouse; just for fun, not part of the ladder.',
+            ],
+        ],
         [
             'date' => '2026-11-07',
             'title' => 'Radar: which map is this?',
@@ -17,10 +92,11 @@ return [
         ],
         [
             'date' => '2026-11-02',
-            'title' => 'Live page: lighter on the game servers',
+            'title' => 'Live page: only our servers',
             'link' => '/live',
             'items' => [
-                'The Live page now refreshes every **10 seconds** instead of every 5. Other public AC servers (not on the ladder) are checked once a minute - the website asks each of them at most once a minute, however many people watch.',
+                'The Live page now shows only the cubeLadder servers and the clan match / inter servers. Other public AC servers are no longer listed or asked for their status.',
+                'It refreshes every **10 seconds** instead of every 5.',
             ],
         ],
         [

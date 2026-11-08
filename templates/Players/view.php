@@ -92,17 +92,28 @@ endif;
     <?php endif; ?>
 
     <!-- Header -->
-    <div class="<?= $panel ?> relative z-20 mb-6 flex flex-col gap-6 p-5 md:p-6 lg:flex-row lg:items-center">
+    <!-- the player's banner map (QR hunt, unlock 'banner') behind the header, dimmed so the text stays readable -->
+    <div class="<?= $panel ?> relative z-20 mb-6 flex flex-col gap-6 p-5 md:p-6 lg:flex-row lg:items-center <?= !empty($banner) ? 'bg-cover bg-center' : '' ?>"
+         <?= !empty($banner) ? 'style="background-image: linear-gradient(to right, rgba(0,0,0,.85), rgba(0,0,0,.6) 60%, rgba(0,0,0,.75)), url(\'' . h($banner) . '\');"' : '' ?>>
         <div class="min-w-0 lg:flex-1">
         <!-- name and flag in one row, above the avatar -->
         <h1 class="mb-4 flex min-w-0 items-center gap-3 text-3xl md:text-5xl font-extrabold tracking-wide">
-            <span class="truncate"><?= h($player->name) ?></span><span class="shrink-0"><?= $this->Layout->flag($player->country) ?></span>
+            <span class="truncate <?= !empty($nameStyle['frame']) ? 'rounded-xl border-[3px] px-3' : '' ?>"
+                  <?= !empty($nameStyle['frame']) ? 'style="' . h(\App\Service\QrHunt::nameFrameCss($nameStyle['frame'])) . '"' : '' ?>><?= h($player->name) ?></span><span class="shrink-0"><?= $this->Layout->flag($player->country) ?></span>
+            <?php if (!empty($nameStyle['gold'])): ?><?= $this->element('qr_gold_badge', ['large' => true]) ?><?php endif; ?>
         </h1>
         <div class="flex min-w-0 flex-wrap items-center gap-5 sm:flex-nowrap">
-        <a href="<?= $this->Layout->playerPicture($player) ?>" class="shrink-0">
+        <div class="shrink-0 text-center">
+        <a href="<?= $this->Layout->playerPicture($player) ?>" class="block">
             <img src="<?= $this->Layout->playerPicture($player) ?>" alt="<?= h($player->name) ?>"
                  class="h-24 w-24 md:h-36 md:w-36 rounded-full object-cover ring-2 ring-white/25">
         </a>
+        <?php if (!empty($isAdmin) && \App\Service\QrHunt::isUploadedAvatar($player->picture)): ?>
+            <!-- admin: the player's own upload (QR hunt, unlock 'upload') can be removed (abuse) -->
+            <?= $this->Form->postLink('<i class="fa-solid fa-trash"></i> remove upload', ['action' => 'removeUpload', $player->id],
+                ['escape' => false, 'confirm' => 'Delete this player\'s uploaded picture?', 'class' => 'mt-1 inline-block text-xs text-red-300 hover:text-red-200']) ?>
+        <?php endif; ?>
+        </div>
         <div class="min-w-0">
             <?php
             // last week's best (not "best on map"), as badges like in the rankings
@@ -222,7 +233,7 @@ endif;
                 <div class="flex flex-wrap items-center gap-y-3 divide-white/10 sm:flex-nowrap sm:divide-x">
                     <?php foreach ($weapons['choice'] as $i => $weapon): ?>
                         <div class="flex min-w-0 items-center gap-3 pr-5 <?= $i > 0 ? 'sm:pl-5' : '' ?>" title="<?= number_format($weapon['kills']) ?> kills with the <?= h($weapon['name']) ?>">
-                            <img src="/img/weapons/<?= h($weapon['key']) ?>.svg" alt="" class="h-10 w-10 shrink-0 md:h-12 md:w-12">
+                            <?= $this->element('weapon_icon', ['key' => $weapon['key'], 'class' => 'h-10 w-10 shrink-0 md:h-12 md:w-12', 'tint' => $weaponTint ?? null]) ?>
                             <div class="min-w-0 leading-snug">
                                 <div class="truncate text-sm font-bold md:text-base"><?= h($weapon['name']) ?></div>
                                 <div class="text-xs text-zinc-400"><?= $weapon['pct'] ?>% of kills</div>
@@ -399,7 +410,16 @@ endif;
         ];
         foreach ($duelCards as $card): ?>
             <section class="<?= $panel ?> p-5">
-                <h3 class="text-lg font-bold"><?= $card['title'] ?></h3>
+                <div class="flex items-baseline justify-between gap-2">
+                    <h3 class="text-lg font-bold"><?= $card['title'] ?></h3>
+                    <span class="flex flex-wrap justify-end gap-x-3">
+                        <?php foreach ([['nemesis', 'duels', 'Nemesis advanced stats', 'All duels'], ['stats', 'stats', 'Special stats: K/D and accuracy over time, maps, hours', 'Special stats']] as [$uk, $action, $what, $label]):
+                            $ok = \App\Service\QrHunt::unlocked((int)($qrLevel ?? 0), $uk); ?>
+                            <a href="/players/<?= $action ?>/<?= h($player->id) ?>" class="text-xs text-zinc-400 hover:text-blue-300"
+                               title="<?= h($what) ?><?= $ok ? '' : ' (unlocked at QR hunt level ' . \App\Service\QrHunt::UNLOCKS[$uk][0] . ')' ?>"><?= $ok ? '' : '<i class="fa-solid fa-lock mr-1"></i>' ?><?= $label ?> &rarr;</a>
+                        <?php endforeach; ?>
+                    </span>
+                </div>
                 <div class="mb-3 text-xs text-zinc-400"><?= $card['sub'] ?></div>
                 <?php if ($card['rows']): ?>
                     <div class="space-y-1.5">

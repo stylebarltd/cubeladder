@@ -101,7 +101,7 @@ class PreviewsController extends AppController
         $list = HallOfFameService::rows((new HallOfFameService())->topLists()[$key] ?? []);
         $photo = !empty($list[0]['picture']) ? WWW_ROOT . 'img/players/' . basename($list[0]['picture']) : null;
         if (!$photo || !is_file($photo)) {
-            $all = glob(WWW_ROOT . 'img/players/*.jpg') ?: [];
+            $all = array_values(array_filter(glob(WWW_ROOT . 'img/players/*.jpg') ?: [], fn($f) => !\App\Service\QrHunt::isHuntAvatar(basename($f))));
             sort($all);
             $photo = $all ? $all[crc32($slug) % count($all)] : null;
         }

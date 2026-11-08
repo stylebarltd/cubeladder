@@ -4,8 +4,6 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Service\AcExtInfoService;
-use App\Service\AcMasterServerService;
-use App\Service\LiveStatusService;
 use Cake\Cache\Cache;
 use Cake\Core\Configure;
 
@@ -13,10 +11,9 @@ use Cake\Core\Configure;
  * Live server status, read straight from the game servers via the
  * AssaultCube extinfo UDP protocol (see AcExtInfoService).
  *
- * Our own servers (Ladder.servers) are always shown and refreshed with the
- * page (10 s); every other public server known to the AC master server is
- * polled at most once a minute (LiveStatusService::others()) and listed under
- * "Other AC servers" while it answers.
+ * Only the servers in Ladder.servers: the ladder servers and the clan match /
+ * inter servers ('live' => false), refreshed with the page (10 s). Other
+ * public AssaultCube servers are not polled (since 2026-11-02).
  */
 class LiveController extends AppController
 {
@@ -84,11 +81,6 @@ class LiveController extends AppController
     {
         $this->request->allowMethod(['get']);
         $cfg = (Configure::read('Ladder.servers') ?: [])[$key] ?? null;
-        if ($cfg === null) {
-            // "elsewhere" servers: any "ip:port" key from the public master
-            // list may be viewed too - but nothing outside that list
-            $cfg = (new AcMasterServerService())->servers()[$key] ?? null;
-        }
         if ($cfg === null) {
             throw new \Cake\Http\Exception\NotFoundException();
         }
@@ -185,56 +177,28 @@ class LiveController extends AppController
         // "clan match / inter" group on the live page
         $clan = array_filter($all, fn($cfg) => ($cfg['live'] ?? true) === false);
 
-        // ours and the clan match servers on every refresh, other people's
-        // servers from the shared once-a-minute poll of the master list
         $ext = new AcExtInfoService();
         $servers = [];
         $clanServers = [];
-        $elsewhere = [];
-        $polled = $online = $players = 0;
-        foreach ($ext->queryMany($own + $clan) + LiveStatusService::others() as $key => $info) {
+        foreach ($ext->queryMany($own + $clan) as $key => $info) {
             $info['key'] = $key;
-            if (isset($own[$key])) {
-                $info['own'] = true;
-                $info['name'] = $own[$key]['name'] ?? $key;
+            $info['own'] = isset($own[$key]);
+            $info['name'] = ($own + $clan)[$key]['name'] ?? $key;
+            if ($info['own']) {
                 $servers[] = $info;
-                continue;
-            }
-            if (isset($clan[$key])) {
-                $info['own'] = false;
-                $info['name'] = $clan[$key]['name'] ?? $key;
+            } else {
                 $clanServers[] = $info;
-                continue;
             }
-            $polled++;
-            if (!$info['online']) {
-                continue;
-            }
-            $online++;
-            $players += $info['numplayers'];
-            $info['own'] = false;
-            $info['name'] = trim((string)$info['description']) ?: $key;
-            $elsewhere[] = $info;
         }
-        // busiest first, then by name - like the in-game server browser
-        usort($elsewhere, fn($a, $b) => [$b['numplayers'], $a['name']] <=> [$a['numplayers'], $b['name']]);
 
         $this->linkProfiles($servers);
-        $this->linkProfiles($elsewhere);
         $this->addThumbs($servers);
         $this->addThumbs($clanServers);
-        $this->addThumbs($elsewhere);
 
         return [
             'fetched_at' => date('c'),
             'servers' => $servers,
             'clan' => ['servers' => $clanServers],
-            'elsewhere' => [
-                'servers' => $elsewhere,
-                'polled' => $polled,
-                'online' => $online,
-                'players' => $players,
-            ],
         ];
     }
 

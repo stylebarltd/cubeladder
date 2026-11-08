@@ -146,19 +146,6 @@ return [
         ],
 
         /*
-         * The other public servers from the master list (LiveStatusService::others()):
-         * polled at most once a minute, shared by the Live page and the "on air"
-         * check, so other people's servers get one query a minute from the website.
-         */
-        'live_others' => [
-            'className' => FileEngine::class,
-            'prefix' => 'myapp_live_others_',
-            'path' => CACHE . 'live' . DS,
-            'serialize' => true,
-            'duration' => '+60 seconds',
-        ],
-
-        /*
          * Server list from the AssaultCube master server (AcMasterServerService).
          * Kept for a day so a flaky master still leaves us with the last good
          * list; the service itself refreshes it every Ladder.master.ttl seconds.

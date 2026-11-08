@@ -55,6 +55,20 @@ merge players, mark a game inaccurate. Read the source before running one.
 - **Longest streak:** only recorded for new games, no backfill. The banner is gated by
   `Ladder.streakBanner`.
 - GeoLite2 databases and `webroot/img/players|maps` are not in git (licence / size).
+- **QR hunt unlocks** are decided in `QrHunt::UNLOCKS` (level = codes found). The explorer avatars
+  (`img/players/explorer-NN.jpg`, level 5) and the last avatars (`legend-NN.jpg`, level 10) are built
+  from `img/illustrated_players` by `bin/cake explorer_avatars`; both folders are outside git, so run it
+  on every machine. Uploaded pictures (level 7) are `img/players/upload-<random>.jpg`, re-encoded by
+  `AvatarUpload`; `QrHunt::isHuntAvatar()` keeps all three out of the plain avatar list and random backgrounds.
+- **Cave lighting in the 3D viewer** (`webroot/map3d/light.js`): a map config line `darkzone x0 y0 x1 y1 ambient top`
+  makes the SPACE cubes in it dark, lit by LIGHT entities (per-vertex tint on floors, walls and models). Only big maps
+  (>= 512) use it, today cl_lost's cave and the inside of cl_cube; every other map renders as before.
+- **Map panels and sound** (browser maps only): `webroot/map3d/displays.js` draws `display` lines of a map config
+  from `/run/halls` (Hall of Fame top 3 per list + the visitor's own card); `ambience.js` plays `mapsound`/SOUND,
+  `synth` and `soundzone` lines (Web Audio, 3D). `tools/map3d/assets.mjs` copies the map's ambience files.
+  `stars.js` draws a `stardome` line as a sky of players from `/run/stars` (cached in `rankings`, cleared on import;
+  per star only country, games, rating; names only for the top 10 and the visitor). `lidzone` lines mark a stone layer
+  (cl_cube's star chamber over its maze) that light and sound do not pass.
 - **PHPUnit doesn't run** (checked 2026-10-19): the test bootstrap migrates the SQLite
   test DB and fails in `CreateWebVisits` ("no such table: main.players"). Verify
   changes in the browser until that's fixed.

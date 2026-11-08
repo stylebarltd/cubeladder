@@ -71,7 +71,7 @@
     const search = document.getElementById('srv-search');
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-    // own servers are known up front (offline ones too); clan / elsewhere once polled
+    // own servers are known up front (offline ones too); clan ones once polled
     // the clan match servers of the competitive ladder (CompetitiveTracker)
     const competitive = new Set(<?= json_encode(array_values(\App\Service\CompetitiveTracker::servers())) ?>);
     const own = <?= json_encode(array_map(fn($k, $c) => [
@@ -185,21 +185,18 @@
             groups = [
                 {title: 'Our servers', servers: own.map(s => ({...s, ...(ownPolled.get(s.key) || {})}))},
                 {title: 'Competitive · clan match / inter', servers: ((data.clan && data.clan.servers) || []).filter(s => s.online)},
-                {title: 'Other AC servers', servers: (data.elsewhere && data.elsewhere.servers) || []},
             ];
-            // "12 players on cubeLadder servers · 2 on other public servers · 4 on competitive servers",
+            // "12 players on cubeLadder servers · 4 on competitive servers",
             // empty parts left out
             const plural = (n) => n + ' player' + (n === 1 ? '' : 's');
             const sum = (list) => (list || []).reduce((n, s) => n + (s.online ? s.numplayers : 0), 0);
             const ownPlayers = sum(data.servers);
-            const otherPlayers = (data.elsewhere && data.elsewhere.players) || 0;
             const compPlayers = sum(data.clan && data.clan.servers);
             document.getElementById('live-elsewhere-sub').textContent = [
                 ownPlayers ? plural(ownPlayers) + ' on cubeLadder servers' : '',
-                otherPlayers ? plural(otherPlayers) + ' on other public servers' : '',
                 compPlayers ? plural(compPlayers) + ' on competitive servers' : '',
             ].filter(Boolean).join(' · ');
-            document.getElementById('live-play').classList.toggle('hidden', ownPlayers + otherPlayers + compPlayers > 0);
+            document.getElementById('live-play').classList.toggle('hidden', ownPlayers + compPlayers > 0);
             renderButton();
             renderList();
             return data;

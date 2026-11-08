@@ -26,6 +26,7 @@ $progress = $progress ?? [];
 $lastSeen = $lastSeen ?? null;
 $badges = $badges ?? [];
 $qrLevel = (int)($qrLevel ?? 0);   // QR hunt: codes found in our maps
+$nameStyle = $nameStyle ?? null;   // QR hunt: name frame ('name') and gold badge ('avatars2'), QrHunt::nameStyles()
 $weapons = $weapons ?? [];
 $map = $map ?? null;
 $subtitle = $subtitle ?? null;
@@ -85,7 +86,11 @@ $archetypeColor = match ($archetype) {
             <img src="<?= $this->Layout->playerPicture($player) ?>" alt=""
                  class="h-16 w-16 shrink-0 rounded-full object-cover ring-[3px] <?= $tier ? 'ring-yellow-400/80' : 'ring-blue-400/60' ?>">
             <div class="min-w-0 flex-1">
-                <div class="truncate text-xl font-extrabold leading-tight"><?= h($player->name) ?></div>
+                <div class="flex min-w-0 items-center gap-1.5">
+                    <div class="truncate text-xl font-extrabold leading-tight <?= !empty($nameStyle['frame']) ? 'rounded-md border-2 px-1.5' : '' ?>"
+                         <?= !empty($nameStyle['frame']) ? 'style="' . h(\App\Service\QrHunt::nameFrameCss($nameStyle['frame'])) . '"' : '' ?>><?= h($player->name) ?></div>
+                    <?php if (!empty($nameStyle['gold'])): ?><?= $this->element('qr_gold_badge') ?><?php endif; ?>
+                </div>
                 <div class="mt-0.5 text-[11px] text-zinc-300">
                     <?= $this->Layout->flag($player->country) ?>
                     <?php if ($subtitle !== null): ?>
@@ -99,7 +104,7 @@ $archetypeColor = match ($archetype) {
                     <div class="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
                         <?php foreach (array_slice($weapons['choice'], 0, 3) as $weapon): ?>
                             <span class="flex items-center gap-1.5">
-                                <img src="/img/weapons/<?= h($weapon['key']) ?>.svg" alt="" class="h-5 w-5 shrink-0">
+                                <?= $this->element('weapon_icon', ['key' => $weapon['key'], 'class' => 'h-5 w-5 shrink-0', 'tint' => $weaponTint ?? null]) ?>
                                 <span class="leading-none">
                                     <span class="block text-[10px] font-extrabold uppercase"><?= h($weapon['name']) ?></span>
                                     <span class="block text-[9px] text-zinc-400"><?= $weapon['pct'] ?>% of kills</span>

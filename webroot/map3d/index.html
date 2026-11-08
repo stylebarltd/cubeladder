@@ -15,6 +15,25 @@
   .sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
   .muted { color: #8a93a6; font-size: 12px; }
   #status { margin-top: 8px; font-size: 12px; color: #8a93a6; white-space: pre-line; }
+  #walkBtn { margin: 8px 0 4px; width: 100%; padding: 6px; background: #f5c242; color: #12151c; border: 0; border-radius: 4px; font-weight: 600; cursor: pointer; }
+  #crosshair { position: fixed; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; pointer-events: none; display: none; }
+  #crosshair::before, #crosshair::after { content: ""; position: absolute; background: rgba(255,255,255,.85); }
+  #crosshair.img::before, #crosshair.img::after { display: none; }
+  #crosshair::before { left: 6px; top: 0; width: 2px; height: 14px; }
+  #crosshair::after { top: 6px; left: 0; height: 2px; width: 14px; }
+  #walkHud { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(18,21,28,.7); border-radius: 6px; padding: 6px 12px; font-size: 12px; color: #c9cfdb; display: none; pointer-events: none; }
+  #walkPause { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(10,12,16,.55); cursor: pointer; }
+  #walkPause > div { background: #1c2130; border: 1px solid #2a3040; border-radius: 10px; padding: 28px 32px; text-align: center; max-width: 520px; }
+  #walkPause .big { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  #walkPause button { border: 0; border-radius: 6px; cursor: pointer; font-weight: 700; }
+  #walkResume { display: block; width: 100%; margin: 18px 0 0; padding: 18px 24px; font-size: 20px; background: #f5c242; color: #12151c; }
+  #walkResume:hover, #walkResume:focus-visible { filter: brightness(1.1); outline: 3px solid #fff; outline-offset: 2px; }
+  #walkExit { margin: 14px 0 0; padding: 8px 14px; font-size: 13px; background: #2a3040; color: #e6e9ef; }
+  #walkMsg { margin-top: 10px; font-size: 13px; color: #f5c242; min-height: 1.2em; }
+  body.walking #panel { display: none; }
+  body.walking #crosshair, body.walking #walkHud { display: block; }
+  body.walking.paused #walkPause { display: flex; }
+  body.walking.paused #crosshair, body.walking.paused #walkHud { display: none; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 <script type="importmap">
@@ -30,6 +49,9 @@
   <h1>AssaultCube map · 3D prototype</h1>
   <select id="map">
     <option value="ac_shine">ac_shine</option>
+    <option value="cl_angkorwat">cl_angkorwat</option>
+    <option value="cl_lost">cl_lost (work in progress)</option>
+    <option value="cl_cube">cl_cube (work in progress)</option>
     <option value="ac_desert">ac_desert</option>
     <option value="ac_desert3">ac_desert3</option>
     <option value="ac_gothic">ac_gothic</option>
@@ -49,22 +71,54 @@
     <div><span class="sw" style="background:#f5c242"></span> Shortest walkable route, flag to flag</div>
     <div><span class="sw" style="background:#3ad9e0"></span> Click a floor: shortest walkable route from there to the target flag</div>
   </div>
+  <button id="walkBtn" type="button">Walk the map (first person)</button>
   <div id="click" class="muted"></div>
   <div id="status">loading…</div>
-  <div class="muted">Drag to orbit, wheel to zoom, right-drag to pan.<br>The route is the shortest walkable way on the cube grid, not the fastest strafe-jump line.</div>
+  <div class="muted">Drag to orbit, wheel to zoom, right-drag to pan.<br>Walk mode moves like AssaultCube: mouse to look, W A S D to move, Space jump, Shift crouch (jump, then Shift = crouch jump), F fly, Esc pause.<br>The route is the shortest walkable way on the cube grid, not the fastest strafe-jump line.</div>
 </div>
+<div id="crosshair"></div>
+<div id="walkHud"><div id="dragNote" style="display:none;color:#f5c242;margin-bottom:3px">The browser did not capture the mouse: hold the left mouse button and drag to look around.</div>W A S D move · mouse look · Space jump · Shift crouch · <b id="flyState">F fly: off</b> · Esc pause · <span id="fps"></span></div>
+<div id="walkPause"><div>
+  <div class="big">Paused</div>
+  <span class="muted">W A S D move · mouse look · Space jump · Shift crouch (Space then Shift: crouch jump) · F fly (Space up, Shift down)</span>
+  <button id="walkResume">▶ Continue walking</button>
+  <div class="muted" style="margin-top:8px">or click anywhere · Enter · Space</div>
+  <button id="walkExit">Back to map overview</button>
+  <div id="walkMsg"></div>
+  <div class="muted" style="margin-top:6px">walk mode v7</div>
+</div></div>
 <script type="module">
   import { loadMap, summary, ENT, TEAM } from "./cgz.js";
   import { Viewer } from "./viewer.js";
   import { buildGrid, astar, snap, distanceField, cellOf, heightOf } from "./path.js";
+  import { Walker } from "./walk.js";
+  import { GameKit, crosshairImage } from "./game.js";
 
   const ROUTE_COLOR = 0xf5c242, CLICK_COLOR = 0x3ad9e0;
   const viewer = new Viewer(document.getElementById("view"));
   const status = document.getElementById("status");
   const $ = (id) => document.getElementById(id);
   let map, grid, pathLines = [];
+  const walker = new Walker(viewer);
+  // ?game=1: walk mode with the game's look (gun, flags, crosshair, no helpers); the flag run page uses the same kit
+  const kit = new URLSearchParams(location.search).has("game") ? new GameKit(viewer) : null;
+  if (kit) {
+    viewer.onFrame = (dt) => kit.update(dt, walker.active ? walker.player : null);
+    crosshairImage().then((src) => { document.getElementById("crosshair").innerHTML = `<img src="${src}" alt="" style="width:32px;height:32px;position:absolute;left:-9px;top:-9px">`; }); // AC blends it additively: black = see-through
+    document.getElementById("crosshair").classList.add("img");
+  }
+  viewer.onStats = ({ fps, worstMs, calls }) => { $("fps").textContent = `${fps.toFixed(0)} fps · slowest frame ${worstMs.toFixed(0)} ms · ${calls} draw calls`; };
+  walker.onChange = ({ active, locked, drag, fly, waiting, error }) => {
+    document.body.classList.toggle("walking", active);
+    document.body.classList.toggle("paused", active && !locked);
+    $("flyState").textContent = `F fly: ${fly ? "on" : "off"}`;
+    $("walkMsg").textContent = error || (waiting ? "Capturing the mouse…" : "");
+    $("dragNote").style.display = drag ? "block" : "none";
+    if (active && !locked) $("walkResume").focus(); // Enter or Space continues straight away, no Tab needed
+  };
 
   async function load(name) {
+    walker.stop();
     status.textContent = `loading ${name}…`;
     const t0 = performance.now();
     try {
@@ -86,6 +140,7 @@
     applyField();
     Promise.all([viewer.texturesReady, viewer.modelsReady]).then(([t, m]) => {
       if (viewer.map !== map) return;
+      viewer.warmUp();
       status.textContent = `${head}\n${lines.join("\n")}\ntextures: ${t.loaded}/${t.slots} slots loaded${t.missing ? `, ${t.missing} missing` : ""} (${map.textures.length} in map config)\nobjects: ${m.placed} placed${m.skipped ? `, ${m.skipped} skipped` : ""}`;
     });
   }
@@ -154,13 +209,21 @@
       if (!down || e.button !== 0) return;
       const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5, slow = performance.now() - down.t > 400;
       down = null;
-      if (moved || slow || !map) return;
+      if (moved || slow || !map || walker.active) return;
       clickCell = viewer.pickCell(e.clientX, e.clientY);
       routeFromClick();
     });
   }
 
-  window.dbg = () => ({ map, grid, viewer, astar, distanceField, snap, cellOf, heightOf });
+  window.dbg = () => ({ map, grid, viewer, walker, kit, astar, distanceField, snap, cellOf, heightOf });
+  $("walkBtn").addEventListener("click", async () => {
+    if (!map || !grid) return;
+    if (kit) { viewer.setGameView(true); await kit.placeFlags(map); kit.showGun(true); }
+    walker.start(map, kit ? { allowFly: false } : {});
+  });
+  // The whole pause screen continues on click; only the exit button leaves.
+  $("walkPause").addEventListener("click", () => walker.resume());
+  $("walkExit").addEventListener("click", (e) => { e.stopPropagation(); walker.stop(); });
   $("map").addEventListener("change", (e) => load(e.target.value));
   $("textures").addEventListener("change", (e) => viewer.setTextured(e.target.checked));
   $("models").addEventListener("change", (e) => viewer.setModelsVisible(e.target.checked));

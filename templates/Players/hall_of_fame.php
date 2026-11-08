@@ -109,8 +109,8 @@ $achievementLabels = [
 $slides = array_values(array_filter($genres, fn($g) => !empty($g['data'])));
 $slideCount = count($slides);
 
-// Random player photos used as the slide backgrounds (one per slide)
-$playerImages = array_map('basename', glob(WWW_ROOT . 'img/players/*.jpg'));
+// Random player photos used as the slide backgrounds (one per slide; not the small explorer avatars)
+$playerImages = array_values(array_filter(array_map('basename', glob(WWW_ROOT . 'img/players/*.jpg') ?: []), fn($f) => !\App\Service\QrHunt::isHuntAvatar($f)));
 shuffle($playerImages);
 ?>
 
@@ -127,7 +127,17 @@ shuffle($playerImages);
          class="flex transition-transform duration-300 ease-out"
          style="transform: translateX(0%);">
 
-        <?php $slideIdx = 0; foreach ($slides as $genre): ?>
+        <?php
+        // weapon icon tints (QR hunt unlock 'weapons') of every listed player, one query
+        $ids = [];
+        foreach ($slides as $g) {
+            foreach ($g['data'] as $p) {
+                $ids[] = (string)($p->player_id ?? '');
+            }
+        }
+        $weaponTints = \App\Service\QrHunt::weaponColors($ids);
+        $nameStyles = \App\Service\QrHunt::nameStyles($ids);   // name frames and gold badges (QR hunt), one query
+        $slideIdx = 0; foreach ($slides as $genre): ?>
             <?php
             $bgImg = !empty($playerImages)
                 ? '/img/players/' . $playerImages[$slideIdx % count($playerImages)]
@@ -182,6 +192,7 @@ shuffle($playerImages);
                                 // an aim trainer round has no game: no weapons, the round's accuracy instead
                                 $weapons = in_array($genre['key'], ['aim', 'radar'], true) ? ['weapons' => []] : $this->Layout->weapon($recordStats);
                                 $medals = $achievementPlayers[$player->player_id] ?? [];
+                                $nameStyle = $nameStyles[(string)$player->player_id] ?? null;
                                 ?>
                                 <div class="flex items-start gap-3 py-2">
 
@@ -200,9 +211,11 @@ shuffle($playerImages);
                                         <!-- Name with the record-game weapon(s) right next to it -->
                                         <div class="flex items-center flex-wrap gap-x-2 gap-y-0.5">
                                             <span class="font-semibold truncate">
-                                                <?= $this->Html->link($player->name, ['controller' => 'Players', 'action' => 'view', $player->player_id], ['class' => 'hover:text-blue-400', 'data-hover-card' => '/players/hover-card/' . $player->player_id]) ?>
+                                                <?= $this->Html->link($player->name, ['controller' => 'Players', 'action' => 'view', $player->player_id], ['class' => 'hover:text-blue-400' . (!empty($nameStyle['frame']) ? ' rounded-md border-2 px-1.5' : ''),
+                                                    'style' => \App\Service\QrHunt::nameFrameCss($nameStyle['frame'] ?? null) ?: null, 'data-hover-card' => '/players/hover-card/' . $player->player_id]) ?>
                                                 <?= $this->Layout->flag($player->country) ?>
                                             </span>
+                                            <?php if (!empty($nameStyle['gold'])): ?><?= $this->element('qr_gold_badge') ?><?php endif; ?>
                                             <?php if ($ch = $playerRatings[(string)$player->player_id] ?? null): ?>
                                                 <?php if (!empty($ch['archetype'])): ?>
                                                     <?= $this->element('archetype_badge', ['archetype' => $ch['archetype'], 'pct' => $ch['archetype_pct'] !== null ? (int)$ch['archetype_pct'] : null, 'rank' => $ch['archetype_rank'] !== null ? (int)$ch['archetype_rank'] : null, 'compact' => true]) ?>
@@ -222,8 +235,7 @@ shuffle($playerImages);
                                             <?php if (!empty($weapons['weapons'])): ?>
                                                 <span class="flex items-center gap-1 shrink-0">
                                                     <?php foreach ($weapons['weapons'] as $weapon): ?>
-                                                        <img src="/img/weapons/<?= $weapon ?>.svg"
-                                                             title="<?= h($weapon) ?>" class="w-4 h-4">
+                                                        <?= $this->element('weapon_icon', ['key' => $weapon, 'title' => $weapon, 'class' => 'w-4 h-4', 'tint' => $weaponTints[(string)$player->player_id] ?? null]) ?>
                                                     <?php endforeach; ?>
                                                 </span>
                                             <?php endif; ?>

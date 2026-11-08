@@ -26,6 +26,10 @@ $shown = array_values(array_filter(
     fn($p) => !empty($p->total_score) && $p->total_score > 0 && ($p->stats['kills'] ?? 0) >= 1
 ));
 // On phones only Points / Rating (where shown) or Points / KDR / Kills (plus the sorted stat) fit
+// weapon icon tints (QR hunt unlock 'weapons') of the listed players, one query
+$weaponTints = \App\Service\QrHunt::weaponColors(array_map(fn($p) => (string)$p->id, $shown));
+// name frames and gold badges (QR hunt unlocks 'name' and 'avatars2'), one query
+$nameStyles = \App\Service\QrHunt::nameStyles(array_map(fn($p) => (string)$p->id, $shown));
 $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort] : ['points', 'kd', 'kills', $sort]);
 ?>
 <div class="relative min-h-[calc(100svh-4rem)] bg-zinc-900 bg-cover bg-center bg-fixed text-white"
@@ -86,6 +90,7 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                 <?php foreach ($shown as $i => $player):
                     $rank = $i + 1;
                     $weapons = $this->Layout->weapon($player->stats);
+                    $nameStyle = $nameStyles[(string)$player->id] ?? null;
                     ?>
                     <tr class="border-b border-white/5 hover:bg-white/5 <?= $rank === 1 ? 'bg-yellow-400/10' : '' ?>">
                         <td class="px-1.5 py-2 sm:px-2 text-right text-base font-extrabold <?= $rank <= 3 ? 'text-yellow-300' : 'text-zinc-500' ?>"><?= $rank ?></td>
@@ -96,7 +101,9 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <?= $this->Html->link(h($player->name), ['controller' => 'Players', 'action' => 'view', $player->id],
-                                            ['escape' => false, 'class' => 'truncate font-semibold hover:text-blue-300', 'data-hover-card' => '/players/hover-card/' . $player->id]) ?>
+                                            ['escape' => false, 'class' => 'truncate font-semibold hover:text-blue-300' . (!empty($nameStyle['frame']) ? ' rounded-md border-2 px-1.5' : ''),
+                                             'style' => \App\Service\QrHunt::nameFrameCss($nameStyle['frame'] ?? null) ?: null, 'data-hover-card' => '/players/hover-card/' . $player->id]) ?>
+                                        <?php if (!empty($nameStyle['gold'])): ?><?= $this->element('qr_gold_badge') ?><?php endif; ?>
                                         <span class="shrink-0"><?= $this->Layout->flag($player->country) ?></span>
                                         <?php if (!empty($player->archetype)): ?>
                                             <?= $this->element('archetype_badge', ['archetype' => $player->archetype, 'pct' => $player->archetype_pct, 'rank' => $player->archetype_rank, 'compact' => true]) ?>
@@ -125,7 +132,7 @@ $mobileStats = array_unique(isset($stats['rating']) ? ['points', 'rating', $sort
                                         <?php if (!empty($weapons['weapons'])): ?>
                                             <span class="flex items-center gap-1">
                                                 <?php foreach ($weapons['weapons'] as $weapon): ?>
-                                                    <img src="/img/weapons/<?= $weapon ?>.svg" alt="<?= h($weapon) ?>" class="h-4 w-4">
+                                                    <?= $this->element('weapon_icon', ['key' => $weapon, 'alt' => $weapon, 'class' => 'h-4 w-4', 'tint' => $weaponTints[(string)$player->id] ?? null]) ?>
                                                 <?php endforeach; ?>
                                             </span>
                                         <?php endif; ?>

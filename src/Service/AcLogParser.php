@@ -34,7 +34,20 @@ class AcLogParser
     protected $Events;
 
     /** killer|victim => ['kills' => n, 'teamkills' => n] for the current game (kill_pairs) */
+    /**
+     * The weapon behind a kill message (AC 1.3 server.h killmessages: gun order knife, pistol, carbine,
+     * shotgun, subgun, sniper, assault, grenade, akimbo; the second row is the gib / headshot message).
+     * "busted" is the pistol and the akimbo alike: counted as pistol.
+     */
+    public const KILL_WEAPONS = [
+        'slashed' => 'knife', 'busted' => 'pistol', 'picked off' => 'carbine', 'peppered' => 'shotgun',
+        'splattered' => 'shotgun', 'sprayed' => 'smg', 'punctured' => 'sniper', 'headshot' => 'sniper',
+        'shredded' => 'assault', 'gibbed' => 'grenade',
+    ];
+
     protected array $killBuffer = [];
+    /** killer|victim|weapon => kills for the current game (kill_weapons, Nemesis advanced stats) */
+    protected array $weaponBuffer = [];
 
     /** buffered rows for the events table (link codes said in the chat, votes, anticheat) */
     protected array $chatBuffer = [];
@@ -293,6 +306,7 @@ class AcLogParser
                 $this->currentGame = $existing;
                 $this->currentGamePlayers = [];
                 $this->killBuffer = [];
+                $this->weaponBuffer = [];
                 $this->timelineGame = $existing; // rebuilt from its start
                 return;
             }
@@ -314,6 +328,7 @@ class AcLogParser
             $this->currentGamePlayers = [];
             $this->streakBuffer = [];
             $this->killBuffer = [];
+            $this->weaponBuffer = [];
             $this->timelineGame = $game;
 
             $this->eventsParsed++;
@@ -488,6 +503,10 @@ class AcLogParser
                 $key = $killerId . '|' . $victimId;
                 $this->killBuffer[$key] ??= ['kills' => 0, 'teamkills' => 0];
                 $this->killBuffer[$key][$isTeamKill ? 'teamkills' : 'kills']++;
+                if (!$isTeamKill && ($weapon = self::KILL_WEAPONS[$verb] ?? null)) {
+                    $wkey = $key . '|' . $weapon;
+                    $this->weaponBuffer[$wkey] = ($this->weaponBuffer[$wkey] ?? 0) + 1;
+                }
             }
 
             // TEAMKILL
@@ -1324,6 +1343,7 @@ class AcLogParser
     {
         if (empty($this->killBuffer) || !$this->currentGame) {
             $this->killBuffer = [];
+            $this->weaponBuffer = [];
             return;
         }
         $gameId = $this->currentGame->id;
@@ -1347,6 +1367,28 @@ class AcLogParser
         }
 
         $this->killBuffer = [];
+        $this->flushWeapons($gameId);
+    }
+
+    /** The current game's killer->victim kills per weapon (kill_weapons); same upsert rule as kill_pairs. */
+    protected function flushWeapons(string $gameId): void
+    {
+        if (!$this->weaponBuffer) {
+            return;
+        }
+        $placeholders = $bindings = [];
+        foreach ($this->weaponBuffer as $key => $n) {
+            [$killerId, $victimId, $weapon] = explode('|', $key);
+            $placeholders[] = '(?,?,?,?,?)';
+            array_push($bindings, $gameId, $killerId, $victimId, $weapon, $n);
+        }
+        try {
+            ConnectionManager::get('default')->execute('INSERT INTO kill_weapons (game_id, killer_id, victim_id, weapon, kills) VALUES '
+                . implode(',', $placeholders) . ' ON DUPLICATE KEY UPDATE kills=VALUES(kills)', $bindings);
+        } catch (\Exception $e) {
+            // never break log processing over nemesis stats
+        }
+        $this->weaponBuffer = [];
     }
 
     // -------------------------------

@@ -15,8 +15,11 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Line2 } from "three/addons/lines/Line2.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { LineGeometry } from "three/addons/lines/LineGeometry.js";
-import { CUBE, ENT, TEAM, floorAt } from "./cgz.js";
+import { CUBE, ENT, TEAM, floorAt, entityBase } from "./cgz.js";
 import { loadMd3 } from "./md3.js";
+import { CaveLight } from "./light.js";
+import { Displays } from "./displays.js";
+import { Stars } from "./stars.js";
 
 const TEAM_COLOR = { [TEAM.CLA]: 0xe0443a, [TEAM.RVSF]: 0x3a7be0 };
 const FLOOR_LOW = new THREE.Color(0xb59a6b);
@@ -24,9 +27,11 @@ const FLOOR_HIGH = new THREE.Color(0xe6d4ad);
 const WALL_LOW = new THREE.Color(0x6f5d48);
 const WALL_HIGH = new THREE.Color(0xc2ae8e);
 const CAP_COLOR = new THREE.Color(0x4a4036);
+const INSTANCE_MIN = 24; // a mapmodel slot placed this often is drawn instanced (addMapModels)
 const TEXTURESCALE = 32; // rendercubes.cpp: one texture repeat covers 32/scale... pixels per cube
-const TEXTURE_BASE = "textures/"; // mirrors packages/textures/ for the textures the bundled maps use
-const MODEL_BASE = "models/";     // mirrors packages/models/mapmodels/ for the models the bundled maps use (+ models.json)
+// Relative to this module, not the page, so other pages (the flag run on /run) can use the viewer too.
+const TEXTURE_BASE = new URL("textures/", import.meta.url).href; // mirrors packages/textures/ for the textures the bundled maps use
+const MODEL_BASE = new URL("models/", import.meta.url).href;     // mirrors packages/models/mapmodels/ for the models the bundled maps use (+ models.json)
 
 export class Viewer {
   constructor(canvas) {
@@ -49,7 +54,8 @@ export class Viewer {
     this.modelGroup = new THREE.Group();
     this.pathGroup = new THREE.Group();
     this.userGroup = new THREE.Group(); // route from a clicked point + its marker
-    this.scene.add(this.mapGroup, this.entGroup, this.modelGroup, this.pathGroup, this.userGroup);
+    this.displayGroup = new THREE.Group(); // live panels (displays.js: cl_cube's hall of fame)
+    this.scene.add(this.mapGroup, this.entGroup, this.modelGroup, this.pathGroup, this.userGroup, this.displayGroup);
     this.raycaster = new THREE.Raycaster();
     this.manifest = null; // models.json, fetched once
     this.lineMaterials = [];
@@ -60,7 +66,50 @@ export class Viewer {
 
     window.addEventListener("resize", () => this.resize());
     this.resize();
-    this.renderer.setAnimationLoop(() => { this.controls.update(); this.renderer.render(this.scene, this.camera); });
+    this.walker = null; // set while the first-person walk mode (walk.js) is active
+    // HUD layer (the gun in the hand): its own scene, drawn after the world with a cleared depth buffer,
+    // so it never sinks into walls (AC draws the HUD gun the same way, in front of everything)
+    this.hudScene = new THREE.Scene();
+    const hudSun = new THREE.DirectionalLight(0xffffff, 1.2);
+    hudSun.position.set(0.3, 1, 0.6);
+    this.hudAmbient = new THREE.AmbientLight(0xffffff, 1.6);
+    this.hudSun = hudSun;
+    this.hudScene.add(this.hudAmbient, hudSun);
+    this.hudCamera = new THREE.PerspectiveCamera(50, 1, 0.01, 50);
+    this.onFrame = null; // per-frame hook after the camera moved: (dt) => void
+    this.clock = new THREE.Clock();
+    this.renderer.setAnimationLoop(() => {
+      const dt = this.clock.getDelta();
+      if (this.walker) this.walker.update(dt); else this.controls.update();
+      if (this.sky) this.sky.position.copy(this.camera.position);
+      this.onFrame?.(dt);
+      if (this.caveLight?.active) {
+        this.caveLight.update(this.clock.elapsedTime, this.textured);
+        this.stars?.update(this.clock.elapsedTime, this.camera, this.renderer.domElement.height);
+        // the gun in the hand takes the cave's light where the player stands
+        const c = this.camera.position, L = this.walker ? this.caveLight.at(c.x, c.z, c.y) : null;
+        const k = L ? Math.min(1, (L[0] + L[1] + L[2]) / 3) : 1;
+        this.hudAmbient.intensity = 1.6 * k; this.hudSun.intensity = 1.2 * k;
+        const m = L ? Math.max(L[0], L[1], L[2]) || 1 : 1;     // and its colour, half way to white
+        this.hudAmbient.color.setRGB(L ? 0.5 + 0.5 * L[0] / m : 1, L ? 0.5 + 0.5 * L[1] / m : 1, L ? 0.5 + 0.5 * L[2] / m : 1);
+      }
+      this.renderer.render(this.scene, this.camera);
+      if (this.hudScene.children.length > 2) {
+        this.hudCamera.fov = this.camera.fov; this.hudCamera.aspect = this.camera.aspect; this.hudCamera.updateProjectionMatrix();
+        this.renderer.autoClear = false;
+        this.renderer.clearDepth();
+        this.renderer.render(this.hudScene, this.hudCamera);
+        this.renderer.autoClear = true;
+      }
+      // frames per second and the slowest frame, every half second (onStats: UI hook)
+      this.statFrames = (this.statFrames ?? 0) + 1;
+      this.statWorst = Math.max(this.statWorst ?? 0, dt);
+      this.statTime = (this.statTime ?? 0) + dt;
+      if (this.statTime >= 0.5) {
+        this.onStats?.({ fps: this.statFrames / this.statTime, worstMs: this.statWorst * 1000, calls: this.renderer.info.render.calls });
+        this.statFrames = 0; this.statWorst = 0; this.statTime = 0;
+      }
+    });
   }
 
   resize() {
@@ -88,9 +137,16 @@ export class Viewer {
     this.clearModels();
     const t0 = performance.now();
     const built = buildGeometry(map);
+    // dark zones (cl_lost's cave): LIGHT entities light the cave's floors and walls (light.js)
+    this.caveLight = new CaveLight(map);
+    this.caveLight.lightGeometry(built.floor);
+    this.caveLight.lightGeometry(built.walls);
+    this.caveLight.lightGeometry(built.roofs);     // ceilings (cl_cube's rooms have real ones)
+    this.caveLight.lightGeometry(built.ceilings);
     this.floorGeo = built.floor;
     this.wallGeo = built.walls;
     this.ceilGeo = built.ceilings;
+    this.roofGeo = built.roofs;
     this.floorVertexStart = built.floorVertexStart;
     this.bounds = built.bounds;
     this.materials = built.slots.map(() => new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }));
@@ -98,15 +154,135 @@ export class Viewer {
     this.ceilMaterials = built.slots.map(() => new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false }));
     const ceilMesh = new THREE.Mesh(built.ceilings, this.ceilMaterials);
     ceilMesh.renderOrder = 1;
-    this.mapGroup.add(new THREE.Mesh(built.floor, this.materials), new THREE.Mesh(built.walls, this.materials), ceilMesh);
+    this.ceilMesh = ceilMesh;
+    this.roofMesh = new THREE.Mesh(built.roofs, this.materials);
+    this.mapGroup.add(new THREE.Mesh(built.floor, this.materials), new THREE.Mesh(built.walls, this.materials), ceilMesh, this.roofMesh);
+    this.terrainGeos = built.terrain;
+    for (const g of built.terrain) this.mapGroup.add(new THREE.Mesh(g, this.materials));
+    this.addWater(map);
+    this.setWalkView(this.walkView ?? false);
+    this.setSky(map);
     console.log(`[viewer] geometry: ${built.floor.attributes.position.count + built.walls.attributes.position.count + built.ceilings.attributes.position.count} vertices, ${built.slots.length} texture slots in ${(performance.now() - t0).toFixed(0)} ms`);
     this.textureStats = { slots: built.slots.length, loaded: 0, missing: 0 };
     this.loadTextures(map, built.slots);
     this.currentDist = null; // a previous map's distance field no longer fits
     this.applyColors();
     this.addEntities(map);
+    if (this.gameView) this.setGameView(true);
     this.modelsReady = this.addMapModels(map);
+    for (const c of this.displayGroup.children) c.material?.map?.dispose();
+    this.clear(this.displayGroup);
+    new Displays(this.displayGroup).build(map);
+    this.stars = new Stars(this.displayGroup);   // cl_cube's star chamber (stardome)
+    this.stars.build(map);
     this.frame();
+  }
+
+  /**
+   * The water (the map header's waterlevel, in tenths of a cube, and watercolour): AC fills every
+   * cube below it. A translucent plane over the whole map, when any floor lies below it.
+   */
+  addWater(map) {
+    const level = map.waterlevel / 10;
+    if (!(level > this.bounds.minH)) return;
+    const [r, g, b, a] = map.watercolor ?? [20, 25, 20, 150];
+    // an island map (big) gets its sea out to the horizon; a normal map's water ends with the map
+    const span = map.size >= 512 ? map.size * 12 : map.size;
+    const geo = new THREE.PlaneGeometry(span, span);
+    geo.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(r / 255, g / 255, b / 255).convertSRGBToLinear(), transparent: true, opacity: map.size >= 512 ? 0.78 : Math.max(0.35, a / 255), depthWrite: false });
+    const water = new THREE.Mesh(geo, mat);
+    water.position.set(map.size / 2, level, map.size / 2);
+    water.renderOrder = 2;
+    this.mapGroup.add(water);
+    if (map.size >= 512) {
+      // beyond the map there is no sea floor: a dark one at the depth of the map's edge, so the open sea
+      // looks like the water over the map (otherwise the sky shows through it)
+      const floorGeo = new THREE.PlaneGeometry(span, span);
+      floorGeo.rotateX(-Math.PI / 2);
+      const seabed = new THREE.Mesh(floorGeo, new THREE.MeshLambertMaterial({ color: new THREE.Color(0x3a3020).convertSRGBToLinear() })); // dark mud, as cl_lost's deep sea floor
+      seabed.position.set(map.size / 2, this.bounds.minH - 1, map.size / 2); // a cube below: no flicker against the map's own sea floor
+      this.mapGroup.add(seabed);
+    }
+  }
+
+  /**
+   * Game view (the flag run): the map as the player sees it in the game, without
+   * the viewer's helpers: no spawn markers, labels, routes or click marker,
+   * textures and objects always on.
+   */
+  setGameView(on) {
+    this.gameView = on;
+    this.entGroup.visible = this.pathGroup.visible = this.userGroup.visible = !on;
+    if (on) { this.setTextured(true); this.setModelsVisible(true); if (this.floorGeo) this.colorFloor(null); }
+  }
+
+  /** Walk mode: opaque ceilings everywhere, as in the game. Overview: open rooms, translucent bridges only. */
+  setWalkView(on) {
+    this.walkView = on;
+    if (this.roofMesh) this.roofMesh.visible = on;
+    if (this.ceilMesh) this.ceilMesh.visible = !on;
+  }
+
+  /**
+   * The map's sky box (loadsky in the map config), as AC draws it
+   * (texture.cpp draw_envbox): six faces around the camera, drawn behind
+   * everything. The face table below is AC's, corner by corner: [s, t, x, y, z]
+   * in AC space. AC's envbox height axis points the other way from the world's
+   * (its "dn" face is drawn at +z), so it maps to three as (x, -z, y);
+   * checked against screenshots: ground below, clouds above.
+   */
+  setSky(map) {
+    if (this.sky) { this.scene.remove(this.sky); this.sky.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } }); this.sky = null; }
+    const name = (map.config?.sky ?? "").replace(/^textures\/skymaps\//, "");
+    if (!name) return;
+    const w = 1000;
+    const faces = [ // lf, rt, ft, bk, dn, up (AC's order and corners)
+      ["lf", [[0, 0, -w, -w, -w], [1, 0, -w, w, -w], [1, 1, -w, w, w], [0, 1, -w, -w, w]]],
+      ["rt", [[1, 1, w, -w, w], [0, 1, w, w, w], [0, 0, w, w, -w], [1, 0, w, -w, -w]]],
+      ["ft", [[1, 1, -w, -w, w], [0, 1, w, -w, w], [0, 0, w, -w, -w], [1, 0, -w, -w, -w]]],
+      ["bk", [[1, 1, w, w, w], [0, 1, -w, w, w], [0, 0, -w, w, -w], [1, 0, w, w, -w]]],
+      ["dn", [[0, 1, -w, w, w], [0, 0, w, w, w], [1, 0, w, -w, w], [1, 1, -w, -w, w]]],
+      ["up", [[0, 1, w, w, -w], [0, 0, -w, w, -w], [1, 0, -w, -w, -w], [1, 1, w, -w, -w]]],
+    ];
+    const group = new THREE.Group();
+    group.renderOrder = -1;
+    for (const [side, c] of faces) {
+      const pos = [], uv = [];
+      for (const k of [0, 1, 2, 0, 2, 3]) { const [s, t, x, y, z] = c[k]; pos.push(x, -z, y); uv.push(s, t); }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, depthWrite: false, depthTest: false, fog: false });
+      this.loader.load(`${TEXTURE_BASE}skymaps/${name}_${side}.jpg`, (t) => {
+        t.flipY = false; // GL texture coordinates as AC uses them: t = 0 is the image's first row
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+        t.needsUpdate = true;
+        mat.map = t; mat.needsUpdate = true;
+      }, undefined, () => console.warn(`[viewer] sky missing: ${name}_${side}`));
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.renderOrder = -1;
+      mesh.frustumCulled = false;
+      group.add(mesh);
+    }
+    this.sky = group;
+    this.scene.add(group);
+  }
+
+  /**
+   * Upload every loaded texture and compile every shader up front. three.js
+   * otherwise does both the first time an object comes into view, which shows
+   * as a hitch when you turn around in walk mode.
+   */
+  async warmUp() {
+    const map = this.map;
+    const textures = (await Promise.all(this.textureCache.values())).filter(Boolean);
+    if (this.map !== map) return;
+    for (const m of [...this.materials, ...this.ceilMaterials]) if (m.userData.texture) textures.push(m.userData.texture);
+    for (const t of textures) this.renderer.initTexture(t);
+    await this.renderer.compileAsync(this.scene, this.camera);
+    console.log(`[viewer] warm-up: ${textures.length} textures uploaded, shaders compiled`);
   }
 
   // ---- mapmodels ------------------------------------------------------------
@@ -122,6 +298,7 @@ export class Viewer {
   baseTexture(url) {
     if (!this.textureCache.has(url)) {
       this.textureCache.set(url, new Promise((resolve) => this.loader.load(url, (t) => {
+        if (/\.png$/i.test(url)) t = bleedAlpha(t);
         t.wrapS = t.wrapT = THREE.RepeatWrapping;
         t.colorSpace = THREE.SRGBColorSpace;
         t.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
@@ -144,33 +321,78 @@ export class Viewer {
     if (!this.manifest) {
       this.manifest = await fetch(MODEL_BASE + "models.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
     }
+    // One set of materials per slot (and world texture); a slot used INSTANCE_MIN+ times (a jungle's trees)
+    // is drawn as instanced meshes, one per surface per TILE x TILE tile so the camera skips tiles out of view.
+    const bySlot = new Map();
     for (const e of ents) {
+      const key = `${e.attr2}:${e.attr4 > 0 ? e.attr4 : 0}`;
+      if (!bySlot.has(key)) bySlot.set(key, []);
+      bySlot.get(key).push(e);
+    }
+    const yaw = (e) => THREE.MathUtils.degToRad(180 - e.attr1 / 10);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), pos = new THREE.Vector3(), scl = new THREE.Vector3();
+    for (let list of bySlot.values()) {
       if (this.map !== map) return stats;
-      const slot = slots[e.attr2], info = slot && this.manifest[slot.name];
-      if (!info) { stats.skipped++; continue; }
-      const group = new THREE.Group();
-      const i = (e.y << map.sfactor) + e.x;
-      const z = map.cubes.floor[i] + slot.zoff + e.attr3 / 5; // ENTSCALE5
-      group.position.set(e.x, z, e.y);
-      // AC rotates the model by (-yaw - 180) about its up axis; the viewer's x/z mapping mirrors handedness.
-      group.rotation.y = THREE.MathUtils.degToRad(e.attr1 / 10 + 180);
-      group.scale.setScalar(slot.scale || 1);
-      const worldTex = e.attr4 > 0 && map.textures[e.attr4] ? TEXTURE_BASE + map.textures[e.attr4].name : null;
+      const e0 = list[0], slot = slots[e0.attr2], info = slot && this.manifest[slot.name];
+      if (!info) { stats.skipped += list.length; continue; }
+      const worldTex = e0.attr4 > 0 && map.textures[e0.attr4] ? TEXTURE_BASE + map.textures[e0.attr4].name : null;
+      const parts = [];
       try {
         for (const part of info.parts) {
           const surfaces = await loadMd3(MODEL_BASE + part.md3, info.trans, info.scale);
-          for (const s of surfaces) {
-            const skin = worldTex ?? (part.skins[s.name] ?? part.skins["*"] ? MODEL_BASE + (part.skins[s.name] ?? part.skins["*"]) : null);
+          for (const sf of surfaces) {
+            const skin = worldTex ?? (part.skins[sf.name] ?? part.skins["*"] ? MODEL_BASE + (part.skins[sf.name] ?? part.skins["*"]) : null);
             const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide, alphaTest: 0.5 });
-            if (skin) this.baseTexture(skin).then((t) => { if (t) { mat.map = t; mat.needsUpdate = true; } else mat.color.setHex(0x9a8c7a); });
-            else mat.color.setHex(0x9a8c7a);
-            group.add(new THREE.Mesh(s.geometry, mat));
+            const dark = mat.clone(); dark.vertexColors = true;          // the same, lit per vertex in a cave (light.js)
+            if (skin) this.baseTexture(skin).then((t) => { for (const m of [mat, dark]) { if (t) { m.map = t; m.needsUpdate = true; } else m.color.setHex(0x9a8c7a); } });
+            else { mat.color.setHex(0x9a8c7a); dark.color.setHex(0x9a8c7a); }
+            parts.push({ geometry: sf.geometry, mat, dark });
           }
         }
-      } catch (err) { console.warn(`[viewer] model ${slot.name}: ${err.message}`); stats.skipped++; continue; }
+      } catch (err) { console.warn(`[viewer] model ${slot.name}: ${err.message}`); stats.skipped += list.length; continue; }
       if (this.map !== map) return stats;
-      this.modelGroup.add(group);
-      stats.placed++;
+      // Placement (entities.cpp renderentities): cube floor + zoff + attr3/5; yaw calibrated on the ladder
+      // (ac-maps, checked in game: rungs east at yaw 0, north at 2700) and the cl_angkorwat plank: the
+      // viewer's x/z mapping mirrors handedness, so the angle runs backwards.
+      const place = (e) => {
+        const z = entityBase(map, (e.y << map.sfactor) + e.x) + slot.zoff + e.attr3 / 5; // ENTSCALE5
+        pos.set(e.x, z, e.y); q.setFromAxisAngle(up, yaw(e)); scl.setScalar(slot.scale || 1);
+        return m4.compose(pos, q, scl);
+      };
+      const cave = this.caveLight?.active ? this.caveLight : null;
+      const inCave = (e) => cave?.isDark((e.y << map.sfactor) + e.x);
+      // models in a cave are drawn one by one with their own lit copy of the geometry (never instanced)
+      for (const e of list.length < INSTANCE_MIN ? list : list.filter(inCave)) {
+        const group = new THREE.Group();
+        const mtx = place(e).clone();
+        mtx.decompose(group.position, group.quaternion, group.scale);
+        for (const pt of parts) {
+          const lit = inCave(e) ? cave.lightModel(pt.geometry, mtx, (e.y << map.sfactor) + e.x) : null;
+          group.add(lit ? new THREE.Mesh(lit, pt.dark) : new THREE.Mesh(pt.geometry, pt.mat));
+        }
+        this.modelGroup.add(group);
+        stats.placed++;
+      }
+      if (list.length < INSTANCE_MIN) continue;
+      list = list.filter((e) => !inCave(e));
+      const tiles = new Map();
+      for (const e of list) {
+        const k = (e.y >> 7) * 64 + (e.x >> 7);
+        if (!tiles.has(k)) tiles.set(k, []);
+        tiles.get(k).push(e);
+      }
+      for (const tl of tiles.values()) {
+        const group = new THREE.Group();
+        for (const pt of parts) {
+          const im = new THREE.InstancedMesh(pt.geometry, pt.mat, tl.length);
+          tl.forEach((e, k) => im.setMatrixAt(k, place(e)));
+          im.instanceMatrix.needsUpdate = true;
+          im.computeBoundingSphere();
+          group.add(im);
+        }
+        this.modelGroup.add(group);
+      }
+      stats.placed += list.length;
     }
     console.log(`[viewer] mapmodels: ${stats.placed} placed, ${stats.skipped} skipped`);
     return stats;
@@ -222,11 +444,11 @@ export class Viewer {
   }
 
   applyColors() {
-    for (const geo of [this.floorGeo, this.wallGeo, this.ceilGeo]) {
+    for (const geo of [this.floorGeo, this.wallGeo, this.ceilGeo, this.roofGeo, ...(this.terrainGeos ?? [])]) {
       if (!geo) continue;
       const col = geo.attributes.color;
       col.array.set(this.textured ? geo.userData.texTint : geo.userData.shadeColor);
-      col.needsUpdate = true;
+      col.clearUpdateRanges(); col.needsUpdate = true; // a full upload (light.js uploads parts)
     }
     if (this.currentDist) this.colorFloor(this.currentDist);
   }
@@ -275,7 +497,7 @@ export class Viewer {
   pickCell(clientX, clientY) {
     const r = this.canvas.getBoundingClientRect();
     this.raycaster.setFromCamera(new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1), this.camera);
-    const hit = this.raycaster.intersectObject(this.mapGroup.children[0], false)[0];
+    const hit = this.raycaster.intersectObjects(this.mapGroup.children.filter((m) => m.geometry === this.floorGeo || this.terrainGeos?.includes(m.geometry)), false)[0];
     if (!hit) return -1;
     const x = Math.floor(hit.point.x), y = Math.floor(hit.point.z);
     if (x < 0 || y < 0 || x >= this.map.size || y >= this.map.size) return -1;
@@ -328,7 +550,7 @@ export class Viewer {
     const col = this.floorGeo.attributes.color;
     if (!dist) {
       col.array.set(this.textured ? this.floorGeo.userData.texTint : this.floorGeo.userData.shadeColor);
-      col.needsUpdate = true;
+      col.clearUpdateRanges(); col.needsUpdate = true;
       return;
     }
     let max = 0;
@@ -341,8 +563,33 @@ export class Viewer {
       else c.setHSL(0.66 - 0.66 * Math.min(1, dist[i] / max), 0.85, this.textured ? 0.6 : 0.5);
       for (let v = 0; v < 6; v++) { col.setXYZ(start + v, c.r, c.g, c.b); }
     }
-    col.needsUpdate = true;
+    col.clearUpdateRanges(); col.needsUpdate = true;
   }
+}
+
+/**
+ * A model skin with alpha (leaves, grass): its see-through pixels are often white, and the mipmaps blend that
+ * white into the leaves, so a tree far away turns pale grey. Give every see-through pixel the average colour
+ * of the opaque ones (the alpha stays), so the blend stays green.
+ */
+function bleedAlpha(tex) {
+  const img = tex.image;
+  if (!img?.width) return tex;
+  const cv = document.createElement("canvas");
+  cv.width = img.width; cv.height = img.height;
+  const ctx = cv.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, cv.width, cv.height), px = data.data;
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 127) { r += px[i]; g += px[i + 1]; b += px[i + 2]; n++; }
+  if (!n || n * 4 === px.length) return tex; // fully clear or fully opaque: nothing to do
+  r /= n; g /= n; b /= n;
+  for (let i = 0; i < px.length; i += 4) if (px[i + 3] <= 127) { px[i] = r; px[i + 1] = g; px[i + 2] = b; }
+  ctx.putImageData(data, 0, 0);
+  const out = new THREE.CanvasTexture(cv);
+  out.flipY = tex.flipY;
+  tex.dispose();
+  return out;
 }
 
 function label(text, color, x, y, z) {
@@ -360,34 +607,50 @@ function label(text, color, x, y, z) {
   return sp;
 }
 
+// A growable Float32Array (or Int32Array) with push(): the geometry of a 1024 map has millions of
+// numbers, which as plain JS arrays cost gigabytes.
+class FList {
+  constructor(Type = Float32Array) { this.a = new Type(1024); this.n = 0; }
+  push() {
+    const k = arguments.length;
+    if (this.n + k > this.a.length) { const b = new this.a.constructor(Math.max(this.a.length * 2, this.n + k)); b.set(this.a.subarray(0, this.n)); this.a = b; }
+    for (let i = 0; i < k; i++) this.a[this.n++] = arguments[i];
+  }
+  get length() { return this.n; }
+  view() { return this.a.subarray(0, this.n); }
+}
+
 // Per-texture-slot vertex buckets; concatenated into one geometry with a group per slot.
 class Buckets {
   constructor() { this.by = new Map(); }
   get(slot) {
     let b = this.by.get(slot);
-    if (!b) { b = { pos: [], norm: [], uv: [], shade: [], tint: [], cells: [] }; this.by.set(slot, b); }
+    if (!b) { b = { pos: new FList(), norm: new FList(), uv: new FList(), shade: new FList(), tint: new FList(), cells: new FList(Int32Array) }; this.by.set(slot, b); }
     return b;
   }
   /** Builds the geometry; `slotIndex` maps slot -> material index (shared by floor and walls). */
   build(slotIndex, floorVertexStart) {
-    const pos = [], norm = [], uv = [], shade = [], tint = [];
+    let total = 0;
+    for (const b of this.by.values()) total += b.pos.length / 3;
+    const pos = new Float32Array(total * 3), norm = new Float32Array(total * 3), uv = new Float32Array(total * 2);
+    const shade = new Float32Array(total * 3), tint = new Float32Array(total * 3);
     const geo = new THREE.BufferGeometry();
+    let start = 0;
     for (const [slot, b] of this.by) {
-      const start = pos.length / 3;
-      if (floorVertexStart) for (let k = 0; k < b.cells.length; k++) floorVertexStart[b.cells[k]] = start + k * 6;
-      geo.addGroup(start, b.pos.length / 3, slotIndex.get(slot));
-      for (const a of b.pos) pos.push(a);
-      for (const a of b.norm) norm.push(a);
-      for (const a of b.uv) uv.push(a);
-      for (const a of b.shade) shade.push(a);
-      for (const a of b.tint) tint.push(a, a, a);
+      const count = b.pos.length / 3;
+      if (floorVertexStart) { const cells = b.cells.view(); for (let k = 0; k < cells.length; k++) floorVertexStart[cells[k]] = start + k * 6; }
+      geo.addGroup(start, count, slotIndex.get(slot));
+      pos.set(b.pos.view(), start * 3); norm.set(b.norm.view(), start * 3); uv.set(b.uv.view(), start * 2); shade.set(b.shade.view(), start * 3);
+      const t = b.tint.view();
+      for (let k = 0; k < t.length; k++) tint[(start + k) * 3] = tint[(start + k) * 3 + 1] = tint[(start + k) * 3 + 2] = t[k];
+      start += count;
     }
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute("normal", new THREE.Float32BufferAttribute(norm, 3));
-    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
-    geo.setAttribute("color", new THREE.Float32BufferAttribute(tint, 3));
-    geo.userData.shadeColor = Float32Array.from(shade); // colours for the untextured view
-    geo.userData.texTint = Float32Array.from(tint);     // brightness multipliers for the textured view
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("normal", new THREE.BufferAttribute(norm, 3));
+    geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+    geo.setAttribute("color", new THREE.BufferAttribute(tint.slice(), 3));
+    geo.userData.shadeColor = shade; // colours for the untextured view
+    geo.userData.texTint = tint;     // brightness multipliers for the textured view
     return geo;
   }
 }
@@ -412,6 +675,28 @@ function buildGeometry(map) {
 
   const floors = new Buckets(), walls = new Buckets(), ceilings = new Buckets(); // ceilings: overhead structures, drawn translucent
   const floorVertexStart = new Int32Array(size * size).fill(-1);
+  // Big maps (cl_lost, 1024): heightfield floors share their corner vertices in indexed meshes, a
+  // vertex per grid corner instead of six per cube, in TILE x TILE tiles so the camera only draws the
+  // tiles in view. Cubes drawn that way have no floorVertexStart (no heatmap).
+  const big = size >= 512, TILE = 128, TV = TILE + 1;
+  const tiles = new Map(); // tile id -> { vert, pos, uv, shade, idx: Map(slot -> FList) }
+  const tCol = new THREE.Color();
+  const tileOf = (x, y) => {
+    const id = (y >> 7) * (size >> 7) + (x >> 7);
+    let t = tiles.get(id);
+    if (!t) tiles.set(id, t = { x0: x & ~(TILE - 1), y0: y & ~(TILE - 1), vert: new Int32Array(TV * TV).fill(-1), pos: new FList(), uv: new FList(), shade: new FList(), idx: new Map() });
+    return t;
+  };
+  const tVertex = (t, vx, vy, h) => {
+    const k = (vy - t.y0) * TV + (vx - t.x0);
+    let v = t.vert[k];
+    if (v >= 0 && t.pos.a[v * 3 + 1] === Math.fround(h)) return v;
+    v = t.pos.length / 3;
+    t.pos.push(vx, h, vy); t.uv.push(vx, vy);
+    tCol.copy(shade(FLOOR_LOW, FLOOR_HIGH, h)); t.shade.push(tCol.r, tCol.g, tCol.b);
+    if (t.vert[k] < 0) t.vert[k] = v;
+    return v;
+  };
   const c = new THREE.Color();
   const pushShade = (b, col, n = 6, tint = 1) => { for (let v = 0; v < n; v++) { b.shade.push(col.r, col.g, col.b); b.tint.push(tint); } };
 
@@ -542,6 +827,13 @@ function buildGeometry(map) {
       const f = cubes.floor[i], cl = cubes.ceil[i];
       // floor quad: corners (x,y) (x+1,y) (x,y+1) (x+1,y+1) in AC space
       const h00 = cornerFloor(i, x, y), h10 = cornerFloor(i, x + 1, y), h01 = cornerFloor(i, x, y + 1), h11 = cornerFloor(i, x + 1, y + 1);
+      if (big && cubes.type[i] === CUBE.FHF) {
+        const t = tileOf(x, y);
+        const a = tVertex(t, x, y, h00), b = tVertex(t, x + 1, y, h10), d = tVertex(t, x, y + 1, h01), e = tVertex(t, x + 1, y + 1, h11);
+        let list = t.idx.get(cubes.ftex[i]);
+        if (!list) t.idx.set(cubes.ftex[i], list = new FList(Int32Array));
+        list.push(a, d, b, b, d, e); // the same winding as the quads below
+      } else {
       const fb = floors.get(cubes.ftex[i]);
       fb.cells.push(i);
       // three: (x, h, y). Two triangles, counter-clockwise seen from above. UVs in cube units (rendercubes.cpp render_flat).
@@ -554,6 +846,7 @@ function buildGeometry(map) {
       c.copy(shade(FLOOR_LOW, FLOOR_HIGH, (h00 + h11) / 2));
       if (cubes.type[i] === CUBE.CORNER) c.multiplyScalar(0.85);
       pushShade(fb, c);
+      }
 
       // walls to the four neighbours
       for (const s of sidesOf(x, y)) {
@@ -599,10 +892,21 @@ function buildGeometry(map) {
   };
   const cornerCeil = (i, cx, cy) => cubes.type[i] === CUBE.CHF ? cubes.ceil[i] + vd(cx, cy) : cubes.ceil[i];
   let overhead = 0;
+  // Walk mode shows every ceiling as the game does (the underside, opaque);
+  // only the overview leaves rooms open from above.
+  const roofs = new Buckets();
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const i = idx(x, y);
       if (cubes.type[i] === CUBE.SOLID || cubes.ctex[i] === SKY) continue;
+      {
+        const r = roofs.get(cubes.ctex[i]);
+        const h00 = cornerCeil(i, x, y), h10 = cornerCeil(i, x + 1, y), h01 = cornerCeil(i, x, y + 1), h11 = cornerCeil(i, x + 1, y + 1);
+        r.pos.push(x, h00, y, x + 1, h10, y, x, h01, y + 1, x + 1, h10, y, x + 1, h11, y + 1, x, h01, y + 1);
+        r.uv.push(x, y, x + 1, y, x, y + 1, x + 1, y, x + 1, y + 1, x, y + 1);
+        for (let v = 0; v < 6; v++) r.norm.push(0, -1, 0);
+        pushShade(r, shade(WALL_LOW, WALL_HIGH, cubes.ceil[i]));
+      }
       if (span(x, y, 1, 0) > SPAN_MAX && span(x, y, 0, 1) > SPAN_MAX) continue;
       overhead++;
       const b = ceilings.get(cubes.ctex[i]);
@@ -623,11 +927,33 @@ function buildGeometry(map) {
   console.log(`[viewer] overhead ceilings drawn: ${overhead} cubes`);
 
   // One material per used slot, shared by both geometries.
-  const slots = [...new Set([...floors.by.keys(), ...walls.by.keys(), ...ceilings.by.keys()])].sort((a, b) => a - b);
+  const slots = [...new Set([...floors.by.keys(), ...walls.by.keys(), ...ceilings.by.keys(), ...roofs.by.keys(), ...[...tiles.values()].flatMap((t) => [...t.idx.keys()])])].sort((a, b) => a - b);
   const slotIndex = new Map(slots.map((s, k) => [s, k]));
   const floor = floors.build(slotIndex, floorVertexStart);
   const wallGeo = walls.build(slotIndex, null);
   const ceilGeo = ceilings.build(slotIndex, null);
+  const roofGeo = roofs.build(slotIndex, null);
+  const terrain = [];
+  let tVerts = 0, tTris = 0;
+  for (const t of tiles.values()) {
+    let total = 0;
+    for (const l of t.idx.values()) total += l.length;
+    const index = new Uint32Array(total), geo = new THREE.BufferGeometry();
+    let at = 0;
+    for (const [slot, l] of t.idx) { index.set(l.view(), at); geo.addGroup(at, l.length, slotIndex.get(slot)); at += l.length; }
+    geo.setIndex(new THREE.BufferAttribute(index, 1));
+    geo.setAttribute("position", new THREE.BufferAttribute(t.pos.view().slice(), 3));
+    geo.setAttribute("uv", new THREE.BufferAttribute(t.uv.view().slice(), 2));
+    const ones = new Float32Array(t.pos.length).fill(1);
+    geo.setAttribute("color", new THREE.BufferAttribute(ones.slice(), 3));
+    geo.userData.shadeColor = t.shade.view().slice();
+    geo.userData.texTint = ones;
+    geo.computeVertexNormals();
+    geo.computeBoundingSphere();
+    terrain.push(geo);
+    tVerts += t.pos.length / 3; tTris += total / 3;
+  }
+  if (terrain.length) console.log(`[viewer] terrain: ${terrain.length} tiles, ${tVerts} vertices, ${tTris} triangles`);
 
-  return { floor, walls: wallGeo, ceilings: ceilGeo, slots, floorVertexStart, bounds: { minX, maxX, minY, maxY, minH, maxH } };
+  return { floor, walls: wallGeo, ceilings: ceilGeo, roofs: roofGeo, terrain, slots, floorVertexStart, bounds: { minX, maxX, minY, maxY, minH, maxH } };
 }

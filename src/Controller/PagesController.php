@@ -135,7 +135,7 @@ class PagesController extends AppController
         if ($page === 'about') {
             // "What's new" (config/changelog.php), newest first
             Configure::load('changelog');
-            $this->set('changelog', Configure::read('Changelog', []));
+            $this->set('changelog', array_values(array_filter(Configure::read('Changelog', []), fn($e) => empty($e['hidden']))));
         }
 
         $this->set(compact('page', 'subpage'));

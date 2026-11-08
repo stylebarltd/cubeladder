@@ -12,7 +12,7 @@
 import { CUBE, ENT } from "./cgz.js";
 
 export const PLAYER_HEIGHT = 5.2; // standing: eyeheight 4.5 + aboveeye 0.7 (physics.cpp playerheight); crouching is not modelled
-export const JUMP_STEP = 2.0;     // guess: walking climbs 1.26 (physics.cpp "rise thru stair"), a jump roughly 2 cubes
+export const JUMP_STEP = 4.0;     // a jump lifts the feet 3.18 (AC physics.cpp, simulated) + STAIR_RISE in the air: the common 4-cube boxes
 const STAIR_RISE = 1.26;          // physics.cpp: height a moving player steps up without jumping
 const MINBORD = 2;                // outer two cubes are always solid (world.h)
 

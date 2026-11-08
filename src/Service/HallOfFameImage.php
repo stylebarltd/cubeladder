@@ -129,7 +129,8 @@ class HallOfFameImage
     /** A random player photo from webroot/img/players (not in git), or null */
     public static function randomBackground(): ?string
     {
-        $files = glob(WWW_ROOT . 'img/players/*.jpg') ?: [];
+        // not the small QR hunt avatars (explorer, legend, uploads)
+        $files = array_values(array_filter(glob(WWW_ROOT . 'img/players/*.jpg') ?: [], fn($f) => !QrHunt::isHuntAvatar(basename($f))));
 
         return $files ? $files[array_rand($files)] : null;
     }

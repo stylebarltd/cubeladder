@@ -7,15 +7,12 @@ use Cake\Cache\Cache;
 use Cake\Core\Configure;
 
 /**
- * "On air": is a game going on anywhere - our servers (own + clan / inter,
- * Ladder.servers) first, then every other public AssaultCube server (like
- * "Elsewhere" on the Live page)? Drives the green dot on "Live" in the nav.
+ * "On air": is a game going on on our servers (ladder + clan / inter,
+ * Ladder.servers)? Drives the green dot on "Live" in the nav.
  *
  * Cheapest source first: the state files the discord_live cron rewrites
  * every few seconds (both feeds). When they are stale (cron not running,
- * e.g. locally) our servers are polled directly; other servers come from
- * the master server list. Polls are cached in "live_slow" (30 s), the master
- * list in "live_others" (60 s, see others()).
+ * e.g. locally) our servers are polled directly, cached in "live_slow" (30 s).
  */
 class LiveStatusService
 {
@@ -49,55 +46,7 @@ class LiveStatusService
             return ['live' => true, 'players' => $players, 'server' => $servers[$key]['name'] ?? $key];
         }
 
-        // nothing on our servers: any other public server?
-        if ($poll) {
-            $other = $this->busiestElsewhere();
-            if ($other && $other['players'] >= self::MIN_PLAYERS) {
-                return ['live' => true] + $other;
-            }
-        }
-
         return ['live' => false, 'players' => 0, 'server' => null];
-    }
-
-    /**
-     * The other public servers from the master list (ours and the clan match
-     * servers excluded), extinfo results keyed "ip:port". Polled at most once a
-     * minute (cache "live_others") for the Live page and the "on air" check together.
-     *
-     * @return array<string, array>
-     */
-    public static function others(): array
-    {
-        return Cache::remember('others', function () {
-            // master list entries are "ip:port"; resolve our own hosts so none
-            // of our servers is polled again under its address
-            $ownAddr = [];
-            foreach (Configure::read('Ladder.servers') ?: [] as $cfg) {
-                $ownAddr[gethostbyname($cfg['host']) . ':' . (int)$cfg['port']] = true;
-            }
-            $targets = array_diff_key((new AcMasterServerService())->servers(), $ownAddr);
-
-            return (new AcExtInfoService())->queryMany($targets);
-        }, 'live_others');
-    }
-
-    /**
-     * Busiest other public server from the master list (ours excluded).
-     *
-     * @return array{players: int, server: string}|null
-     */
-    private function busiestElsewhere(): ?array
-    {
-        $best = null;
-        foreach (self::others() as $key => $info) {
-            $n = !empty($info['online']) ? (int)$info['numplayers'] : 0;
-            if ($n > ($best['players'] ?? 0)) {
-                $best = ['players' => $n, 'server' => trim((string)($info['description'] ?? '')) ?: $key];
-            }
-        }
-
-        return $best;
     }
 
     /**

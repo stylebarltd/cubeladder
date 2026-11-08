@@ -49,7 +49,7 @@ class DiscordUpdateCommand extends Command
     public function execute(Arguments $args, ConsoleIo $io): ?int
     {
         Configure::load('changelog');
-        $entries = Configure::read('Changelog', []);
+        $entries = array_values(array_filter(Configure::read('Changelog', []), fn($e) => empty($e['hidden'])));
         $entry = $entries[max(1, (int)$args->getOption('entry')) - 1] ?? null;
         if (!$entry) {
             $io->err('No such changelog entry');
