@@ -60,7 +60,7 @@ return [
             'link' => '/run',
             'items' => [
                 '**4 codes - Special stats:** your K/D week by week for the last 26 weeks, your accuracy over time (measured since Oct 2026), your best and worst maps and **your hours**: by weekday and time of day, in your own time zone. Open it with "Special stats" next to Nemesis on your profile; everyone can see it once you have unlocked it.',
-                '**5 codes - Explorer avatars:** 45 new avatars that only QR hunters can pick, in their own group on your profile settings page.',
+                '**5 codes - Explorer avatars:** 44 new avatars that only QR hunters can pick, in their own group on your profile settings page.',
                 '**6 codes - Weapon colours:** tint your weapon icons on your profile, in the rankings, the Hall of Fame and your hover card. Pick from 9 colours on your profile settings page.',
                 'The hunt levels have names now: Explorer, Temple Raider, Relic Hunter, Castaway, Dharma Recruit and Island Survivor.',
             ],

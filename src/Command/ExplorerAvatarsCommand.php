@@ -12,7 +12,8 @@ use Cake\Console\ConsoleOptionParser;
 /**
  * The QR hunt avatar sets, 400x400 JPGs in webroot/img/players:
  * - explorer avatars (unlock 'avatars1', 5 points): the illustrated portraits
- *   img/illustrated_players/ai-generated-*.png as explorer-01.jpg .. explorer-NN.jpg;
+ *   img/illustrated_players/ai-generated-*.png as explorer-01.jpg .. explorer-NN.jpg,
+ *   except those that are also last avatars (same picture in img/legend_players);
  * - the last avatars (unlock 'avatars2', 10 points, every code): every picture
  *   in their own folder img/legend_players/ (png, jpg, webp) as
  *   legend-01.jpg .. legend-NN.jpg, on a dark gold ground with a gold ring and
@@ -66,9 +67,24 @@ class ExplorerAvatarsCommand extends Command
             mkdir($dst, 0775, true);
         }
 
+        // a picture that is also one of the last avatars (img/legend_players, same content) is not an explorer
+        // avatar: skipped, and an earlier build of it removed; the others keep their numbers
+        $legend = [];
+        foreach (glob(WWW_ROOT . 'img' . DS . 'legend_players' . DS . '*') ?: [] as $f) {
+            if (is_file($f)) {
+                $legend[(string)sha1_file($f)] = true;
+            }
+        }
         $built = 0;
         foreach ($sources as $i => $file) {
             $target = $dst . sprintf('%s%02d.jpg', QrHunt::EXPLORER_AVATAR_PREFIX, $i + 1);
+            if (isset($legend[(string)sha1_file($file)])) {
+                if (is_file($target)) {
+                    unlink($target);
+                    $io->out(basename($target) . ' removed: ' . basename($file) . ' is one of the last avatars');
+                }
+                continue;
+            }
             if (!$args->getOption('force') && is_file($target)) {
                 continue;
             }
