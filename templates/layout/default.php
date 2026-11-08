@@ -92,10 +92,6 @@
                     <a href="/play" class="hidden md:inline-block p-2 hover:text-zinc-500 transition" title="Aim trainer" aria-label="Aim trainer">
                         <i class="fa-solid fa-crosshairs"></i>
                     </a>
-                    <!-- Radar, the map quiz (desktop; in the menu on phones) -->
-                    <a href="/radar" class="hidden md:inline-block p-2 hover:text-zinc-500 transition" title="Radar: which map is this?" aria-label="Radar">
-                        <i class="fa-solid fa-satellite-dish"></i>
-                    </a>
 
                     <!-- Search -->
                     <button class="p-2 hover:text-zinc-500 transition" id="search-btn" aria-label="Search players">
@@ -202,7 +198,6 @@
                 </a>
                 <a href="/maps" class="block px-3 py-2 hover:bg-zinc-600 rounded-md">Maps</a>
                 <a href="/play" class="hidden md:flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-crosshairs"></i> Aim trainer</a><!-- the game is not played on phones -->
-                <a href="/radar" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-satellite-dish"></i> Radar &ndash; which map?</a>
 
                 <a href="/stats" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-users"></i> Community stats</a>
                 <a href="/about" class="flex items-center gap-2 px-3 py-2 hover:bg-zinc-600 rounded-md"><i class="fa-solid fa-circle-question"></i> About, rules &amp; what's new</a>
