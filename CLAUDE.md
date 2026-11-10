@@ -70,6 +70,11 @@ merge players, mark a game inaccurate. Read the source before running one.
   `stars.js` draws a `stardome` line as a sky of players from `/run/stars` (cached in `rankings`, cleared on import;
   per star only country, games, rating; names only for the top 10 and the visitor). `lidzone` lines mark a stone layer
   (cl_cube's star chamber over its maze) that light and sound do not pass.
+- **Flag run fair play** (`FlagRun::checkTrace`): minimum time = straight line flag to flag and back at
+  `ROUTE_SPEED`, not the walk-grid route (good players beat that; a valid sub-9 s ac_favela run was refused,
+  2026-11-10). The path must not stand in or cross solid cubes: `webroot/map3d/maps/flagrun-walls.json`, built by
+  `node tools/flagrun/walls.mjs`; re-run it after adding or changing a flag map. Like the maps folder it is not in
+  git: upload it with the deploy (without it the wall check is skipped).
 - **PHPUnit doesn't run** (checked 2026-10-19): the test bootstrap migrates the SQLite
   test DB and fails in `CreateWebVisits` ("no such table: main.players"). Verify
   changes in the browser until that's fixed.

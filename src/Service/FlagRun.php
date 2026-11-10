@@ -19,7 +19,11 @@ use Cake\Datasource\ConnectionManager;
  * - the path starts at the own flag, touches the enemy flag and ends at the
  *   own flag (AC's pickup distance, entities.cpp),
  * - no step between two samples is faster than a player can move,
- * - the time is not below the shortest walkable route at top speed.
+ * - the time is not below the straight line flag to flag and back at top speed
+ *   (not the walk grid's route: players cut corners and jump off roofs, and a
+ *   valid 8.x s run on ac_favela was refused by that, 2026-11-10),
+ * - no sample stands in a solid cube and no step passes through one (noclip,
+ *   teleports): flagrun-walls.json, tools/flagrun/walls.mjs.
  * Modes: `flag` (to the enemy flag and back) and `parkour` (the map's fixed
  * course of pickups, in its order, then home: the same course for everyone,
  * so times compare). A parkour path must pass every pickup in order (AC's
@@ -38,6 +42,8 @@ class FlagRun
     public const MAX_SPEED = 32.0;
     /** The fastest a route can be run on average, cubes per second (top speed with jumps) */
     public const ROUTE_SPEED = 24.0;
+    /** How far one step's straight line may run inside solid cubes: the player keeps 1.1 off walls, so a real step only grazes a corner */
+    public const WALL_DEPTH = 1.0;
     /** Server clock vs. the run's time: network and a stalled frame or two */
     public const CLOCK_SLACK_MS = 3000;
     /** A game clock slower than this share of real time is slow motion, not a stall */
@@ -127,7 +133,7 @@ class FlagRun
         if ($timeMs <= 0 || $timeMs > $server + self::CLOCK_SLACK_MS || $timeMs < ($server - self::CLOCK_SLACK_MS) * self::CLOCK_MIN_RATIO) {
             return ['error' => 'The game clock did not keep up with real time (the game ran too fast or too slow).'];
         }
-        $check = self::checkTrace($trace, $timeMs, $map, (string)$run['mode']);
+        $check = self::checkTrace($trace, $timeMs, $map, (string)$run['mode'], (string)$run['map']);
         if ($check !== null) {
             return ['error' => $check];
         }
@@ -214,19 +220,28 @@ class FlagRun
     }
 
     /** Why a path is not a run, or null when it is (see the class comment). */
-    public static function checkTrace(array $trace, int $timeMs, array $map, string $mode = 'flag'): ?string
+    public static function checkTrace(array $trace, int $timeMs, array $map, string $mode = 'flag', ?string $name = null): ?string
     {
         [$error, $pts] = self::parsePath($trace, $timeMs);
         if ($error !== null) {
             return $error;
         }
         $n = count($pts);
-        $route = $mode === 'parkour' ? (float)($map['parkour']['route'] ?? 0) : (float)$map['route'];
-        if ($timeMs < $route / self::ROUTE_SPEED * 1000) {
-            return 'This run is faster than the shortest way allows.';
-        }
         $own = $map['flags']['cla'];
         $enemy = $map['flags']['rvsf'];
+        // the shortest conceivable way: straight lines from target to target (each reached at pickup
+        // distance), at top speed. The walk grid's route is longer than what good players run.
+        $stops = array_merge([$own], $mode === 'parkour' ? array_values($map['parkour']['items'] ?? []) : [$enemy], [$own]);
+        $least = 0.0;
+        for ($i = 1; $i < count($stops); $i++) {
+            $least += max(0.0, hypot($stops[$i]['x'] - $stops[$i - 1]['x'], $stops[$i]['y'] - $stops[$i - 1]['y']) - 2 * self::REACH);
+        }
+        if ($timeMs < $least / self::ROUTE_SPEED * 1000) {
+            return 'This run is faster than the shortest way allows.';
+        }
+        if ($name !== null && ($wall = self::throughWall($pts, $name)) !== null) {
+            return $wall;
+        }
         $near = fn(array $p, array $f) => hypot($p[1] - $f['x'], $p[2] - $f['y']) <= self::REACH && abs($p[3] - $f['z']) <= 6;
         if (!$near($pts[0], $own) || !$near($pts[$n - 1], $own)) {
             return 'This run does not start and end at your flag.';
@@ -244,6 +259,72 @@ class FlagRun
         }
 
         return null;
+    }
+
+    /**
+     * Why the path is impossible on the map's walls, or null: a sample inside a solid cube,
+     * or a step whose straight line runs more than WALL_DEPTH inside solid cubes.
+     *
+     * @param list<array{0:int,1:float,2:float,3:float}> $pts
+     */
+    public static function throughWall(array $pts, string $name): ?string
+    {
+        $walls = self::walls($name);
+        if ($walls === null) {
+            return null;   // no wall data for this map: the other checks still apply
+        }
+        $prev = null;
+        foreach ($pts as $p) {
+            if (self::solidAt($walls, $p[1], $p[2])) {
+                return 'This run goes through a wall.';
+            }
+            if ($prev !== null) {
+                $len = hypot($p[1] - $prev[1], $p[2] - $prev[2]);
+                $steps = (int)ceil($len / 0.1);
+                $inside = 0;
+                for ($k = 1; $k < $steps; $k++) {
+                    $f = $k / $steps;
+                    if (self::solidAt($walls, $prev[1] + ($p[1] - $prev[1]) * $f, $prev[2] + ($p[2] - $prev[2]) * $f)) {
+                        if (++$inside * $len / $steps > self::WALL_DEPTH) {
+                            return 'This run goes through a wall.';
+                        }
+                    } else {
+                        $inside = 0;
+                    }
+                }
+            }
+            $prev = $p;
+        }
+
+        return null;
+    }
+
+    /** @return array{0:int, 1:string}|null [sfactor, one bit per cube] from flagrun-walls.json */
+    private static function walls(string $name): ?array
+    {
+        static $all = null;
+        if ($all === null) {
+            $file = WWW_ROOT . 'map3d/maps/flagrun-walls.json';
+            $all = is_file($file) ? (json_decode((string)file_get_contents($file), true) ?: []) : [];
+        }
+        if (!isset($all[$name]['solid'])) {
+            return null;
+        }
+
+        return [(int)$all[$name]['sfactor'], (string)base64_decode($all[$name]['solid'])];
+    }
+
+    private static function solidAt(array $walls, float $x, float $y): bool
+    {
+        [$sf, $bits] = $walls;
+        $cx = (int)floor($x);
+        $cy = (int)floor($y);
+        if ($cx < 0 || $cy < 0 || $cx >= (1 << $sf) || $cy >= (1 << $sf)) {
+            return true;
+        }
+        $i = ($cy << $sf) + $cx;
+
+        return ((ord($bits[$i >> 3]) >> ($i & 7)) & 1) === 1;
     }
 
     public static function weekStart(): string

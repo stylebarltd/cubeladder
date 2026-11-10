@@ -8,6 +8,15 @@ return [
     'Changelog' => [
         [
             'date' => '2026-11-10',
+            'title' => 'Flag run: fast runs count, wall cheats do not',
+            'link' => '/run',
+            'items' => [
+                '**Fast runs count now.** The flag run refused times below a minimum taken from the walking route, and good runners beat that minimum for real, with corner cuts and jumps off the roofs. On ac_favela a fair run under 9 seconds was turned away. The minimum is now the straight line from flag to flag and back at top speed. Thanks for the video!',
+                '**Through walls no longer counts.** Every run is now checked against the map\'s walls: a run that stands in or passes through a wall is refused, however fast it is.',
+            ],
+        ],
+        [
+            'date' => '2026-11-10',
             'title' => 'QR hunt: see who found the codes',
             'link' => '/run',
             'items' => [
