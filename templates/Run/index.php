@@ -15,6 +15,8 @@
  * @var string|null $linkCode
  * @var int $qrLevel
  * @var array $qrUnlocks QrHunt::UNLOCKS
+ * @var list<array> $qrHunters QrHunt::hunters(): players with finds, most first
+ * @var int $qrTotal codes hidden now
  * @var \App\Model\Entity\Player|null $authPlayer
  */
 use App\Service\Aim3D;
@@ -148,6 +150,21 @@ $csrf = (string)$this->request->getAttribute('csrfToken');
       </ul>
       <p class="muted">Hint: the rifle's recoil pushes you &ndash; shoot at the ground while you jump to get onto higher edges.
         <?= $authPlayer ? '' : 'Scanning works as a guest too: the code page tells you how to link your name.' ?></p>
+      <h3 style="margin-top:14px"><span>QR hunters</span> <small><?= count($qrHunters) ?> <?= count($qrHunters) === 1 ? 'player' : 'players' ?> &middot; <?= (int)$qrTotal ?> codes hidden</small></h3>
+      <?php if ($qrHunters): ?>
+      <table><thead><tr><th class="l">#</th><th class="l">Player</th><th class="l">Level</th><th>Codes</th></tr></thead><tbody>
+        <?php foreach ($qrHunters as $i => $h): ?>
+        <tr class="<?= $authPlayer && $h['player_id'] === (string)$authPlayer->id ? 'me' : '' ?>">
+          <td class="n"><?= $i + 1 ?></td>
+          <td><a href="<?= h($this->Url->build(['controller' => 'Players', 'action' => 'view', $h['player_id']])) ?>" style="color:inherit"><?= h($h['name']) ?></a> <?= $this->Layout->flag($h['country']) ?></td>
+          <td class="muted"><?= h((string)QrHunt::levelName($h['level'])) ?></td>
+          <td class="t"><?= (int)$h['level'] ?></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody></table>
+      <?php else: ?>
+      <p class="muted">Nobody has found a code yet. Be the first.</p>
+      <?php endif; ?>
     </div>
   </div>
 </div></div>

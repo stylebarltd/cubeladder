@@ -39,8 +39,11 @@ class RunController extends AppController
             }
         }
         $player = $this->request->getAttribute('identity');
-        $qrLevel = $player ? (new QrHunt())->level((string)$player->id) : 0;
+        $hunt = new QrHunt();
+        $qrLevel = $player ? $hunt->level((string)$player->id) : 0;
         $qrUnlocks = QrHunt::UNLOCKS;
+        $qrHunters = $hunt->hunters(50);   // who found codes so far, and how many
+        $qrTotal = $hunt->total();
         // not recognised: a code to say in a game (PlayerLink, as on /play), kept in a cookie until it matches
         $linkCode = null;
         if (!$this->request->getAttribute('identity')) {
@@ -53,7 +56,7 @@ class RunController extends AppController
                     ->withSecure($this->request->is('https'))->withHttpOnly(true)->withSameSite(SameSiteEnum::LAX));
             }
         }
-        $this->set(compact('tabs', 'linkCode', 'qrLevel', 'qrUnlocks'));
+        $this->set(compact('tabs', 'linkCode', 'qrLevel', 'qrUnlocks', 'qrHunters', 'qrTotal'));
     }
 
     public function start()

@@ -7,6 +7,14 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-11-10',
+            'title' => 'QR hunt: see who found the codes',
+            'link' => '/run',
+            'items' => [
+                '**QR hunters** on /run: the QR hunt tab now lists every player who found codes, with their level and how many of the 10 they have. Most codes first; on a tie, whoever got there first.',
+            ],
+        ],
+        [
             'date' => '2026-11-08',
             'title' => 'AssaultCube in your browser: the QR hunt is open',
             'link' => '/run',
