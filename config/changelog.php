@@ -7,6 +7,14 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-11-11',
+            'title' => 'xrd.me match server on the Live page',
+            'link' => '/live',
+            'items' => [
+                '**xrd.me 5000 match** now shows on /live with the clan match servers: who is playing, the map and the score, live.',
+            ],
+        ],
+        [
             'date' => '2026-11-10',
             'title' => 'Flag run: fast runs count, wall cheats do not',
             'link' => '/run',

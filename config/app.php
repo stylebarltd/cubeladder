@@ -554,6 +554,7 @@ return [
             'mys-1111'  => ['name' => 'MyS 1111',  'host' => 'mysick.org',   'port' => 1111, 'live' => false],
             'mys-2222'  => ['name' => 'MyS 2222',  'host' => 'mysick.org',   'port' => 2222, 'live' => false],
             'mys-3333'       => ['name' => 'MyS 3333',           'host' => 'mysick.org',   'port' => 3333, 'live' => false],
+            'xrd-5000'       => ['name' => 'xrd.me 5000 match',  'host' => 'xrd.me',       'port' => 5000, 'live' => false],
         ],
 
         /*
