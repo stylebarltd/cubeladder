@@ -5,7 +5,8 @@
 #
 # Gateway (see the handover from the Vortex admin):
 #   GET /servers                 -> {"servers": [id, ...], "cursor": next page or null}
-#   GET /files?server=ID         -> {"logs": [{"filename", "path"}, ...]} (oldest first)
+#   GET /files?server=ID[&cursor=C] -> {"logs": [{"filename", "path"}, ...], "cursor": next page or null}
+#                                   (oldest first, 100 per page: follow the cursor to the newest)
 #   GET /logfile/ID/FILENAME     -> the complete log; the newest one keeps growing
 # Auth: "Authorization: Bearer $VORTEX_TOKEN" (.env.local). The offset in
 # log_offsets skips what is imported already, so re-downloading a growing file is fine.
@@ -46,6 +47,10 @@ v_curl() { printf 'header = "Authorization: Bearer %s"\n' "$VORTEX_TOKEN" | curl
 # (its last lines). Nothing older than VORTEX_SINCE (yyyymmdd): the ladder
 # starts there for these servers.
 SINCE="serverlog_${VORTEX_SINCE:-20261024}"
+# how many of the newest logs per server (2 per run; more to catch up once:
+# VORTEX_LAST=50 VORTEX_SINCE=20261104 ./fetch_vortex_logs.sh; games already
+# imported are skipped)
+LAST="${VORTEX_LAST:-2}"
 
 for key in "${!VORTEX_SERVERS[@]}"; do
     id="${VORTEX_SERVERS[$key]}"
@@ -53,15 +58,32 @@ for key in "${!VORTEX_SERVERS[@]}"; do
     echo "Processing server: $key (Vortex gateway, $id)"
     echo "==============================="
 
-    if ! listing=$(v_curl --max-time 30 "$GATEWAY/files?server=$id" 2>&1); then
-        echo "Vortex listing failed for $key: $(echo "$listing" | tail -n 1)" >> "$LOGFILE"
+    # every page of the listing (the gateway pages it, oldest first)
+    all="" cursor="" page=0 failed=""
+    while :; do
+        url="$GATEWAY/files?server=$id"
+        [[ -n "$cursor" ]] && url="$url&cursor=$(php -r 'echo rawurlencode($argv[1]);' "$cursor")"
+        if ! listing=$(v_curl --max-time 30 "$url" 2>&1); then
+            failed="$(echo "$listing" | tail -n 1)"
+            break
+        fi
+        # "filename<TAB>path" per log, then the next cursor on a line of its own ("-" at the end)
+        page_out=$(printf '%s' "$listing" | php -r '
+            $d = json_decode(stream_get_contents(STDIN), true);
+            foreach ($d["logs"] ?? [] as $l) echo $l["filename"], "\t", $l["path"], "\n";
+            echo "#cursor ", ($d["cursor"] ?? null) ?: "-", "\n";')
+        all+=$(printf '%s\n' "$page_out" | grep -v '^#cursor ' || true)$'\n'
+        cursor=$(printf '%s\n' "$page_out" | sed -n 's/^#cursor //p')
+        page=$((page + 1))
+        [[ "$cursor" == "-" || -z "$cursor" || $page -ge 50 ]] && break
+    done
+    if [[ -n "$failed" && -z "$all" ]]; then
+        echo "Vortex listing failed for $key: $failed" >> "$LOGFILE"
         continue
     fi
-    # "filename<TAB>path" per log, newest two that are not older than SINCE
-    files=$(printf '%s' "$listing" | php -r '
-        $d = json_decode(stream_get_contents(STDIN), true);
-        foreach ($d["logs"] ?? [] as $l) echo $l["filename"], "\t", $l["path"], "\n";' \
-        | sort | awk -F'\t' -v since="$SINCE" '$1 >= since' | tail -n 2 || true)
+    [[ -n "$failed" ]] && echo "Vortex listing for $key stopped at page $((page + 1)): $failed" >> "$LOGFILE"
+    # the newest LAST logs that are not older than SINCE
+    files=$(printf '%s' "$all" | grep -v '^$' | sort -u | awk -F'\t' -v since="$SINCE" '$1 >= since' | tail -n "$LAST" || true)
 
     if [[ -z "$files" ]]; then
         echo "No log file found on the Vortex gateway for $key" >> "$LOGFILE"
