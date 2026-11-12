@@ -1258,6 +1258,11 @@ $gamesDataGlobal = [];        // games inside lastGameIds
             return $this->redirect(['action' => 'index']);
         }
 
+        // an admin's decision (App\Service\Blacklist) is not the player's to undo
+        if (!empty($player->admin_status)) {
+            $this->Flash->error('An admin has taken this profile off the ladder - write to the admin if you think that is wrong.');
+            return $this->redirect(['action' => 'profile']);
+        }
         $player->track = $this->request->getData('dont_track') ? 0 : 1;
         $this->Players->saveOrFail($player);
         \Cake\Cache\Cache::clear('rankings');

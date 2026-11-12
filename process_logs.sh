@@ -128,6 +128,11 @@ done
 # Vortex servers (logs via their Cloudflare gateway): fetch_vortex_logs.sh
 "$BASE_DIR/fetch_vortex_logs.sh" || echo "fetch_vortex_logs.sh failed!" >> "$LOGFILE"
 
+echo "➡ Blacklist"
+if ! "$BASE_DIR/bin/cake" blacklist >> "$LOGFILE" 2>&1; then
+    echo "Blacklist failed!" >> "$LOGFILE"
+fi
+
 echo "➡ CleanUp"
 if ! "$BASE_DIR/bin/cake" CleanUp >> "$LOGFILE" 2>&1; then
     echo "CleanUp failed!" >> "$LOGFILE"

@@ -136,6 +136,12 @@ class MessagesController extends AppController
             return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
         }
 
+        // blacklisted players write to nobody but the admin (sendToAdmin)
+        if ($sender->admin_status === \App\Service\Blacklist::BLACKLISTED) {
+            $this->Flash->error('Your profile was taken off the ladder: you can only write to the admin.');
+            return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
+        }
+
         if ($sender->id === $receiverId) {
             $this->Flash->error('You cannot send a message to yourself.');
             return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);

@@ -3,7 +3,7 @@
  * Admin area: title and tabs (AdminController).
  *
  * @var \App\View\AppView $this
- * @var string $tab requests | duplicates | messages | merge | suspicious | competitive | visitors | untracked
+ * @var string $tab requests | duplicates | messages | merge | suspicious | competitive | visitors | untracked | blacklist
  */
 $this->assign('title', 'Admin · cubeLadder');
 $tabs = [
@@ -15,6 +15,7 @@ $tabs = [
     'competitive' => ['competitive', 'fa-chess-knight', 'Competitive names'],
     'visitors' => ['visitors', 'fa-chart-simple', 'Visitors'],
     'untracked' => ['untracked', 'fa-eye-slash', 'Not tracked'],
+    'blacklist' => ['blacklist', 'fa-ban', 'Blacklist'],
 ];
 ?>
 <div class="flex flex-wrap items-center justify-between gap-3">

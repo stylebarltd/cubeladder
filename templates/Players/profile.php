@@ -163,6 +163,12 @@
     <!-- Privacy -->
     <div class="mb-10 max-w-2xl rounded-xl border border-zinc-700 bg-zinc-900 p-6">
         <h2 class="text-xl font-semibold mb-3">Privacy</h2>
+        <?php if (!empty($player->admin_status)): ?>
+            <p class="text-sm text-zinc-300">
+                <i class="fa-solid fa-ban mr-1 text-red-300"></i>An admin has taken this profile off the ladder, so it is not tracked.
+                If you think that is wrong, <?= $this->Html->link('write to the admin', ['controller' => 'Messages', 'action' => 'sendToAdmin'], ['class' => 'underline hover:text-blue-300']) ?>.
+            </p>
+        <?php else: ?>
         <?= $this->Form->create(null, ['url' => ['controller' => 'Players', 'action' => 'privacy']]) ?>
             <label class="flex cursor-pointer items-start gap-3">
                 <?= $this->Form->checkbox('dont_track', [
@@ -181,6 +187,7 @@
                 Save
             </button>
         <?= $this->Form->end() ?>
+        <?php endif; ?>
     </div>
 
     <?php if (!empty($legendAvatars)): ?>

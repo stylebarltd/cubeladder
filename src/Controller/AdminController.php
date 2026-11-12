@@ -29,7 +29,7 @@ class AdminController extends AppController
             return $this->redirect(['action' => 'login']);
         }
         // the duplicates form has a checkbox and buttons per row (CSRF still applies)
-        $this->FormProtection->setConfig('unlockedActions', ['pair', 'review', 'competitive']);
+        $this->FormProtection->setConfig('unlockedActions', ['pair', 'review', 'competitive', 'playerStatus', 'blacklist']);
     }
 
     /** bcrypt hash of the admin password: config/admin_password.php (bin/cake admin_password) */
@@ -352,6 +352,67 @@ class AdminController extends AppController
 
         $this->set(compact('players'));
         $this->set('tab', 'untracked');
+    }
+
+    /**
+     * The admin buttons on a player's page: 'untracked', 'blacklisted' or
+     * 'clear' (App\Service\Blacklist). Back to the player's page.
+     */
+    public function playerStatus()
+    {
+        $this->request->allowMethod(['post']);
+        $playerId = (string)$this->request->getData('player_id');
+        $status = (string)$this->request->getData('status');
+        $note = (string)$this->request->getData('note');
+        $bl = new \App\Service\Blacklist();
+        if (!$this->fetchTable('Players')->exists(['id' => $playerId])) {
+            $this->Flash->error('No such player.');
+
+            return $this->redirect(['action' => 'blacklist']);
+        }
+        if ($status === 'clear') {
+            $bl->clear($playerId);
+            $this->Flash->success('Back on the ladder: tracked again, blacklist entries removed. Rating and milestones with the next import.');
+        } elseif ($status === \App\Service\Blacklist::UNTRACKED) {
+            $bl->set($playerId, $status, $note);
+            $this->Flash->success('Not tracked: Anonymous everywhere, page hidden, and the player cannot switch it back.');
+        } elseif ($status === \App\Service\Blacklist::BLACKLISTED) {
+            $listed = $bl->set($playerId, $status, $note, (bool)$this->request->getData('ip'));
+            $this->Flash->success(sprintf('Blacklisted: out of every list on the ladder. %d key(s)%s on the blacklist; rating and milestones with the next import.',
+                $listed['pubkeys'], $listed['ip'] ? ' and the IP' : ''));
+        }
+
+        return $this->redirect(['controller' => 'Players', 'action' => 'view', $playerId]);
+    }
+
+    /**
+     * Blacklisted and untracked players, the list of keys and IPs, and the
+     * profiles on a blacklisted IP to decide on (POST do = block | ok | remove).
+     */
+    public function blacklist()
+    {
+        $bl = new \App\Service\Blacklist();
+        if ($this->request->is('post')) {
+            $do = (string)$this->request->getData('do');
+            $playerId = (string)$this->request->getData('player_id');
+            $source = (string)$this->request->getData('source');
+            if ($do === 'block' && $playerId !== '') {
+                $bl->set($playerId, \App\Service\Blacklist::BLACKLISTED, 'Same IP as ' . $source);
+                $this->Flash->success('Blacklisted.');
+            } elseif ($do === 'ok' && $playerId !== '') {
+                $bl->dismiss($playerId, 'Same IP as blacklisted ' . $source . ', checked: someone else');
+                $this->Flash->success('Marked as someone else: it will not show here again.');
+            } elseif ($do === 'remove') {
+                $bl->remove((int)$this->request->getData('entry_id'));
+                $this->Flash->success('Entry removed (the player keeps their status).');
+            }
+
+            return $this->redirect(['action' => 'blacklist']);
+        }
+        $this->set('players', $bl->players());
+        $this->set('entries', $bl->entries());
+        $this->set('matches', $bl->ipMatches());
+        $this->set('tab', 'blacklist');
     }
 
     public function competitive()

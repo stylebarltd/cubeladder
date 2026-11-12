@@ -75,6 +75,10 @@ merge players, mark a game inaccurate. Read the source before running one.
   2026-11-10). The path must not stand in or cross solid cubes: `webroot/map3d/maps/flagrun-walls.json`, built by
   `node tools/flagrun/walls.mjs`; re-run it after adding or changing a flag map. Like the maps folder it is not in
   git: upload it with the deploy (without it the wall check is skipped).
+- **Blacklist** (`src/Service/Blacklist.php`, admin box on a player's page, Admin -> Blacklist): `players.admin_status`
+  'untracked' (track = 0, locked) or 'blacklisted' (cheater = 1 + track = 0, locked, pubkeys in `blacklist`).
+  `bin/cake blacklist` after ProcessLogs blacklists any profile with a listed pubkey; a listed IP only reports
+  matches for the admin to decide (IPs are shared). Filters still use `track`/`cheater`, nothing else to check.
 - **PHPUnit doesn't run** (checked 2026-10-19): the test bootstrap migrates the SQLite
   test DB and fails in `CreateWebVisits` ("no such table: main.players"). Verify
   changes in the browser until that's fixed.

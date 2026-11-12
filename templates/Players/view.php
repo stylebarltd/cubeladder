@@ -194,9 +194,13 @@ endif;
                     <?= $this->Html->link('<i class="fa-solid fa-pen mr-1"></i> Edit profile',
                         ['controller' => 'Players', 'action' => 'profile'],
                         ['escape' => false, 'class' => 'rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition']) ?>
-                    <?php if ((int)$player->track === 0): ?>
+                    <?php if ($player->admin_status === \App\Service\Blacklist::BLACKLISTED): ?>
+                        <span class="rounded bg-red-500/20 px-2 py-1 text-xs text-red-300">
+                            <i class="fa-solid fa-ban mr-1"></i> Removed from the ladder by an admin &ndash; only you can see this page
+                        </span>
+                    <?php elseif ((int)$player->track === 0): ?>
                         <span class="rounded bg-amber-500/20 px-2 py-1 text-xs text-amber-300">
-                            <i class="fa-solid fa-eye-slash mr-1"></i> Not tracked &ndash; only you can see this page
+                            <i class="fa-solid fa-eye-slash mr-1"></i> Not tracked<?= $player->admin_status ? ' (set by an admin)' : '' ?> &ndash; only you can see this page
                         </span>
                     <?php endif; ?>
                 <?php endif; ?>
@@ -204,12 +208,6 @@ endif;
                     <?= $this->Html->link('<i class="fa-solid fa-envelope mr-1"></i> Send Message',
                         ['controller' => 'Messages', 'action' => 'send', $player->id],
                         ['escape' => false, 'class' => 'rounded-lg border border-blue-400/50 bg-black/40 px-4 py-2 text-sm font-semibold text-blue-300 hover:bg-blue-500/20 transition']) ?>
-                <?php endif; ?>
-                <?php if ($authPlayer && $authPlayer->id != $player->id): ?>
-                    <?= $this->Html->link('<i class="fa-solid fa-code-merge mr-1"></i> This was my profile',
-                        ['controller' => 'Players', 'action' => 'claim', $player->id],
-                        ['escape' => false, 'title' => 'Merge this old profile into yours (an admin checks it)',
-                         'class' => 'rounded-lg border border-white/15 bg-black/40 px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/10 transition']) ?>
                 <?php endif; ?>
                 <?php if ((int)$player->track === 1): ?>
                     <?= $this->element('player_card_share', [
@@ -220,6 +218,46 @@ endif;
                     ]) ?>
                 <?php endif; ?>
             </div>
+            <?php if (!empty($isAdmin)):
+                // admin: take the player off the ladder (App\Service\Blacklist, Admin -> Blacklist)
+                $adminStatus = $player->admin_status;
+                $ipShown = preg_match('/^(\d+\.\d+\.\d+)\.\d+$/', (string)$player->ip, $ipm) ? $ipm[1] . '.x' : '';
+                ?>
+                <div class="mt-4 rounded-lg border border-red-400/30 bg-red-500/5 p-3 text-sm">
+                    <div class="mb-2 text-xs uppercase tracking-wider text-red-300">
+                        <i class="fa-solid fa-shield-halved mr-1"></i>Admin
+                        <?php if ($adminStatus): ?>
+                            &middot; <b><?= $adminStatus === \App\Service\Blacklist::BLACKLISTED ? 'Blacklisted' : 'Not tracked by the admin' ?></b>
+                            <?php if ($player->admin_note): ?><span class="normal-case tracking-normal text-zinc-300"> &ndash; <?= h($player->admin_note) ?></span><?php endif; ?>
+                        <?php elseif ($player->cheater): ?>
+                            &middot; <b>marked cheater (Suspicious)</b>
+                        <?php endif; ?>
+                    </div>
+                    <?= $this->Form->create(null, ['url' => ['controller' => 'Admin', 'action' => 'playerStatus'], 'class' => 'flex flex-wrap items-center gap-2']) ?>
+                        <input type="hidden" name="player_id" value="<?= h($player->id) ?>">
+                        <?php if ($adminStatus !== \App\Service\Blacklist::BLACKLISTED): ?>
+                            <input type="text" name="note" maxlength="500" placeholder="Why (only admins see it)"
+                                   class="w-full rounded-lg border border-white/15 bg-black/40 px-3 py-1.5 text-sm text-white placeholder-zinc-500">
+                            <?php if ($ipShown !== ''): ?>
+                                <label class="flex items-center gap-1.5 text-xs text-zinc-300" title="New profiles on this IP then show up in Admin -> Blacklist for you to decide">
+                                    <input type="checkbox" name="ip" value="1" class="accent-red-600"> also list the IP <?= h($ipShown) ?>
+                                </label>
+                            <?php endif; ?>
+                            <?php if (!$adminStatus): ?>
+                                <button name="status" value="untracked" class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
+                                        title="Anonymous everywhere, page hidden; the player cannot switch it back"><i class="fa-solid fa-eye-slash mr-1"></i>Not tracked</button>
+                            <?php endif; ?>
+                            <button name="status" value="blacklisted" class="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+                                    title="Out of every list on the ladder; same AssaultCube key = blacklisted too"
+                                    onclick="return confirm('Blacklist <?= h(addslashes((string)$player->name)) ?>?')"><i class="fa-solid fa-ban mr-1"></i>Blacklist</button>
+                        <?php endif; ?>
+                        <?php if ($adminStatus): ?>
+                            <button name="status" value="clear" class="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/20"
+                                    onclick="return confirm('Put <?= h(addslashes((string)$player->name)) ?> back on the ladder?')"><i class="fa-solid fa-rotate-left mr-1"></i>Undo</button>
+                        <?php endif; ?>
+                    <?= $this->Form->end() ?>
+                </div>
+            <?php endif; ?>
         </div>
         </div>
         </div>

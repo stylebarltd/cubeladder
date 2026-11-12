@@ -7,6 +7,15 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-11-12',
+            'title' => 'Cheaters off the ladder, for good',
+            'items' => [
+                '**Blacklist:** a player caught cheating is taken off the ladder completely: no rankings, Hall of Fame, rating, milestones, achievements or run boards, Anonymous in games, on /live and on Discord. Their games still count for everyone who played against them.',
+                '**A new name does not help:** a new profile with the same AssaultCube key is blacklisted by the next import.',
+                '**Profile pages:** the "This was my profile" button is gone. To join an old profile with yours, write to the admin.',
+            ],
+        ],
+        [
             'date' => '2026-11-11',
             'title' => 'xrd match server on the Live page',
             'link' => '/live',
