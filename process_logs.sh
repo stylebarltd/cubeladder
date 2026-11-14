@@ -178,3 +178,9 @@ echo "➡ DiscordResults"
 if ! "$BASE_DIR/bin/cake" discord_results >> "$LOGFILE" 2>&1; then
     echo "DiscordResults failed!" >> "$LOGFILE"
 fi
+
+echo "➡ DiscordWelcome"
+# start-here message: the QR hunters line, edited only when it changed
+if ! "$BASE_DIR/bin/cake" discord_welcome --if-changed >> "$LOGFILE" 2>&1; then
+    echo "DiscordWelcome failed!" >> "$LOGFILE"
+fi
