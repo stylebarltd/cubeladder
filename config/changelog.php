@@ -7,6 +7,14 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-11-15',
+            'title' => 'Two pioac.eu match servers',
+            'link' => '/live',
+            'items' => [
+                '**pioac.eu 5000 and 6000** are on /live with the clan match servers, and their games count for the competitive ladder.',
+            ],
+        ],
+        [
             'date' => '2026-11-12',
             'title' => 'Cheaters off the ladder, for good',
             'items' => [

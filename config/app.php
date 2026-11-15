@@ -526,7 +526,11 @@ return [
 
         // Competitive ladder (/competitive): open to everyone, but not linked
         // anywhere on purpose (only the admin nav knows the page).
-        'competitive' => ['public' => true],
+        'competitive' => [
+            'public' => true,
+            // the clan match servers whose games count (CompetitiveTracker)
+            'servers' => ['mys-1111', 'mys-2222', 'mys-3333', 'pioac-5000', 'pioac-6000'],
+        ],
 
         // /privacy: the privacy contact (an OVH mail redirect)
         'privacy' => ['email' => 'privacy@cubeladder.ovh'],
@@ -555,6 +559,8 @@ return [
             'mys-2222'  => ['name' => 'MyS 2222',  'host' => 'mysick.org',   'port' => 2222, 'live' => false],
             'mys-3333'       => ['name' => 'MyS 3333',           'host' => 'mysick.org',   'port' => 3333, 'live' => false],
             'xrd-5000'       => ['name' => 'xrd',                'host' => 'xrd.me',       'port' => 5000, 'live' => false],
+            'pioac-5000'     => ['name' => 'pioac 5000',         'host' => 'pioac.eu',     'port' => 5000, 'live' => false],
+            'pioac-6000'     => ['name' => 'pioac 6000',         'host' => 'pioac.eu',     'port' => 6000, 'live' => false],
         ],
 
         /*
@@ -642,7 +648,7 @@ return [
                 ],
                 'mys' => [
                     'webhook' => env('DISCORD_MYS_WEBHOOK'),
-                    'servers' => ['mys-1111', 'mys-2222', 'mys-3333'],
+                    'servers' => ['mys-1111', 'mys-2222', 'mys-3333', 'pioac-5000', 'pioac-6000'],
                     'title' => 'MyS Inter – live servers',
                     'brand' => 'MyS Inter',
                     // inter: spectators are people waiting for a mix – name them
