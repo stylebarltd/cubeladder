@@ -7,6 +7,14 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-11-16',
+            'title' => 'See a live game from any tab',
+            'link' => '/live',
+            'items' => [
+                '**The browser tab tells you:** while a game is on, a cubeLadder tab shows a green dot on its icon and the number of players in its title, like "(6) Rankings". Handy when the site sits among many open tabs.',
+            ],
+        ],
+        [
             'date' => '2026-11-15',
             'title' => 'Two pioac.eu match servers',
             'link' => '/live',

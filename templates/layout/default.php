@@ -300,6 +300,45 @@
     // "On air" dot on Live: refresh every 30 s (cheap, cached server side)
     (function () {
         const links = document.querySelectorAll('.js-onair-link');
+
+        // The browser tab shows it too: a green dot on the icon and "(6) " before the title
+        const icons = [...document.querySelectorAll('link[rel~="icon"]')];
+        icons.forEach(l => { l.dataset.href = l.href; l.dataset.type = l.type; });
+        let liveIcon = null;
+        function makeLiveIcon() {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        const c = document.createElement('canvas');
+                        c.width = c.height = 64;
+                        const g = c.getContext('2d');
+                        g.drawImage(img, 0, 0, 64, 64);
+                        g.beginPath();
+                        g.arc(48, 48, 15, 0, 2 * Math.PI);
+                        g.fillStyle = '#4ade80';   // green-400, like the Live link
+                        g.fill();
+                        g.lineWidth = 5;
+                        g.strokeStyle = '#0b1225'; // theme colour, so the dot stands off the icon
+                        g.stroke();
+                        resolve(c.toDataURL('image/png'));
+                    } catch (e) { resolve(null); }
+                };
+                img.onerror = () => resolve(null);
+                img.src = '/android-chrome-192x192.png';
+            });
+        }
+        async function showInTab(s) {
+            const title = document.title.replace(/^\(\d+\) /, '');
+            document.title = s.live ? '(' + s.players + ') ' + title : title;
+            if (s.live && !liveIcon) liveIcon = await makeLiveIcon();
+            const on = s.live && liveIcon;
+            icons.forEach(l => {
+                l.type = on ? 'image/png' : l.dataset.type;
+                l.href = on ? liveIcon : l.dataset.href;
+            });
+        }
+
         async function refresh() {
             try {
                 const res = await fetch('/live/onair', { headers: { Accept: 'application/json' }, cache: 'no-store' });
@@ -313,6 +352,7 @@
                     ['onair-pulse', 'text-green-400', 'font-bold'].forEach(c => link.classList.toggle(c, s.live));
                     link.title = s.live ? 'On air: ' + s.server + ' · ' + s.players + ' playing' : 'Live servers';
                 });
+                showInTab(s);
             } catch (e) {}
         }
         refresh();
