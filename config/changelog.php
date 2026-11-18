@@ -7,6 +7,16 @@
 return [
     'Changelog' => [
         [
+            'date' => '2026-11-18',
+            'title' => 'Competitive: new look',
+            'link' => '/competitive',
+            'hidden' => true,
+            'items' => [
+                '**Top 3 on a podium**, the leaders in K/D, accuracy, games and beating the odds, and the rest in the All Time Ranking style.',
+                '**Knocking on the door:** provisional players closest to 10 games first, with how many games they still need. Recent games in a slider like the game pages: the map behind the scoreboard of both teams, and the Elo change of every player, plus top fragger, most flags, best aim, biggest Elo gain and upsets.',
+            ],
+        ],
+        [
             'date' => '2026-11-16',
             'title' => 'See a live game from any tab',
             'link' => '/live',

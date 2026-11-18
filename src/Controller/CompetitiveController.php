@@ -40,7 +40,7 @@ class CompetitiveController extends AppController
         $conn = $this->fetchTable('Games')->getConnection();
         // active players: ranked from MIN_GAMES on, the others provisional
         $active = $conn->execute(
-            'SELECT r.*, p.name profile_name, p.country, p.track FROM comp_ratings r
+            'SELECT r.*, p.name profile_name, p.country, p.track, p.picture FROM comp_ratings r
              LEFT JOIN players p ON p.id = r.player_id
              WHERE r.last_game_at >= ? AND COALESCE(p.cheater, 0) = 0 AND COALESCE(p.track, 1) = 1
              ORDER BY r.rating DESC', [date('Y-m-d H:i:s', strtotime('-' . self::ACTIVE_DAYS . ' days'))])->fetchAll('assoc');
@@ -85,9 +85,10 @@ class CompetitiveController extends AppController
         $games = $conn->execute(
             'SELECT * FROM comp_games ORDER BY ended_at DESC LIMIT 30')->fetchAll('assoc');
         $players = $this->gamePlayers(array_column($games, 'id'));
-        $running = $conn->execute('SELECT server_name, state, updated_at FROM comp_running')->fetchAll('assoc');
+        $profiles = $this->profileBadges(array_values(array_filter(array_column($active, 'player_id'))));
+        $viewer = $this->request->getAttribute('identity')?->id;
 
-        $this->set(compact('ratings', 'provisional', 'inactive', 'games', 'players', 'running', 'example'));
+        $this->set(compact('ratings', 'provisional', 'inactive', 'games', 'players', 'example', 'profiles', 'viewer'));
         $this->set('k', ['new' => CompetitiveRatings::K_NEW, 'normal' => CompetitiveRatings::K, 'newGames' => CompetitiveRatings::NEW_GAMES]);
         $this->set('minShare', CompetitiveTracker::MIN_SHARE);
         $this->set('activeDays', self::ACTIVE_DAYS);
@@ -115,7 +116,7 @@ class CompetitiveController extends AppController
             return [];
         }
         $rows = $this->fetchTable('Games')->getConnection()->execute(
-            'SELECT s.*, p.name profile_name, p.country, p.track FROM comp_player_stats s
+            'SELECT s.*, p.name profile_name, p.country, p.track, p.picture FROM comp_player_stats s
              LEFT JOIN players p ON p.id = s.player_id
              WHERE s.comp_game_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')
              ORDER BY s.flags DESC, s.frags DESC', $ids)->fetchAll('assoc');
@@ -124,11 +125,47 @@ class CompetitiveController extends AppController
             if ($r['player_id'] && (int)$r['track'] !== 1) {
                 $r['player_id'] = null;
                 $r['name'] = 'Anonymous';
+                $r['picture'] = null;
             }
             $out[$r['comp_game_id']][] = $r;
         }
 
         return $out;
+    }
+
+    /**
+     * What the All Time Ranking (/players) shows next to a name, for these
+     * players, one query each: player type and archetype (PlayerRatings),
+     * last week's achievements, name frame / gold badge (QR hunt).
+     *
+     * @return array{ratings: array, achievements: array, styles: array}
+     */
+    private function profileBadges(array $ids): array
+    {
+        if (!$ids) {
+            return ['ratings' => [], 'achievements' => [], 'styles' => []];
+        }
+        $ratings = [];
+        foreach ($this->fetchTable('PlayerRatings')->find()
+            ->select(['player_id', 'type', 'attack_pct', 'defense_pct', 'combat_pct', 'archetype', 'archetype_pct', 'archetype_rank'])
+            ->where(['player_id IN' => $ids])->disableHydration()->all() as $r) {
+            $ratings[$r['player_id']] = [
+                'type' => $r['type'],
+                'type_label' => \App\Command\CalculateRatingsCommand::typeLabel($r['type'], (int)$r['attack_pct'], (int)$r['defense_pct'], (int)$r['combat_pct']),
+                'archetype' => $r['archetype'],
+                'archetype_pct' => $r['archetype_pct'] !== null ? (int)$r['archetype_pct'] : null,
+                'archetype_rank' => $r['archetype_rank'] !== null ? (int)$r['archetype_rank'] : null,
+            ];
+        }
+        $achievements = [];
+        foreach ($this->fetchTable('Achievements')->find()
+            ->select(['player_id', 'event_type', 'count'])
+            ->where(['player_id IN' => $ids, 'week_end' => date('Y-m-d', strtotime('last week sunday')), 'event_type IS NOT' => 'best_on_map'])
+            ->disableHydration()->all() as $a) {
+            $achievements[$a['player_id']][$a['event_type']] = $a['count'];
+        }
+
+        return ['ratings' => $ratings, 'achievements' => $achievements, 'styles' => \App\Service\QrHunt::nameStyles($ids)];
     }
 
     /** Elo start value, for the templates */

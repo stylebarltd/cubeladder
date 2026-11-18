@@ -9,7 +9,7 @@
 $flagMode = in_array($game['mode'], ['ctf', 'htf', 'tktf'], true);
 $scores = json_decode($game['team_scores'], true) ?: [];
 $map = $this->Layout->cleanMapName((string)$game['map']);
-$this->assign('title', $map . ' · Competitive · cubeLadder');
+$this->assign('title', $map . ' · Inter Games · cubeLadder');
 $afps = ($game['source'] ?? 'live') === 'actionfps';
 $hasAcc = (bool)array_filter($players, fn($p) => (int)($p['shot_damage'] ?? 0) > 0);
 $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'RVSF' => ['band' => 'bg-blue-600/45', 'text' => 'text-blue-400']];
@@ -17,10 +17,10 @@ $teamStyle = ['CLA' => ['band' => 'bg-red-600/45', 'text' => 'text-red-400'], 'R
 <div class="relative min-h-[calc(100svh-4rem)] bg-zinc-950 text-white">
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 md:px-10 md:py-8">
     <div>
-        <a href="<?= $this->Url->build(['action' => 'index']) ?>" class="text-sm text-zinc-400 hover:text-white"><i class="fa-solid fa-chevron-left mr-1"></i>Competitive</a>
+        <a href="<?= $this->Url->build(['action' => 'index']) ?>" class="text-sm text-zinc-400 hover:text-white"><i class="fa-solid fa-chevron-left mr-1"></i>Inter Games</a>
         <h1 class="mt-1 text-3xl font-extrabold"><?= h($map) ?></h1>
         <p class="mt-1 flex flex-wrap gap-x-3 text-sm text-zinc-400">
-            <span class="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-bold uppercase text-amber-200">Competitive</span>
+            <span class="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-bold uppercase text-amber-200">Inter Games</span>
             <span><?= h(strtoupper((string)$game['mode'])) ?> &middot; <?= h($game['team_size']) ?></span>
             <span><?= $afps ? 'from ActionFPS' : h($this->Layout->serverName($game['server_name'])) ?></span>
             <span><?= h(date('D, d M Y H:i', strtotime((string)$game['started_at']))) ?> UTC</span>
