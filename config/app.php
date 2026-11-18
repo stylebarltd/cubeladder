@@ -649,8 +649,14 @@ return [
                 'mys' => [
                     'webhook' => env('DISCORD_MYS_WEBHOOK'),
                     'servers' => ['mys-1111', 'mys-2222', 'mys-3333', 'pioac-5000', 'pioac-6000'],
-                    'title' => 'MyS Inter – live servers',
-                    'brand' => 'MyS Inter',
+                    'title' => 'Inter matches – live servers',
+                    'brand' => 'Inter matches',
+                    // the Inter Games page (/competitive): its gold, the title links there, a line + button
+                    'accent' => 0xFCD34D,
+                    'url' => '/competitive',
+                    'links' => [
+                        ['label' => 'Inter Games', 'path' => '/competitive', 'emoji' => '🏆', 'text' => 'Inter Games: Elo ranking, top 3 and recent games'],
+                    ],
                     // inter: spectators are people waiting for a mix – name them
                     'show_spectators' => true,
                     // and every server stays listed, empty ones too

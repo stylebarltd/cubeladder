@@ -8,6 +8,14 @@ return [
     'Changelog' => [
         [
             'date' => '2026-11-18',
+            'title' => 'pioac.eu servers with their own logo',
+            'link' => '/live',
+            'items' => [
+                '**pioac 5000 and 6000** show their own badge on /live and in the Discord live messages, like the MyS servers.',
+            ],
+        ],
+        [
+            'date' => '2026-11-18',
             'title' => 'Competitive: new look',
             'link' => '/competitive',
             'hidden' => true,

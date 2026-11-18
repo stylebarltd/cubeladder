@@ -12,7 +12,8 @@ class LogProcessorService
     use LocatorAwareTrait;
 
     private $LogOffsets;
-    //private AcLogParser $acLogParser;
+    /** Parser of the file being processed (set per file in processLocalFile) */
+    private ?AcLogParser $acLogParser = null;
 
     public function __construct()
     {

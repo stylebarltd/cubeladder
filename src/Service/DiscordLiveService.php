@@ -218,6 +218,10 @@ class DiscordLiveService
                 $s['name'],
                 $s['map'] ? sprintf(' — %s · %s', $s['map'], $s['mode_name'] ?? '?') : ''
             );
+            foreach ($this->links() as $link) {
+                // <url>: a link without a preview card
+                $text .= sprintf(' · [%s](<%s>)', $link['label'], $link['url']);
+            }
             if (!empty($cfg['mention'])) {
                 $text = $cfg['mention'] . ' ' . $text;
             }
@@ -356,13 +360,18 @@ class DiscordLiveService
                 $when
             );
         }
+        // Ladder.discord(.feeds.*).links: pages of the feed, a line in the box and a button each
+        foreach ($this->links() as $link) {
+            $description .= sprintf("\n%s [%s](%s)", $link['emoji'] ?? '', $link['text'] ?? $link['label'], $link['url']);
+        }
         $summary = [
             'title' => $this->cfg['title'] ?? ($onAir ? 'cubeLadder – on air' : 'cubeLadder – live servers'),
             'description' => $description,
-            'color' => $color,
+            // a feed's own accent colour (Ladder.discord.feeds.*.accent), red while every server is offline
+            'color' => $online > 0 && isset($this->cfg['accent']) ? (int)$this->cfg['accent'] : $color,
         ];
         if ($this->site()) {
-            $summary['url'] = $this->site() . '/live';
+            $summary['url'] = $this->site() . ($this->cfg['url'] ?? '/live');
         }
 
         $footer = ($this->cfg['brand'] ?? 'CubeLadder') . ' · refreshes automatically, this message is edited in place';
@@ -534,7 +543,16 @@ class DiscordLiveService
             'emoji' => ['name' => '📡'],
             'url' => $this->site() . '/live',
         ]];
-        foreach (array_slice($busy, 0, 4) as $s) {
+        foreach ($this->links() as $link) {
+            $row[] = array_filter([
+                'type' => 2, 'style' => 5,
+                'label' => $link['label'],
+                'emoji' => !empty($link['emoji']) ? ['name' => $link['emoji']] : null,
+                'url' => $link['url'],
+            ]);
+        }
+        // Discord takes five buttons per row
+        foreach (array_slice($busy, 0, max(0, 5 - count($row))) as $s) {
             $row[] = [
                 'type' => 2, 'style' => 5,
                 'label' => mb_substr(sprintf('%s · %d/%d', $s['name'], (int)$s['numplayers'], (int)($s['maxclients'] ?? 0)), 0, 80),
@@ -543,6 +561,21 @@ class DiscordLiveService
         }
 
         return [['type' => 1, 'components' => $row]];
+    }
+
+    /**
+     * The feed's own pages (Ladder.discord.feeds.*.links: label, path, emoji, text = the line in the
+     * summary box), with full URLs; none without a site URL.
+     *
+     * @return array<array{label: string, url: string, emoji?: string, text?: string}>
+     */
+    private function links(): array
+    {
+        if (!$this->site()) {
+            return [];
+        }
+
+        return array_map(fn($l) => ['url' => $this->site() . $l['path']] + $l, (array)($this->cfg['links'] ?? []));
     }
 
     /**
