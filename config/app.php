@@ -651,16 +651,20 @@ return [
                     'servers' => ['mys-1111', 'mys-2222', 'mys-3333', 'pioac-5000', 'pioac-6000'],
                     'title' => 'Inter matches – live servers',
                     'brand' => 'Inter matches',
-                    // the Inter Games page (/competitive): its gold, the title links there, a line + button
+                    // the Inter Games page (/competitive): its gold, the title, a line in the box and a button link there
                     'accent' => 0xFCD34D,
                     'url' => '/competitive',
                     'links' => [
-                        ['label' => 'Inter Games', 'path' => '/competitive', 'emoji' => '🏆', 'text' => 'Inter Games: Elo ranking, top 3 and recent games'],
+                        ['label' => 'Inter Matches Ladder', 'path' => '/competitive', 'emoji' => '🏆', 'text' => 'Inter Matches Ladder'],
                     ],
+                    // "Watch live" in every server box: /live with that server picked
+                    'watch_link' => true,
+                    'intro' => 'Mixed and clan matches, **2 vs 2, 3 vs 3** and up. Games that start with even teams and run their full 15 minutes count for the Inter Matches Ladder.',
                     // inter: spectators are people waiting for a mix – name them
                     'show_spectators' => true,
-                    // and every server stays listed, empty ones too
-                    'on_air' => false,
+                    // a box only for servers being played on; every server's status as a line in the top box
+                    'on_air' => true,
+                    'status_list' => true,
                 ],
             ],
 

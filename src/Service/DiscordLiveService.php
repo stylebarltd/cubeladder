@@ -360,9 +360,19 @@ class DiscordLiveService
                 $when
             );
         }
+        // Ladder.discord(.feeds.*).intro: a few lines about the feed above the counts
+        if (!empty($this->cfg['intro'])) {
+            $description = $this->cfg['intro'] . "\n\n" . $description;
+        }
+        // Ladder.discord(.feeds.*).status_list: one status line per server in the box
+        if (!empty($this->cfg['status_list'])) {
+            $description .= "\n\n" . implode("\n", array_map(fn($s) => $this->statusLine($s), $servers));
+        }
         // Ladder.discord(.feeds.*).links: pages of the feed, a line in the box and a button each
-        foreach ($this->links() as $link) {
-            $description .= sprintf("\n%s [%s](%s)", $link['emoji'] ?? '', $link['text'] ?? $link['label'], $link['url']);
+        // ... with a 'text' also as a line in the box
+        $lines = array_filter($this->links(), fn($l) => !empty($l['text']));
+        foreach (array_values($lines) as $i => $link) {
+            $description .= sprintf("\n%s%s [%s](%s)", $i === 0 ? "\n" : '', $link['emoji'] ?? '', $link['text'], $link['url']);
         }
         $summary = [
             'title' => $this->cfg['title'] ?? ($onAir ? 'cubeLadder – on air' : 'cubeLadder – live servers'),
@@ -375,7 +385,7 @@ class DiscordLiveService
         }
 
         $footer = ($this->cfg['brand'] ?? 'CubeLadder') . ' · refreshes automatically, this message is edited in place';
-        if ($onAir) {
+        if ($onAir && empty($this->cfg['status_list'])) {
             $empty = count(array_filter($servers, fn($s) => $s['online'] && !$this->isOnAir($s)));
             $offline = count($servers) - $online;
             $rest = array_filter([
@@ -564,7 +574,31 @@ class DiscordLiveService
     }
 
     /**
-     * The feed's own pages (Ladder.discord.feeds.*.links: label, path, emoji, text = the line in the
+     * A server's line in the status list: playing (map, mode, time left),
+     * only spectators waiting, empty or offline.
+     */
+    private function statusLine(array $s): string
+    {
+        $name = '**' . $this->mdEscape((string)$s['name']) . '**';
+        if (!$s['online']) {
+            return '🔴 ' . $name . ' · offline';
+        }
+        $n = (int)$s['numplayers'];
+        $max = (int)($s['maxclients'] ?? 0);
+        $count = $max > 0 ? sprintf('%d/%d', $n, $max) : (string)$n;
+        if ($this->activePlayers($s) > 0) {
+            return sprintf('🟢 %s · %s · %s · %s%s', $name, $count, $this->mdEscape((string)($s['map'] ?? '?')), $s['mode_name'] ?? '?',
+                $s['minremain'] !== null ? sprintf(' · %d min left', $s['minremain']) : '');
+        }
+        if ($n > 0) {
+            return sprintf('🟡 %s · %s · %d waiting', $name, $count, $n);
+        }
+
+        return '⚪ ' . $name . ' · empty';
+    }
+
+    /**
+     * The feed's own pages (Ladder.discord.feeds.*.links: label, path, emoji, text = optional line in the
      * summary box), with full URLs; none without a site URL.
      *
      * @return array<array{label: string, url: string, emoji?: string, text?: string}>
@@ -689,6 +723,10 @@ class DiscordLiveService
         }
         if ($this->site() && ($gameId = $this->gameId($s)) !== null) {
             $embed['description'] .= sprintf("\n📊 [this game on CubeLadder](%s/games/view/%s)", $this->site(), $gameId);
+        }
+        // Ladder.discord(.feeds.*).watch_link: the Live page with this server picked (/live#key)
+        if ($this->site() && !empty($this->cfg['watch_link'])) {
+            $embed['description'] .= sprintf("\n▶️ [**Watch live**](%s/live#%s)", $this->site(), rawurlencode($s['key']));
         }
 
         // map picture as full-width image (same lookup as the Maps / Games
