@@ -218,6 +218,9 @@ class DiscordLiveService
                 $s['name'],
                 $s['map'] ? sprintf(' — %s · %s', $s['map'], $s['mode_name'] ?? '?') : ''
             );
+            if (($watch = $this->watchUrl($s)) !== null) {
+                $text .= sprintf(' · ▶️ [Watch live](<%s>)', $watch);
+            }
             foreach ($this->links() as $link) {
                 // <url>: a link without a preview card
                 $text .= sprintf(' · [%s](<%s>)', $link['label'], $link['url']);
@@ -573,6 +576,12 @@ class DiscordLiveService
         return [['type' => 1, 'components' => $row]];
     }
 
+    /** Ladder.discord(.feeds.*).watch_link: the Live page with this server picked (/live#key), else null */
+    private function watchUrl(array $s): ?string
+    {
+        return $this->site() && !empty($this->cfg['watch_link']) ? $this->site() . '/live#' . rawurlencode($s['key']) : null;
+    }
+
     /**
      * A server's line in the status list: playing (map, mode, time left),
      * only spectators waiting, empty or offline.
@@ -582,6 +591,10 @@ class DiscordLiveService
         $name = '**' . $this->mdEscape((string)$s['name']) . '**';
         if (!$s['online']) {
             return '🔴 ' . $name . ' · offline';
+        }
+        // online: the name opens the Live page with this server picked
+        if (($watch = $this->watchUrl($s)) !== null) {
+            $name = sprintf('[%s](%s)', $name, $watch);
         }
         $n = (int)$s['numplayers'];
         $max = (int)($s['maxclients'] ?? 0);
@@ -725,8 +738,8 @@ class DiscordLiveService
             $embed['description'] .= sprintf("\n📊 [this game on CubeLadder](%s/games/view/%s)", $this->site(), $gameId);
         }
         // Ladder.discord(.feeds.*).watch_link: the Live page with this server picked (/live#key)
-        if ($this->site() && !empty($this->cfg['watch_link'])) {
-            $embed['description'] .= sprintf("\n▶️ [**Watch live**](%s/live#%s)", $this->site(), rawurlencode($s['key']));
+        if (($watch = $this->watchUrl($s)) !== null) {
+            $embed['description'] .= sprintf("\n▶️ [**Watch live**](%s)", $watch);
         }
 
         // map picture as full-width image (same lookup as the Maps / Games
